@@ -601,9 +601,12 @@ function dashCrmSection(m, crm) {
   const t = m.total;
   const tips = {
     leads: 'Leads in your CRM attributed to Google or Meta ads under the selected attribution model.',
+    cpl: 'Cost per lead: total ad spend ÷ attributed leads.',
     converted: 'Attributed leads marked as converted (won) in your CRM.',
-    revenue: 'Closed revenue from converted leads, credited to ads by the selected attribution model. ROAS = attributed revenue ÷ ad spend.'
+    revenue: 'Closed revenue from converted leads, credited to ads by the selected attribution model.',
+    roas: 'Return on ad spend: attributed revenue ÷ total ad spend.'
   };
+  const kpis = [['Attributed Leads', tips.leads], ['Cost per Lead', tips.cpl], ['Converted Leads', tips.converted], ['Attributed Revenue', tips.revenue], ['ROAS', tips.roas]];
   if (!crm) {
     const locked = (title, tip) => `<div class="kpi-card kpi-locked"><div class="kpi-title">${esc(title)} ${infoTip(tip)}<i data-lucide="lock" class="dash-lock"></i></div><div class="kpi-value">—</div><div class="kpi-sub">Requires CRM</div></div>`;
     return `<div class="dash-crm">
@@ -612,7 +615,7 @@ function dashCrmSection(m, crm) {
         <div><div class="banner-title">Connect a CRM to unlock leads, revenue and ROAS</div><div class="banner-text">Ad platform metrics above work without a CRM. Lead and revenue attribution needs one connected CRM.</div></div>
         <button type="button" class="btn btn-primary btn-sm dash-banner-btn" onclick="navigate('integrations')"><i data-lucide="plug"></i>Connect CRM</button>
       </div>
-      <div class="grid-3 dash-kpis">${locked('Attributed Leads', tips.leads)}${locked('Converted Leads', tips.converted)}${locked('Attributed Revenue', tips.revenue)}</div>
+      <div class="grid-5 dash-kpis">${kpis.map(([title, tip]) => locked(title, tip)).join('')}</div>
     </div>`;
   }
   const model = state.ui.dashModel;
@@ -624,10 +627,12 @@ function dashCrmSection(m, crm) {
         ${infoTip('Multi-Touch gives 40% of the credit to the first touch, 40% to the last touch and splits 20% across the touches in between. First-Touch and Last-Touch give all the credit to one touch.')}
       </label>
     </div>
-    <div class="grid-3 dash-kpis">
-      ${dashKpi('Attributed Leads', tips.leads, fmtNum(t.leads), `CPL <b>${t.leads ? fmtMoney(t.cpl, 2) : '—'}</b>`)}
+    <div class="grid-5 dash-kpis">
+      ${dashKpi('Attributed Leads', tips.leads, fmtNum(t.leads), t.conversions ? `<b>${fmtPct(t.leads / t.conversions * 100, 0)}</b> of platform conversions` : 'From Google and Meta ads')}
+      ${dashKpi('Cost per Lead', tips.cpl, t.leads ? fmtMoney(t.cpl, 2) : '—', t.conversions ? `vs <b>${fmtMoney(t.cpa, 2)}</b> per conversion` : 'Spend ÷ attributed leads')}
       ${dashKpi('Converted Leads', tips.converted, fmtNum(t.converted), `<b>${fmtPct(t.convRate, 1)}</b> conversion rate`)}
-      ${dashKpi('Attributed Revenue', tips.revenue, fmtMoney(t.revenue), `ROAS <b>${t.roas.toFixed(2)}x</b>`)}
+      ${dashKpi('Attributed Revenue', tips.revenue, fmtMoney(t.revenue), t.converted ? `Avg. deal <b>${fmtMoney(t.revenue / t.converted)}</b>` : 'No converted leads yet')}
+      ${dashKpi('ROAS', tips.roas, t.spend ? `${t.roas.toFixed(2)}x` : '—', `on <b>${fmtMoney(t.spend)}</b> ad spend`)}
     </div>
   </div>`;
 }
@@ -1142,7 +1147,7 @@ Client-facing workspace dashboard giving a simplified, unified view of Meta and 
 - **Global Event-Based Date Filter**: Filters all dashboard data by the exact date the action (e.g. click or conversion) happened within the selected timeframe, independent of events higher up the funnel.
   - **Prototype note:** the date filter scales mock data to the selected range, and the Daily Performance chart plots one point per day of the range. It does **not** yet filter by event date.
 - **CRM mode (from V2)**: shown when the workspace has a connected, active CRM.
-  - A second KPI row: Attributed Leads (+ CPL), Converted Leads (+ conversion rate) and Attributed Revenue (+ ROAS).
+  - A second row of 5 KPI cards, matching the ad-platform row: Attributed Leads (+ share of platform conversions), Cost per Lead (+ cost per conversion for comparison), Converted Leads (+ conversion rate), Attributed Revenue (+ average deal value) and ROAS (+ ad spend).
   - The table gains Leads, CPL, Revenue and ROAS columns.
   - The **attribution model** selector offers Multi-Touch (40/20/40), First-Touch and Last-Touch. Each model credits leads and revenue differently, so the figures change with the model.
   - **Ad-only mode** (no CRM): those three cards are locked ("Requires CRM"), with a "Connect a CRM to unlock leads, revenue and ROAS" banner linking to Integrations.

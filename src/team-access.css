@@ -15,8 +15,8 @@
 .team-note svg.lucide { color: var(--primary); width: 14px; height: 14px; }
 .team-center { display: flex; justify-content: center; margin-top: -16px; padding-bottom: 16px; }
 
-/* Tables: Figma tables have no outer border; menus must not be clipped by the scroll wrapper */
-.team-table-wrap { border: 0; border-radius: var(--r-xs); overflow: visible; }
+/* Tables: Figma tables have no outer border. The wrapper scrolls horizontally; row menus are pinned to the viewport by core.js so they are not clipped. */
+.team-table-wrap { border: 0; border-radius: var(--r-xs); }
 .team-table th:first-child { border-top-left-radius: var(--r-xs); }
 .team-table td { padding: 12px 14px; white-space: nowrap; }
 .team-table td.team-ws-cell, .team-table td.team-wrap { white-space: normal; }
@@ -150,5 +150,4 @@
   .team-role-layout { grid-template-columns: 1fr; }
   .team-role-nav { position: static; min-height: 0; }
   .team-org-grid { grid-template-columns: 1fr; }
-  .team-table-wrap { overflow-x: auto; }
 }

@@ -271,6 +271,7 @@ function toggleMenu(id, ev) {
   closeAllPopovers();
   if (wasOpen) return;
   el.classList.add('open');
+  el.closest('td, th')?.classList.add('menu-open-cell');
   // Menus inside scrollable tables would be clipped: pin them to the viewport next to their trigger.
   const trigger = ev && ev.currentTarget;
   if (trigger && el.closest('.table-wrap')) {
@@ -283,6 +284,7 @@ function toggleMenu(id, ev) {
 window.addEventListener('scroll', () => document.querySelectorAll('.table-wrap .menu.open').forEach(el => el.classList.remove('open')), true);
 function closeAllPopovers() {
   document.querySelectorAll('.menu.open, .filter-panel.open, .ws-panel.open, .date-filter.open').forEach(el => el.classList.remove('open'));
+  document.querySelectorAll('.menu-open-cell').forEach(el => el.classList.remove('menu-open-cell'));
 }
 function rowMenu(id, items) {
   // items: [{ label, icon, onClick: "js string", danger, disabled }] or 'sep'
@@ -443,6 +445,26 @@ function applyDateFilter(scope, onApply) {
   closeAllPopovers();
   if (onApply && window[onApply]) window[onApply]();
 }
+
+// ---------- Pinned action columns ----------
+// A table's last column is pinned when it is an action column: its header says Action/Actions or carries an
+// *action* class, or the header is blank/Remove/Manage and every body row's last cell holds a button or row menu.
+function markActionColumns(root = document) {
+  root.querySelectorAll('.table-wrap > .table').forEach(table => {
+    const head = table.querySelector('thead tr > :last-child');
+    const rows = [...table.querySelectorAll('tbody tr')].filter(r => r.children.length > 1);
+    const explicit = !!head && (/action/i.test(head.textContent) || /action/i.test(head.className));
+    const implicit = !!head && /^(remove|manage|)$/i.test(head.textContent.trim()) && rows.length > 0 &&
+      rows.every(r => r.lastElementChild.querySelector('button, .menu-anchor, a'));
+    table.classList.toggle('has-action-col', explicit || implicit);
+    const wrap = table.parentElement;
+    wrap.classList.toggle('is-overflowing', wrap.scrollWidth > wrap.clientWidth + 1);
+  });
+}
+let actionColFrame;
+new MutationObserver(() => { cancelAnimationFrame(actionColFrame); actionColFrame = requestAnimationFrame(() => markActionColumns()); })
+  .observe(document.documentElement, { childList: true, subtree: true });
+window.addEventListener('resize', () => markActionColumns());
 
 // ---------- Global listeners ----------
 document.addEventListener('click', e => {

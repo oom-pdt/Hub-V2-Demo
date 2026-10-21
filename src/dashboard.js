@@ -1011,7 +1011,7 @@ function dashHeatBody() {
     g += `<div class="dash-heat-day">${DASH_DAYS[d]}</div>`;
     row.forEach((v, h) => {
       const n = max > min ? (v - min) / (max - min) : 0;
-      g += `<div class="dash-heat-cell ${d === pd && h === ph ? 'peak' : ''}" style="background:${dashRamp(n)}" data-d="${d}" data-h="${h}" data-v="${v.toFixed(2)}"></div>`;
+      g += `<div class="dash-heat-cell" style="background:${dashRamp(n)}" data-d="${d}" data-h="${h}" data-v="${v.toFixed(2)}"></div>`;
     });
   });
   const when = `${DASH_DAYS[pd]} ${String(ph).padStart(2, '0')}:00`;
@@ -1020,7 +1020,7 @@ function dashHeatBody() {
     : `Lowest cost per conversion: ${when} (about ${fmtMoney(target, 2)} per conversion on average)`;
   return `<div class="dash-heat" id="dash-heat">${g}</div>
     <div class="dash-heat-legend"><span>Low</span><span class="dash-heat-ramp"></span><span>High</span></div>
-    <div class="dash-heat-callout"><span class="dash-heat-key"></span>${esc(callout)}</div>`;
+    <div class="dash-heat-callout">${esc(callout)}</div>`;
 }
 function dashBindHeatmap() {
   const card = document.getElementById('dash-heat-card');

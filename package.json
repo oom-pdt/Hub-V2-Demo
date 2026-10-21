@@ -1,0 +1,13 @@
+{
+  "name": "galaxis-hub-demo",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "vite --port=5173",
+    "build": "python3 scripts/build_standalone.py",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^6.3.5"
+  }
+}

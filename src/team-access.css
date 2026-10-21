@@ -1,0 +1,154 @@
+/* team-access module styles — component-specific only; shared components live in design.css */
+
+/* Tabs + cards */
+.team-tabs { margin-bottom: 32px; }
+.team-tabs .page-tab svg.lucide { width: 18px; height: 18px; }
+.team-card { padding: 24px; }
+.team-card-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+.team-card-title { font-family: var(--font-head); font-weight: 700; font-size: 20px; line-height: 24px; margin: 0; }
+.team-card-tools { flex-wrap: wrap; justify-content: flex-end; }
+.team-search { width: 308px; }
+.team-card-tools .btn-primary { height: 36px; padding: 0 20px; }
+.team-filter-head { margin-bottom: 16px; }
+.team-filter-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+.team-note { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-secondary); margin: -8px 0 14px; }
+.team-note svg.lucide { color: var(--primary); width: 14px; height: 14px; }
+.team-center { display: flex; justify-content: center; margin-top: -16px; padding-bottom: 16px; }
+
+/* Tables: Figma tables have no outer border; menus must not be clipped by the scroll wrapper */
+.team-table-wrap { border: 0; border-radius: var(--r-xs); overflow: visible; }
+.team-table th:first-child { border-top-left-radius: var(--r-xs); }
+.team-table td { padding: 12px 14px; white-space: nowrap; }
+.team-table td.team-ws-cell, .team-table td.team-wrap { white-space: normal; }
+.team-table .chips { flex-wrap: nowrap; }
+.team-th-action, .team-td-action { text-align: center; width: 72px; }
+.team-table tbody tr:nth-last-child(-n+2):not(:nth-child(-n+3)) .menu { top: auto; bottom: calc(100% + 6px); }
+.team-name { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; }
+.team-table .cell-sub { font-size: 10px; letter-spacing: .5px; }
+.team-row-muted td { color: var(--text-muted); }
+.team-row-muted .chip { opacity: .6; }
+.team-primary-badge { display: inline-flex; align-items: center; gap: 4px; height: 18px; padding: 0 8px; border-radius: var(--r-pill); background: var(--warning-bg); color: var(--warning-dark); font-size: 10px; font-weight: 700; letter-spacing: .25px; white-space: nowrap; }
+.team-primary-badge svg.lucide { width: 10px; height: 10px; fill: currentColor; }
+.team-you { height: 18px; padding: 0 8px; font-size: 10px; font-weight: 700; color: var(--link); }
+.team-ws-cell { max-width: 200px; min-width: 150px; }
+.team-ws-all { font-weight: 700; color: var(--link); }
+.team-link-cell { border: 0; background: none; padding: 0; font-size: 12px; text-align: left; color: var(--text); }
+.team-link-cell:hover { color: var(--link); text-decoration: underline; }
+.team-lock { display: inline-flex; margin-left: 6px; color: var(--text-muted); vertical-align: middle; }
+.team-lock svg.lucide { width: 12px; height: 12px; }
+.team-dot-link { background: var(--link); }
+
+/* Seat usage */
+.team-seat-card { margin-bottom: 32px; }
+.team-seat-name, .team-seat-count { font-family: var(--font-head); font-weight: 700; font-size: 20px; line-height: 24px; margin: 0; }
+.team-seat-bar { margin-top: 18px; height: 12px; background: #EAEAEA; }
+.team-seat-legend { font-size: 12px; margin-top: 14px; }
+
+/* Forms in modals */
+.team-form-2 { gap: 16px; }
+.team-toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--r-md); }
+.team-toggle-row .t-bold { font-size: 14px; }
+.team-all-ws { padding: 10px 14px; }
+.team-checklist { display: flex; flex-direction: column; gap: 10px; }
+.team-selected-count { font-size: 12px; color: var(--primary); font-weight: 700; white-space: nowrap; }
+.team-checklist-list { max-height: 228px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--r-sm); padding: 4px; display: flex; flex-direction: column; }
+.team-check-row { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: var(--r-sm); cursor: pointer; }
+.team-check-row:hover { background: var(--grey-light); }
+.team-check-row.disabled { cursor: default; }
+.team-check-row input { width: 16px; height: 16px; accent-color: var(--primary); margin: 0; flex-shrink: 0; }
+.team-check-label { display: block; font-size: 14px; }
+.team-check-row .cell-sub, .team-pick-row .cell-sub, .team-suggest .cell-sub { display: block; color: var(--text-muted); font-size: 11px; }
+.team-checklist-empty { padding: 16px; text-align: center; color: var(--text-muted); font-size: 12px; }
+.team-chip-select { display: flex; flex-wrap: wrap; gap: 8px; }
+.team-chip-opt { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: var(--r-pill); border: 1px solid var(--border); background: var(--surface); font-size: 12px; color: var(--text-secondary); }
+.team-chip-opt svg.lucide { width: 12px; height: 12px; }
+.team-chip-opt:hover { border-color: var(--primary); color: var(--primary); }
+.team-chip-opt.on { background: var(--tint); border-color: var(--blue-light); color: var(--link); font-weight: 700; }
+.team-assign-chips { min-height: 38px; padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--r-sm); }
+.team-assign-chips .chip-remove svg.lucide { width: 12px; height: 12px; }
+.team-pick-row { display: flex; align-items: center; gap: 12px; width: 100%; border: 1px solid transparent; background: none; padding: 8px 10px; border-radius: var(--r-sm); text-align: left; }
+.team-pick-row:hover { background: var(--grey-light); }
+.team-pick-row.on { border-color: var(--primary); background: var(--tint); }
+.team-org-seg { margin-bottom: 4px; }
+
+/* Client Organisation cards (Figma 6461:24705) */
+.team-org-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.team-org-card { border: 1px solid var(--border); border-radius: var(--r-md); padding: 16px; display: flex; flex-direction: column; gap: 14px; background: var(--surface); }
+.team-org-card.archived { background: #FAFAFA; }
+.team-org-card.archived .team-org-name { color: var(--text-muted); }
+.team-org-top { display: flex; align-items: center; gap: 10px; }
+.team-org-logo { width: 28px; height: 28px; border-radius: var(--r-sm); background: var(--tint); color: var(--primary); font-size: 10px; font-weight: 700; display: grid; place-items: center; flex-shrink: 0; }
+.team-org-logo.sm { width: 28px; height: 28px; }
+.team-org-name { flex: 1; min-width: 0; border: 0; background: none; padding: 0; text-align: left; font-family: var(--font-head); font-weight: 700; font-size: 16px; line-height: 20px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.team-org-name:not(:disabled):hover { color: var(--link); }
+.team-org-name:disabled { cursor: default; }
+.team-org-top .dot-label { font-size: 11px; }
+.team-org-line { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.team-org-line svg.lucide { width: 14px; height: 14px; color: var(--text-secondary); }
+.team-org-contact { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+.team-org-contact-name { display: block; }
+.team-org-contact .cell-sub { display: block; color: var(--text-muted); font-size: 10px; }
+.team-org-avatar { width: 24px; height: 24px; border-radius: 50%; background: var(--text-muted); color: #fff; display: grid; place-items: center; flex-shrink: 0; }
+.team-org-avatar svg.lucide { width: 14px; height: 14px; }
+.team-org-stats { display: grid; grid-template-columns: 1fr 1fr; background: #F7F7F7; border-radius: var(--r-sm); padding: 10px 0; }
+.team-org-stats > div { padding: 0 16px; }
+.team-org-stats > div + div { border-left: 1px solid var(--border); }
+.team-org-stat { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 12px; }
+.team-org-stat svg.lucide { width: 14px; height: 14px; }
+.team-org-stats .cell-sub { color: var(--text-muted); font-size: 10px; padding-left: 22px; }
+
+/* Agency tab */
+.team-agency-org { margin-bottom: 32px; padding: 28px 24px; }
+.team-agency-logo { width: 84px; height: 56px; display: grid; place-items: center; font-family: var(--font-head); font-weight: 500; font-size: 22px; color: #C8102E; letter-spacing: -1px; flex-shrink: 0; }
+.team-agency-name { font-family: var(--font-head); font-weight: 700; font-size: 16px; }
+.team-agency-org .org-meta svg.lucide { width: 14px; height: 14px; }
+.team-assign { position: relative; width: 320px; }
+.team-suggest { width: 100%; max-height: 300px; overflow-y: auto; }
+.team-suggest .menu-item { align-items: center; }
+.team-avatar-sm { width: 28px; height: 28px; font-size: 10px; }
+.team-row-pending td { background: var(--warning-bg); }
+.team-row-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.team-pending-tag { font-size: 11px; font-weight: 700; color: var(--warning-dark); margin-right: 4px; }
+.team-default-access { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+.team-agency-org + .team-card .team-td-action { width: auto; text-align: right; }
+
+/* Role editor (Figma 6461:21738) */
+.team-back { font-size: 14px; margin-bottom: 24px; }
+.team-back svg.lucide { width: 18px; height: 18px; }
+.team-role-banner { margin-bottom: 20px; }
+.team-role-fields { margin-bottom: 24px; }
+.team-role-layout { display: grid; grid-template-columns: 284px minmax(0, 1fr); gap: 24px; align-items: start; }
+.team-role-nav { position: sticky; top: calc(var(--devbar-h) + 16px); display: flex; flex-direction: column; gap: 14px; padding: 16px; min-height: 420px; }
+.team-role-nav .search .input { height: 32px; }
+.team-role-nav-list { display: flex; flex-direction: column; gap: 4px; }
+.team-role-nav-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 0; background: none; padding: 9px 12px; border-radius: var(--r-sm); font-size: 12px; text-align: left; color: var(--text); }
+.team-role-nav-item:hover { background: var(--grey-light); }
+.team-role-nav-item.active { background: var(--tint); color: var(--link); }
+.team-role-nav-count { font-size: 12px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.team-role-nav-item.active .team-role-nav-count { color: var(--link); }
+.team-role-groups { display: flex; flex-direction: column; gap: 16px; }
+.team-perm-group { padding: 16px 16px 8px; scroll-margin-top: 64px; }
+.team-perm-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; width: 100%; border: 0; background: none; padding: 0 0 14px; text-align: left; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+.team-perm-head .card-sub { display: block; margin-top: 4px; }
+.team-perm-count { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+.team-perm-sub { padding: 10px 0 6px; }
+.team-perm-sub + .team-perm-sub { border-top: 1px solid var(--border-light); }
+.team-perm-sub-head { display: flex; align-items: center; justify-content: space-between; padding: 6px 0 8px; font-size: 12px; }
+.team-select-all { font-size: 12px; gap: 8px; flex-direction: row-reverse; }
+.team-perm-row { display: flex; align-items: center; gap: 16px; padding: 9px 16px; border-radius: var(--r-sm); cursor: pointer; }
+.team-perm-row:hover { background: #F8FBFF; }
+.team-perm-row input { width: 16px; height: 16px; accent-color: var(--primary); margin: 0 4px 0 0; flex-shrink: 0; }
+.team-perm-title { display: block; font-size: 12px; }
+.team-perm-desc { display: block; font-size: 10px; color: var(--text-muted); letter-spacing: .5px; margin-top: 2px; }
+.team-role-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+
+@media (max-width: 1180px) {
+  .team-org-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .team-search, .team-assign { width: 240px; }
+}
+@media (max-width: 960px) {
+  .team-role-layout { grid-template-columns: 1fr; }
+  .team-role-nav { position: static; min-height: 0; }
+  .team-org-grid { grid-template-columns: 1fr; }
+  .team-table-wrap { overflow-x: auto; }
+}

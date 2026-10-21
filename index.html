@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Galaxis Hub Demo</title>
+  <meta name="description" content="Galaxis Hub prototype: V1 features and V2 integrations, leads and attribution, built to the Galaxis Product Design Figma.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Arimo:wght@400;700&family=Radio+Canada+Big:wght@400;500;700&display=swap">
+  <script src="https://unpkg.com/lucide@0.546.0/dist/umd/lucide.min.js"></script>
+  <!-- build:css -->
+  <link rel="stylesheet" href="src/design.css">
+  <link rel="stylesheet" href="src/dashboard.css">
+  <link rel="stylesheet" href="src/organisation.css">
+  <link rel="stylesheet" href="src/team-access.css">
+  <link rel="stylesheet" href="src/integrations.css">
+  <link rel="stylesheet" href="src/leads.css">
+  <!-- /build:css -->
+</head>
+<body>
+  <header class="devbar" id="devbar"></header>
+  <div class="dev-specs-drawer" id="specs-drawer"></div>
+
+  <div class="app">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="main">
+      <div class="main-inner">
+        <div class="page-header" id="page-header"></div>
+        <div id="screen-root"></div>
+      </div>
+    </main>
+  </div>
+
+  <div id="drawer-root"></div>
+  <div id="modal-root"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="chart-tooltip" id="chart-tooltip"></div>
+
+  <!-- build:js (order matters: each file is a classic script sharing globals) -->
+  <script src="src/data.js"></script>
+  <script src="src/core.js"></script>
+  <script src="src/shell.js"></script>
+  <script src="src/devtools.js"></script>
+  <script src="src/specs.js"></script>
+  <script src="src/dashboard.js"></script>
+  <script src="src/organisation.js"></script>
+  <script src="src/team-access.js"></script>
+  <script src="src/integrations.js"></script>
+  <script src="src/leads.js"></script>
+  <script src="src/app.js"></script>
+  <!-- /build:js -->
+</body>
+</html>

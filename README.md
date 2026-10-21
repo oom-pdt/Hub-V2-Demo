@@ -29,11 +29,10 @@ This writes `standalone.html` and `dist/index.html`, with every stylesheet and s
 
 ## Developer toolbar
 
-The dark bar at the top has three parts:
+The dark bar at the top has two parts:
 
 - **Screen selector:** jump to any screen in the agency context ("My Workspace") or a client workspace.
 - **States:** scenario toggles for the current screen, such as alerts on/off, ad-only vs CRM connected, integration error states, or viewing as an Agency Admin vs a Client User.
-- **Specs:** a drawer with the specification for the current screen. It shows a status badge (Approved / In Review / Draft) and has a **Copy Markdown** button.
 
 ## Code layout
 
@@ -43,8 +42,8 @@ The dark bar at the top has three parts:
 | `src/data.js` | Shared mock entities: workspaces, ad accounts, products, members, teams, roles |
 | `src/core.js` | State, routing (`navigate`, `switchWorkspace`), formatting, modals, drawer, menus, sorting, pagination, date filter |
 | `src/shell.js` | Sidebar, page header, workspace switcher |
-| `src/devtools.js` | Developer toolbar and specs drawer |
-| `src/specs.js` | Spec registry; each module adds its own entries |
+| `src/devtools.js` | Developer toolbar |
+| `src/specs.js` | Spec registry: each module adds its screen specs here as documentation (not shown in the UI) |
 | `src/dashboard.js` | Agency and client dashboards |
 | `src/organisation.js` | Business Information, Billing, Brand Identity |
 | `src/team-access.js` | Members, Teams, Roles & Permissions, Client Organisation, Agency |

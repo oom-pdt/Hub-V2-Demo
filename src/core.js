@@ -180,6 +180,15 @@ function productLogo(pid, size = 32) {
   return `<span class="product-logo" style="width:${size}px;height:${size}px;background:${p.color};color:${fg};font-size:${Math.round(size / 2.8)}px">${esc(p.initials)}</span>`;
 }
 
+// ---------- Clipboard ----------
+// Fallback for browsers without navigator.clipboard (e.g. file:// pages).
+function fallbackCopy(text, done) {
+  const ta = document.createElement('textarea');
+  ta.value = text; document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); done(); } catch (e) { showToast('Copy failed — select the text manually', 'triangle-alert'); }
+  ta.remove();
+}
+
 // ---------- Toast ----------
 let toastTimer;
 function showToast(message, icon = 'check-circle') {
@@ -444,5 +453,4 @@ document.addEventListener('keydown', e => {
   closeAllPopovers();
   if (document.getElementById('modal-root').innerHTML) closeModal();
   else if (document.getElementById('drawer-root').innerHTML) closeDrawer();
-  else if (typeof closeSpecs === 'function') closeSpecs();
 });

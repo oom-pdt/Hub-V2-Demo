@@ -590,8 +590,8 @@ function colGroupHeaderRow(id, layout, { lead = 1, trail = 0 } = {}) {
   return `<tr class="colgrp-row">${blank(lead, 'colgrp-lead', toggleAll)}${layout.groups.map(g => `
     <th class="colgrp-band colgrp-${g.tone} colgrp-start ${g.collapsed ? 'is-collapsed' : ''}"${g.span > 1 ? ` colspan="${g.span}"` : ''}>
       <button type="button" class="colgrp-btn" onclick="colToggleGroup('${id}', '${g.key}')" aria-expanded="${!g.collapsed}"
-        title="${g.collapsed ? `${g.hidden} more column${g.hidden === 1 ? '' : 's'} — click to expand` : 'Collapse this group'}">
-        <i data-lucide="${g.collapsed ? 'chevron-right' : 'chevron-down'}"></i>${esc(g.label)}${g.collapsed && g.hidden ? `<span class="colgrp-more">+${g.hidden}</span>` : ''}
+        title="${esc(g.label)} · ${g.collapsed ? `${g.hidden} more column${g.hidden === 1 ? '' : 's'} — click to expand` : 'click to collapse'}">
+        <i data-lucide="${g.collapsed ? 'chevron-right' : 'chevron-down'}"></i><span class="colgrp-label">${esc(g.label)}</span>${g.collapsed && g.hidden ? `<span class="colgrp-more">+${g.hidden}</span>` : ''}
       </button></th>`).join('')}${blank(trail, 'colgrp-trail')}</tr>`;
 }
 function colToggleGroup(id, key) {

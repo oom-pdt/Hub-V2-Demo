@@ -317,6 +317,11 @@ svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
 .colgrp-btn { display: flex; align-items: center; gap: 6px; width: 100%; height: 30px; padding: 0 12px; border: 0; background: none;
   color: var(--colgrp-fg); font-size: 11px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; white-space: nowrap; text-align: left; }
 .colgrp-btn:hover { background: rgba(255, 255, 255, .45); }
+/* A band widens its columns only a little (labels up to 180px); longer labels end in "…". */
+.colgrp-band .colgrp-btn { max-width: 180px; overflow: hidden; }
+.colgrp-band[colspan] .colgrp-btn { max-width: none; }
+.colgrp-label { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.colgrp-btn svg.lucide, .colgrp-more { flex-shrink: 0; }
 .colgrp-btn svg.lucide { width: 14px; height: 14px; }
 .colgrp-more { margin-left: 2px; padding: 0 6px; border-radius: var(--r-pill); background: var(--surface); font-size: 10px; letter-spacing: 0; }
 .colgrp-band.is-collapsed .colgrp-btn { padding-right: 8px; }

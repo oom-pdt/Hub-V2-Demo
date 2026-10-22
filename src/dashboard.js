@@ -1332,7 +1332,7 @@ function dashClearDrill() { state.ui.dashDrill = null; state.ui.dashLevel = 'pla
 // plus V1's Cost Per Conversion and the CRM-attributed columns. tip = the sheet's definition.
 // quality: 'low' = lower is better, 'high' = higher is better (coloured dot against the workspace total).
 const DASH_CT_COLS = [
-  { key: 'spend', group: 'delivery', label: 'Spend', tip: 'Amount spent on your campaign.', fmt: v => fmtMoney(v) },
+  { key: 'spend', group: 'details', label: 'Spend', tip: 'Amount spent on your campaign.', fmt: v => fmtMoney(v) },
   { key: 'impressions', group: 'delivery', label: 'Impressions', tip: 'Total number of times the ad was shown on screen.', fmt: v => fmtNum(v) },
   { key: 'reach', group: 'delivery', label: 'Reach', tip: 'Estimated number of unique individuals who saw the ad.', fmt: v => fmtNum(v) },
   { key: 'cpm', group: 'delivery', label: 'CPM', tip: 'The average cost to show the ad 1,000 times.', fmt: v => fmtMoney(v, 2), quality: 'low' },
@@ -1361,11 +1361,11 @@ const DASH_CT_CRM_COLS = [
 
 // ---------- Column picker (show / hide columns; shared helper in core.js) ----------
 // Name and Action are always shown; every other column (Status included) can be hidden or collapsed with its group.
-// Details group: shown before the metrics; Status is now hideable too.
+// Overview group: Ad Format and Status, shown before the metrics (Spend joins them from DASH_CT_COLS).
 const DASH_CT_DETAIL_COLS = [{ key: 'format', group: 'details', label: 'Ad Format' }, { key: 'status', group: 'details', label: 'Status' }];
 registerColumnPicker('campaigns', {
   columns: () => DASH_CT_DETAIL_COLS.concat(DASH_CT_COLS, activeCrm(state.ctx) ? DASH_CT_CRM_COLS : []),
-  groups: [['details', 'Details', { summary: 'status', tone: 'neutral' }], ['delivery', 'Delivery', { summary: 'spend', tone: 'ads' }],
+  groups: [['details', 'Overview', { summary: 'spend', tone: 'neutral' }], ['delivery', 'Impressions', { summary: 'impressions', tone: 'ads' }],
     ['clicks', 'Clicks', { summary: 'ctr', tone: 'ads2' }], ['conversions', 'Conversions', { summary: 'conversions', tone: 'ads' }],
     ['engagement', 'Engagement', { summary: 'engRate', tone: 'ads2' }], ['crm', 'CRM', { summary: 'roas', tone: 'crm' }]],
   collapsible: true,
@@ -1405,7 +1405,7 @@ function dashCampaignBody() {
   const page = paginate(rows, 'dash-ct', 10);
   const ref = m.total;
   const next = DASH_LEVELS[DASH_LEVELS.indexOf(level) + 1];
-  // Grouped, collapsible columns (core.js colLayout): Details · Delivery · Clicks · Conversions · Engagement · CRM.
+  // Grouped, collapsible columns (core.js colLayout): Overview · Impressions · Clicks · Conversions · Engagement · CRM.
   const layout = colLayout('campaigns', DASH_CT_DETAIL_COLS.concat(metricCols).filter(c => colVisible('campaigns', c.key)));
   const cols = layout.columns;
   const colDef = Object.fromEntries(metricCols.map(c => [c.key, c]));
@@ -1990,9 +1990,9 @@ Client-facing workspace dashboard giving a simplified, unified view of Meta and 
   - **Level tabs**: Platform / Campaigns / Ad Groups / Ads.
   - **Drill-down**: clicking a row, or "View …" in the ⋮ menu, opens the next level with a "Filtered for X ✕" badge. Clearing the badge returns to Platform.
   - **Columns**: Name (parent shown above), Ad Format (+N overflow), Status, then the platform metrics from the *Google & Meta Ads Metrics* sheet (Metrics (Dev Notes), green rows), in sheet order: Spend (Cost), Impressions, Reach, CPM, Frequency, Clicks, CTR, CPC, Conversions, Conversion Rate, Cost Per Conversion (kept from V1), Cost Per Lead, Cost Per Purchase, ROAS, Conversion Value, Engagement Rate, Engagement, Cost Per Engagement. In CRM mode, CRM Leads, CRM CPL, CRM Revenue and CRM ROAS follow ("CRM" prefix to separate CRM-attributed ROAS from platform-reported ROAS). Header tooltips show the sheet's definitions. Every column is sortable, including Status (Active → Attention Required → Paused) and Ad Format (first format).
-  - **Column picker** (columns icon next to the filter): show or hide columns, grouped as Details (Ad Format, Status), Delivery, Clicks, Conversions, Engagement and CRM (CRM mode only), with Show all / Hide all per group and Show all columns. The badge counts hidden columns. Name and Action are always shown.
+  - **Column picker** (columns icon next to the filter): show or hide columns, grouped as Overview (Ad Format, Status, Spend), Impressions (Impressions, Reach, CPM, Frequency), Clicks, Conversions, Engagement and CRM (CRM mode only), with Show all / Hide all per group and Show all columns. The badge counts hidden columns. Name and Action are always shown.
   - **Default columns** (relevant to every client): Status, Spend, Impressions, Clicks, CTR, CPC, Conversions, Conversion Rate, Cost Per Conversion, plus the CRM columns in CRM mode. Hidden by default (one click away in the picker, or **Reset to default**): Ad Format, Reach, CPM, Frequency, Cost Per Lead, Cost Per Purchase, ROAS, Conversion Value and the Engagement group, which only matter for some clients (e-commerce, awareness or social engagement campaigns).
-  - **Column groups**: the same groups appear as coloured, collapsible bands above the column headers. Collapsing a group leaves its summary column: Details → Status, Delivery → Spend, Clicks → CTR, Conversions → Conversions, Engagement → Engagement Rate, CRM → CRM ROAS (or the group's first visible column if that one is hidden). "Collapse all / Expand all" sits above the name column. All groups start expanded; each viewer's choice is remembered. The choice is remembered per viewer in the browser (prototype: localStorage; product: save per user).
+  - **Column groups**: the same groups appear as coloured, collapsible bands above the column headers. Collapsing a group leaves its summary column: Overview → Spend, Impressions → Impressions, Clicks → CTR, Conversions → Conversions, Engagement → Engagement Rate, CRM → CRM ROAS (or the group's first visible column if that one is hidden). "Collapse all / Expand all" sits above the name column. All groups start expanded; each viewer's choice is remembered. The choice is remembered per viewer in the browser (prototype: localStorage; product: save per user).
   - **API fields** (from the sheet, for development):
     - Cost — Meta \`spend\`; Google \`metrics.cost_micros\`
     - Impressions — Meta \`impressions\`; Google \`metrics.impressions\`

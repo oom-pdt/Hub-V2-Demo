@@ -288,3 +288,8 @@
   .dash-donut-card { grid-column: auto; }
   .dash-entity-trigger { width: 100%; }
 }
+
+/* ---------- Managed Accounts: contract days left ---------- */
+.dash-days { font-size: 12px; }
+.dash-days.dash-days-amber { color: var(--warning-dark); font-weight: 700; }
+.dash-days.dash-days-red { color: var(--error); font-weight: 700; }

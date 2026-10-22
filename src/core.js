@@ -55,6 +55,12 @@ function wsAdBudget(wsId) {
   const services = (crmAccounts[wsId]?.services || []).filter(x => CRM_AD_SERVICES.includes(x.type));
   return services.length ? services.reduce((t, x) => t + x.monthlyBudget, 0) : (wsById(wsId)?.budget || 0);
 }
+// CRM services that are live today (started and not yet ended), each with daysLeft until its contract ends.
+function crmLiveServices(wsId) {
+  const today = toDateInput(new Date());
+  return (crmAccounts[wsId]?.services || []).filter(x => (!x.start || x.start <= today) && (!x.end || x.end >= today))
+    .map(x => ({ ...x, daysLeft: x.end ? Math.round((new Date(x.end + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000) : null }));
+}
 function wsAdAccounts(wsId) { return adAccounts.filter(a => a.workspaceId === wsId); }
 function wsPlatforms(wsId) { return ['google', 'meta'].filter(p => wsAdAccounts(wsId).some(a => a.platform === p)); }
 

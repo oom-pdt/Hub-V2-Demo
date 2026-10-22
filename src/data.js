@@ -258,24 +258,43 @@ function seededRandom(seed) {
 }
 
 // ---------- Agency CRM (internal) ----------
-// One converted CRM account per workspace: live services with monthly budgets (SGD), account manager,
-// agency assignees and client contacts. Built from the workspace data so budgets match the dashboard.
+// One converted CRM account per workspace: account manager, agency assignees, client contacts and live services.
+// Each service belongs to a contract with its own dates (a client can have concurrent contracts, e.g. ads and SEO).
+// monthlyBudget is SGD; for ad services it is the monthly media budget used for pacing. adAccountIds are the CRM's
+// Google Ads customer ID / Meta ad account ID (join keys for auto-linking ad accounts).
 const CRM_SERVICE_TYPES = ['SEO', 'Content Marketing', 'SEM', 'Google Ads', 'Facebook Ads', 'Social Media'];
 const CRM_AD_SERVICES = ['SEM', 'Google Ads', 'Facebook Ads'];   // services whose budget is ad spend
 const agencyCrm = { status: 'connected', lastSynced: '2026-10-22T07:30:00', accountsSynced: 0 };
 const crmAccounts = {};
+// Demo variety: media budget relative to the workspace's spend level (below 1 = tighter budget, so pacing runs ahead).
+const CRM_BUDGET_FACTOR = { 'ws-technova': 0.8, 'ws-kinspired': 1.25, 'ws-bright': 0.8, 'ws-synergy': 1.3, 'ws-pinnacle': 1.2, 'ws-lumaforge': 0.85 };
+// Demo variety: days until each contract ends, by workspace (ads / SEO / content). Others are seeded.
+const CRM_DAYS_LEFT = { 'ws-visual': { ads: 72, seo: 41 }, 'ws-bright': { ads: 150, seo: 25 }, 'ws-technova': { ads: 18, seo: 210 }, 'ws-kinspired': { seo: 56 } };
 (function crmSeed() {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const contract = (no, months, daysLeft) => {
+    const end = new Date(today); end.setDate(end.getDate() + daysLeft);
+    const start = new Date(end); start.setMonth(start.getMonth() - months);
+    return { contractNo: no, start: iso(start), end: iso(end) };
+  };
   workspaces.forEach(ws => {
     const r = seededRandom(ws.seed * 17 + 3);
-    const plats = ['google', 'meta'].filter(p => adAccounts.some(a => a.workspaceId === ws.id && a.platform === p));
+    const pick = list => list[Math.floor(r() * list.length)];
+    const days = CRM_DAYS_LEFT[ws.id] || {};
+    const yymm = `${ws.createdAt.slice(2, 4)}${ws.createdAt.slice(5, 7)}`;
+    const linked = p => adAccounts.find(a => a.workspaceId === ws.id && a.platform === p);
+    const plats = ['google', 'meta'].filter(linked);
     const services = [];
-    const start = ws.createdAt;
-    const end = `${Number(ws.createdAt.slice(0, 4)) + 1}${ws.createdAt.slice(4)}`;
-    const ad = plats.length ? plats : ['google'];   // a live ad service can exist before its account is linked
+    // Ads contract: a live ad service can exist before its account is linked.
+    const ad = plats.length ? plats : ['google'];
     const split = ad.length === 2 ? [0.6, 0.4] : [1];
-    ad.forEach((p, i) => services.push({ type: p === 'google' ? 'Google Ads' : 'Facebook Ads', monthlyBudget: Math.round(ws.budget * split[i]), start, end }));
-    if (seoProjects[ws.id]) services.push({ type: 'SEO', monthlyBudget: 2000 + Math.round(r() * 8) * 500, start, end });
-    if (ws.seed % 3 === 0) services.push({ type: 'Content Marketing', monthlyBudget: 1500 + Math.round(r() * 3) * 500, start, end });
+    const adC = contract(`${yymm}-${String(ws.seed).padStart(3, '0')}`, 12, days.ads ?? pick([34, 88, 120, 165, 240, 300]));
+    ad.forEach((p, i) => services.push({ type: p === 'google' ? 'Google Ads' : 'Facebook Ads', monthlyBudget: Math.round(ws.budget * split[i] * (CRM_BUDGET_FACTOR[ws.id] || 1) / 100) * 100, ...adC }));
+    // SEO contract: separate, usually 12 months.
+    if (seoProjects[ws.id]) services.push({ type: 'SEO', monthlyBudget: 2000 + Math.round(r() * 8) * 500, ...contract(`${yymm}-${String(ws.seed + 40).padStart(3, '0')}`, 12, days.seo ?? pick([48, 95, 130, 200, 280])) });
+    // Content: shorter ad-hoc contracts.
+    if (ws.seed % 3 === 0) services.push({ type: 'Content Marketing', monthlyBudget: 1500 + Math.round(r() * 3) * 500, ...contract(`${yymm}-${String(ws.seed + 70).padStart(3, '0')}`, 6, pick([22, 64, 110])) });
     const assigned = members.filter(m => m.org === 'agency' && m.workspaces.includes(ws.id));
     const am = assigned.find(m => m.roleId === 'r-a-am') || members.find(m => m.id === 'm-a3');
     const assignees = [{ role: 'Account Manager', memberId: am.id }];
@@ -283,7 +302,10 @@ const crmAccounts = {};
     const pl = assigned.find(m => m.roleId === 'r-a-pl');
     if (pl) assignees.push({ role: 'Project Lead', memberId: pl.id });
     const contacts = members.filter(m => m.org === ws.id).slice(0, 3).map(m => ({ name: m.name, email: m.email, role: m.isPrimary ? 'Primary contact' : 'Marketing' }));
-    crmAccounts[ws.id] = { crmId: `CRM-${1000 + ws.seed}`, stage: 'converted', convertedAt: ws.createdAt, services, accountManager: am.id, assignees, clientContacts: contacts, source: 'crm' };
+    crmAccounts[ws.id] = {
+      crmId: `CRM-${1000 + ws.seed}`, stage: 'converted', convertedAt: ws.createdAt, services, accountManager: am.id, assignees, clientContacts: contacts, source: 'crm',
+      adAccountIds: { google: linked('google')?.id || null, meta: linked('meta')?.id || null }
+    };
   });
   agencyCrm.accountsSynced = Object.keys(crmAccounts).length;
 })();

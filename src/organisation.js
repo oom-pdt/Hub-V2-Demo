@@ -374,7 +374,7 @@ function orgServicesHTML() {
   const id = currentOrgId();
   const acc = crmAccounts[id];
   const crmLink = viewerIsAgency() && acc ? `<button type="button" class="org-link" onclick="showToast('Opening ${q(acc.crmId)} in the agency CRM (demo)', 'external-link')">View in CRM<i data-lucide="arrow-up-right"></i></button>` : '';
-  const head = orgCardHead('Services & Contract', 'Live services and monthly budgets from the agency CRM. Read-only.', crmLink);
+  const head = orgCardHead('Services & Contract', 'Services, contracts and monthly budgets from the agency CRM. Each service runs on its own contract. Read-only.', crmLink);
   if (!acc) {
     return `<section class="card org-section">${head}${emptyState('file-x', 'No CRM record linked', 'This workspace was created manually. Services and budgets appear here once the account is linked in the agency CRM.')}</section>`;
   }
@@ -382,9 +382,14 @@ function orgServicesHTML() {
   const live = x => (!x.start || x.start <= today) && (!x.end || x.end >= today);
   const total = acc.services.filter(live).reduce((t, x) => t + x.monthlyBudget, 0);
   const am = memberById(acc.accountManager);
-  const rows = acc.services.map(x => `<tr><td class="t-bold">${esc(x.type)}${CRM_AD_SERVICES.includes(x.type) ? '<div class="cell-sub">Ad spend</div>' : ''}</td>
-      <td class="num">${fmtMoney(x.monthlyBudget)}</td><td>${fmtDate(x.start)}</td><td>${fmtDate(x.end)}</td>
-      <td>${live(x) ? '<span class="pill pill-sm pill-green">Live</span>' : x.start > today ? '<span class="pill pill-sm pill-blue">Upcoming</span>' : '<span class="pill pill-sm pill-grey">Ended</span>'}</td></tr>`).join('');
+  const daysLeft = x => Math.round((new Date(x.end + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000);
+  const rows = [...acc.services].sort((a, b) => (a.end || '').localeCompare(b.end || '')).map(x => {
+    const d = x.end ? daysLeft(x) : null;
+    const left = live(x) && d !== null ? `<span class="${d <= 30 ? 't-error' : d <= 60 ? 't-warning' : 't-secondary'} t-bold">${d} day${d === 1 ? '' : 's'}</span>` : '<span class="t-muted">—</span>';
+    return `<tr><td class="t-bold">${esc(x.type)}${CRM_AD_SERVICES.includes(x.type) ? '<div class="cell-sub">Ad spend</div>' : ''}</td>
+      <td>${esc(x.contractNo || '—')}</td><td class="num">${fmtMoney(x.monthlyBudget)}</td><td>${fmtDate(x.start)}</td><td>${fmtDate(x.end)}</td><td>${left}</td>
+      <td>${live(x) ? '<span class="pill pill-sm pill-green">Live</span>' : x.start > today ? '<span class="pill pill-sm pill-blue">Upcoming</span>' : '<span class="pill pill-sm pill-grey">Ended</span>'}</td></tr>`;
+  }).join('');
   return `<section class="card org-section">${head}
     <div class="org-svc-kpis">
       <div><div class="kv-label">Total monthly budget</div><div class="org-plan-value">${fmtMoney(total)}</div><div class="org-plan-sub">Live services only</div></div>
@@ -393,8 +398,8 @@ function orgServicesHTML() {
       <div><div class="kv-label">Account manager</div><div class="org-plan-value">${esc(am?.name || '—')}</div><div class="org-plan-sub">${esc(am?.email || 'Not mapped to a Galaxis user')}</div></div>
     </div>
     <div class="table-wrap org-svc-table"><table class="table">
-      <thead><tr><th>Service</th><th class="num">Monthly budget</th><th>Start date</th><th>End date</th><th>Status</th></tr></thead>
-      <tbody>${rows || '<tr><td class="table-empty" colspan="5">No services in the CRM record.</td></tr>'}</tbody></table></div>
+      <thead><tr><th>Service</th><th>Contract</th><th class="num">Monthly budget</th><th>Start date</th><th>End date</th><th>Days left</th><th>Status</th></tr></thead>
+      <tbody>${rows || '<tr><td class="table-empty" colspan="7">No services in the CRM record.</td></tr>'}</tbody></table></div>
     <div class="org-sync-note org-svc-sync"><i data-lucide="refresh-cw"></i>Synced from Agency CRM · ${esc(fmtDateTime(agencyCrm.lastSynced))}${agencyCrm.status !== 'connected' ? ' · connection paused, figures may be out of date' : ''}</div>
   </section>`;
 }

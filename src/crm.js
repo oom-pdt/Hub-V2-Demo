@@ -24,18 +24,21 @@ const crmQueue = [
   { name: 'Northstar Dental Pte Ltd', industry: 'Healthcare', site: 'northstar-dental.example.com',
     services: [{ type: 'SEO', monthlyBudget: 3500 }, { type: 'Google Ads', monthlyBudget: 8000 }, { type: 'Content Marketing', monthlyBudget: 2000 }],
     seo: { contractedKeywords: 60, targetTop10Pct: 50 },
+    adAccountIds: { google: '#998-234-1102' },
     accountManager: 'melson.ng@example.com',
     assignees: [{ crmRole: 'SEO Specialist', email: 'mary.lim@example.com' }, { crmRole: 'Project Lead', email: 'serah.chua@example.com' }],
     contacts: [{ name: 'Alex Northstar', email: 'alex@northstar-dental.example.com', role: 'Primary contact' },
       { name: 'Bea Practice', email: 'bea@northstar-dental.example.com', role: 'Marketing' }] },
   { name: 'Harbourview Bakery', industry: 'F&B', site: 'harbourview-bakery.example.com',
     services: [{ type: 'Facebook Ads', monthlyBudget: 3000 }, { type: 'Social Media', monthlyBudget: 1500 }],
+    adAccountIds: { meta: 'act_4920194820' },
     accountManager: 'joseph.tan@example.com',
     assignees: [{ crmRole: 'Ads Specialist', email: '' }],
     contacts: [{ name: 'Casey Harbour', email: 'casey@harbourview.example.com', role: 'Primary contact' }] },
   { name: 'Lumen Fitness Studio', industry: 'Other', site: 'lumen-fitness.example.com',
     services: [{ type: 'SEO', monthlyBudget: 2500 }, { type: 'Google Ads', monthlyBudget: 5000 }, { type: 'Facebook Ads', monthlyBudget: 4000 }],
     seo: { contractedKeywords: 40, targetTop10Pct: 45 },
+    adAccountIds: { google: '#552-901-7744', meta: 'act_9999999999' },   // the Meta ID isn't discovered yet: stays a manual step
     accountManager: 'joseph.tan@example.com',
     assignees: [{ crmRole: 'SEO Specialist', email: '' }, { crmRole: 'Ads Specialist', email: '' }, { crmRole: 'Project Lead', email: '' }],
     contacts: [{ name: 'Dana Lumen', email: 'dana@lumen-fitness.example.com', role: 'Primary contact' },
@@ -110,8 +113,12 @@ function crmSetupSteps(wsId) {
   if (need.length) {
     const linked = wsPlatforms(wsId);
     const left = need.filter(p => !linked.includes(p));
+    const ids = acc.adAccountIds || {};
+    const auto = (s.autoLinked || []).map(id => adAccounts.find(a => a.id === id)).filter(a => a && a.workspaceId === wsId);
+    const why = p => ids[p] ? `the CRM's ${PLATFORM_NAME[p]} ID ${ids[p]} isn't among the discovered accounts yet` : `the CRM has no ${PLATFORM_NAME[p]} ad account ID`;
     steps.push({ id: 'ads', label: 'Ad accounts linked', state: left.length ? 'manual' : 'done',
-      detail: left.length ? `Link the ${left.map(p => PLATFORM_NAME[p]).join(' and ')} ad account${left.length === 1 ? '' : 's'} in Integrations. This step stays manual.` : `${need.map(p => PLATFORM_NAME[p]).join(' and ')} linked.` });
+      detail: (auto.length ? `Linked automatically from the CRM's ad account IDs: ${auto.map(a => `${PLATFORM_NAME[a.platform]} ${a.id}`).join(', ')}. ` : '')
+        + (left.length ? `Link ${left.map(p => PLATFORM_NAME[p]).join(' and ')} in Integrations: ${left.map(why).join('; ')}.` : (auto.length ? '' : `${need.map(p => PLATFORM_NAME[p]).join(' and ')} linked.`)) });
   }
   return steps;
 }
@@ -154,7 +161,8 @@ function crmSimulateConversion() {
   const assignees = wanted.map(a => ({ crmRole: a.crmRole, memberId: (a.crmRole === 'Account Manager' ? am : crmResolve(a.crmRole, a.email))?.id || null }));
   crmAccounts[ws.id] = {
     crmId, stage: 'converted', convertedAt: today, source: 'crm',
-    services: next.services.map(x => ({ ...x, start: today, end })),
+    services: next.services.map(x => ({ ...x, contractNo: `${today.slice(2, 4)}${today.slice(5, 7)}-${String(crmId.slice(-3)).padStart(3, '0')}`, start: today, end })),
+    adAccountIds: { google: next.adAccountIds?.google || null, meta: next.adAccountIds?.meta || null },
     accountManager: am?.id || null,
     assignees: assignees.filter(a => a.memberId).map(a => ({ role: a.crmRole, memberId: a.memberId })),
     clientContacts: next.contacts.map(c => ({ ...c }))
@@ -169,10 +177,16 @@ function crmSimulateConversion() {
     seoProjects[ws.id] = { contractedKeywords: next.seo.contractedKeywords, targetTop10Pct: next.seo.targetTop10Pct, scenarioTop10Pct: 0, startedAt: today };
     wsProducts(ws.id)['seo-cloud'] = { status: 'pending', active: false, lastSynced: null, error: 'SEO Cloud project created; keyword set-up in progress.' };
   }
+  // Ad accounts: link automatically when the CRM's Google Ads / Meta IDs match accounts discovered by the master connections.
+  const autoLinked = [];
+  Object.entries(crmAccounts[ws.id].adAccountIds).forEach(([plat, id]) => {
+    const acc = id && adAccounts.find(a => a.id === id && a.platform === plat && !a.workspaceId);
+    if (acc && !wsAdAccounts(ws.id).some(a => a.platform === plat)) { acc.workspaceId = ws.id; autoLinked.push(acc); }
+  });
   // 4. Client contacts: awaiting approval (or invited straight away when the agency turns approval off).
   const status = crmSettings.approvalRequired ? 'awaiting' : 'pending';
   const contactIds = next.contacts.map(c => crmAddContactMember(ws.id, c, status).id);
-  crmSetups[ws.id] = { crmId, createdAt: today, assignees, contactIds, removed: 0 };
+  crmSetups[ws.id] = { crmId, createdAt: today, assignees, contactIds, removed: 0, autoLinked: autoLinked.map(a => a.id) };
   agencyCrm.accountsSynced += 1;
   agencyCrm.lastSynced = new Date().toISOString();
 

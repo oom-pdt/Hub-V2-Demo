@@ -110,10 +110,10 @@ function dashTree(wsId) {
       });
     });
   });
-  // Fit 30-day spend to 72–94% of the monthly budget so budget pacing looks plausible.
+  // Fit 30-day spend to 72–94% of the workspace's spend level (ws.budget); the CRM media budget can differ, which drives pacing.
   const total = t.ads.reduce((s, a) => s + a.base.spend, 0);
   if (total) {
-    const f = wsAdBudget(wsId) * (0.72 + dashRng(`${wsId}:budget`)() * 0.22) / total;
+    const f = (ws.budget || 0) * (0.72 + dashRng(`${wsId}:budget`)() * 0.22) / total;
     t.ads.forEach(a => Object.keys(a.base).forEach(k => { a.base[k] *= f; }));
   }
   dashCache.tree[key] = t;
@@ -240,7 +240,7 @@ const DASH_FILTERS = {
   attention: {
     store: () => state.ui.dashAttFilter,
     groups: () => [
-      { key: 'type', title: 'Issue Status', options: ['Performance Review', 'SEO Critical', 'SEO Off Track', 'No Account Linked', 'Integration Error', 'Token Expired', 'Unlinked Ad Accounts', 'CRM Set-up'].map(t => [t, t]) },
+      { key: 'type', title: 'Issue Status', options: ['Performance Review', 'SEO Critical', 'SEO Off Track', 'Renewal at Risk', 'Contract Ending', 'Budget Pacing', 'No Account Linked', 'Integration Error', 'Token Expired', 'Unlinked Ad Accounts', 'CRM Set-up'].map(t => [t, t]) },
       { key: 'priority', title: 'Priority Status', options: [['High', 'High'], ['Medium', 'Medium'], ['Low', 'Low']] }
     ],
     refresh: () => renderRegion('dash-att-list', dashAttentionList())
@@ -352,6 +352,29 @@ function dashAttentionItems() {
     desc: `${dashPctTxt(stats.top10Pct)} of keywords in top 10 vs ${dashPctTxt(stats.target)} target (${dashNum1(stats.status.gap)} pts below).`,
     cta: 'View SEO', action: `openWorkspace('${ws.id}','dashboard',{tab:'seo'})`
   }));
+  // Agency CRM contracts: SEO contract ending soon while SEO is below target, then any service contract ending within 30 days.
+  list.forEach(w => {
+    const svcs = crmLiveServices(w.id);
+    const seoSvc = svcs.find(x => x.type === 'SEO');
+    const st = seoConnected(w.id) ? seoStats(w.id, dateRangeDays('agency')).status : null;
+    const atRisk = seoSvc && seoSvc.daysLeft !== null && seoSvc.daysLeft <= 60 && st && st.key !== 'on';
+    if (atRisk) items.push({
+      client: w.name, type: 'Renewal at Risk', priority: 'High',
+      desc: `SEO contract ends in ${seoSvc.daysLeft} days (${fmtDate(seoSvc.end)}) while SEO is ${st.label.toLowerCase()}.`,
+      cta: 'View SEO', action: `openWorkspace('${w.id}','dashboard',{tab:'seo'})`
+    });
+    svcs.filter(x => x.daysLeft !== null && x.daysLeft <= 30 && !(atRisk && x === seoSvc)).forEach(x => items.push({
+      client: w.name, type: 'Contract Ending', priority: 'Medium',
+      desc: `${x.type} contract ${x.contractNo || ''} ends in ${x.daysLeft} day${x.daysLeft === 1 ? '' : 's'} (${fmtDate(x.end)}).`,
+      cta: 'View Account', action: `openWorkspace('${w.id}','organisation',{tab:'business'})`
+    }));
+    const pace = dashPacing(w.id, dashMetrics(w.id, 'agency').total.spend, dateRangeDays('agency'));
+    if (pace && pace.key === 'ahead') items.push({
+      client: w.name, type: 'Budget Pacing', priority: 'Medium',
+      desc: `Ad spend is ahead of pace: ${Math.round(pace.pct)}% of the media budget for these dates.`,
+      cta: 'View Account', action: `openWorkspace('${w.id}','dashboard',{tab:'ads'})`
+    });
+  });
   // Agency CRM auto set-up waiting for the account manager (provided by crm.js when loaded).
   if (typeof crmPendingSetups === 'function') {
     (crmPendingSetups() || []).filter(x => x.pendingInvites > 0).forEach(x => items.push({
@@ -528,10 +551,11 @@ function dashManagedRows() {
   return dashAgencyWorkspaces().map(w => {
     const t = dashMetrics(w.id, 'agency').total;
     const linked = t.spend > 0;
-    const services = crmAccounts[w.id]?.services || [];
+    const services = crmLiveServices(w.id);
     return {
       w, t, linked, plats: wsPlatforms(w.id),
-      services, budget: services.reduce((s, x) => s + (x.monthlyBudget || 0), 0),
+      adSvcs: services.filter(x => CRM_AD_SERVICES.includes(x.type)), seoSvcs: services.filter(x => x.type === 'SEO'),
+      pacing: dashPacing(w.id, t.spend, days), industry: w.industry, am: memberById(crmAccounts[w.id]?.accountManager || '')?.name || null,
       seo: seoConnected(w.id) ? seoStats(w.id, days) : null,
       q: { cpm: linked ? dashQuality(t.cpm, port.cpm) : '', cpc: linked ? dashQuality(t.cpc, port.cpc) : '', cpa: linked ? dashQuality(t.cpa, port.cpa) : '' }
     };
@@ -542,19 +566,20 @@ function dashManagedRows() {
 const DASH_MG_COLS = [
   { key: 'platforms', group: 'ads', label: 'Ad Platforms' },
   { key: 'spend', group: 'ads', label: 'Combined Spend' },
+  { key: 'pacing', group: 'ads', label: 'Budget Pacing', tip: 'Ad spend against the media budget in the Agency CRM for the selected dates. Ahead of pace above 115%, Under spend below 80%, otherwise On track (same rule as the CRM).' },
   { key: 'cpm', group: 'ads', label: 'CPM' },
   { key: 'cpc', group: 'ads', label: 'CPC' },
   { key: 'cpa', group: 'ads', label: 'Cost Per Conversion' },
+  { key: 'adsDays', group: 'ads', label: 'Contract Days Left', tip: 'Days left on the Agency CRM contract for the live ad services (Google Ads, Facebook Ads, SEM). Shown per platform when they run on different contracts. Amber at 60 days or fewer, red at 30 or fewer.' },
   { key: 'seoStatus', group: 'seo', label: 'SEO Status', tip: 'SEO Cloud project status: On track at or above the top-10 target, Off track less than 5 points below, Critical 5 or more points below.' },
   { key: 'top10', group: 'seo', label: 'Top 10 %', tip: 'Share of tracked keywords ranking in the top 10 today, against the contracted target.' },
   { key: 'avgPos', group: 'seo', label: 'Avg Position', tip: 'Mean position of keywords ranking in the top 100 (lower is better).' },
-  { key: 'services', group: 'crm', label: 'Live Services', tip: 'Live services on the Agency CRM account.' },
-  { key: 'budget', group: 'crm', label: 'Monthly Budget', tip: 'Sum of the monthly budgets of every live CRM service (SGD).' }
+  { key: 'seoDays', group: 'seo', label: 'Contract Days Left', tip: 'Days left on the Agency CRM contract for the SEO service. Amber at 60 days or fewer, red at 30 or fewer.' }
 ];
 registerColumnPicker('managed', {
   columns: () => DASH_MG_COLS,
   groups: [['ads', 'Ads', { summary: 'spend', tone: 'ads' }],
-    ['seo', 'SEO', { summary: 'seoStatus', tone: 'seo' }], ['crm', 'CRM', { summary: 'budget', tone: 'crm' }]],
+    ['seo', 'SEO', { summary: 'seoStatus', tone: 'seo' }]],
   collapsible: true,
   note: 'Client and Action are always shown',
   onChange: 'dashRefreshManaged',
@@ -574,13 +599,31 @@ function dashManagedCard() {
 }
 function dashManagedSearch(v) { state.ui.dashMgrSearch = v; pager('dash-managed').page = 1; dashRefreshManaged(); }
 function dashRefreshManaged() { renderRegion('dash-managed-body', dashManagedBody()); }
-function dashServiceChips(services, max = 2) {
-  if (!services.length) return '<span class="t-muted">—</span>';
-  const names = services.map(x => x.type);
-  const more = names.length > max ? `<span class="more-count" title="${esc(names.slice(max).join(', '))}">+${names.length - max}</span>` : '';
-  return `<span class="chips dash-nowrap">${names.slice(0, max).map(n => `<span class="chip">${esc(n)}</span>`).join('')}${more}</span>`;
+// Days left on the Agency CRM contracts of the given live services (crmLiveServices in core.js). Services on the same
+// contract show one figure; concurrent contracts (e.g. Google and Meta bought separately) show one per service.
+const DASH_SVC_SHORT = { 'Google Ads': 'Google', 'Facebook Ads': 'Meta', 'SEM': 'SEM', 'SEO': 'SEO' };
+function dashDaysLeftCell(services) {
+  const list = services.filter(x => x.daysLeft !== null);
+  if (!list.length) return '<span class="t-muted">—</span>';
+  const tone = d => d <= 30 ? 'dash-days-red' : d <= 60 ? 'dash-days-amber' : '';
+  const title = list.map(x => `${x.type} · contract ${x.contractNo || '—'} · ends ${fmtDate(x.end)} (${x.daysLeft} day${x.daysLeft === 1 ? '' : 's'} left)`).join('\n');
+  const same = list.every(x => x.daysLeft === list[0].daysLeft);
+  const body = same
+    ? `<span class="dash-days ${tone(list[0].daysLeft)}">${list[0].daysLeft} days</span>`
+    : [...list].sort((x, y) => x.daysLeft - y.daysLeft).map(x => `<span class="dash-days ${tone(x.daysLeft)}">${esc(DASH_SVC_SHORT[x.type] || x.type)} ${x.daysLeft}d</span>`).join(' · ');
+  return `<span class="dash-nowrap" title="${esc(title)}">${body}</span>`;
+}
+const dashMinDays = list => { const d = list.filter(x => x.daysLeft !== null).map(x => x.daysLeft); return d.length ? Math.min(...d) : null; };
+// Budget pacing (Agency CRM rule): spend in the selected days vs the CRM media budget for the same days.
+function dashPacing(wsId, spend, days) {
+  const monthly = crmLiveServices(wsId).filter(x => CRM_AD_SERVICES.includes(x.type)).reduce((t, x) => t + (x.monthlyBudget || 0), 0);
+  if (!monthly || !spend) return null;
+  const pct = spend / (monthly * days / 30) * 100;
+  const key = pct > 115 ? 'ahead' : pct < 80 ? 'under' : 'on';
+  return { key, pct, monthly, label: { ahead: 'Ahead of pace', under: 'Under spend', on: 'On track' }[key], quality: { ahead: 'bad', under: 'mid', on: 'good' }[key] };
 }
 function dashManagedBody() {
+  const days = dateRangeDays('agency');
   const term = state.ui.dashMgrSearch.trim().toLowerCase();
   const f = state.ui.dashMgrFilter;
   let rows = dashManagedRows().filter(r => {
@@ -599,7 +642,8 @@ function dashManagedBody() {
     name: r => r.w.name.toLowerCase(), platforms: r => r.plats.length,
     spend: r => num(r.t.spend), cpm: r => num(r.t.cpm), cpc: r => num(r.t.cpc), cpa: r => num(r.t.cpa),
     seoStatus: r => miss(r.seo ? seoRank[r.seo.status.key] : null), top10: r => miss(r.seo ? r.seo.top10Pct : null),
-    avgPos: r => miss(r.seo ? r.seo.avgPos : null), services: r => num(r.services.length), budget: r => num(r.budget)
+    avgPos: r => miss(r.seo ? r.seo.avgPos : null), adsDays: r => miss(dashMinDays(r.adSvcs)), seoDays: r => miss(dashMinDays(r.seoSvcs)),
+    pacing: r => miss(r.pacing ? r.pacing.pct : null)
   });
   const total = rows.length;
   const page = paginate(rows, 'dash-managed', 10);
@@ -618,14 +662,16 @@ function dashManagedBody() {
       case 'seoStatus': return r.seo ? `<span class="pill pill-sm ${r.seo.status.pill}">${esc(r.seo.status.label)}</span>` : dash;
       case 'top10': return r.seo ? `<b class="${DASH_SEO_TEXT[r.seo.status.key]}">${dashPctTxt(r.seo.top10Pct)}</b><span class="t-muted"> / ${dashPctTxt(r.seo.target)}</span>` : dash;
       case 'avgPos': return r.seo && r.seo.avgPos !== null ? dashNum1(r.seo.avgPos) : dash;
-      case 'services': return dashServiceChips(r.services);
-      case 'budget': return r.budget ? fmtMoney(r.budget) : dash;
+      case 'adsDays': return dashDaysLeftCell(r.adSvcs);
+      case 'seoDays': return dashDaysLeftCell(r.seoSvcs);
+      case 'pacing': return r.pacing ? `<span title="${esc(fmtMoney(r.t.spend))} spent vs ${esc(fmtMoney(r.pacing.monthly * days / 30))} media budget for these dates">${dashDot(esc(r.pacing.label), r.pacing.quality)} <span class="t-muted">${Math.round(r.pacing.pct)}%</span></span>` : dash;
     }
     return '';
   };
   const body = page.map(r => `
     <tr class="clickable" onclick="openWorkspace('${r.w.id}','dashboard')">
-      <td class="dash-nowrap"><button type="button" class="dash-name-link" onclick="event.stopPropagation(); openWorkspace('${r.w.id}','dashboard')">${esc(r.w.name)}</button></td>
+      <td class="dash-nowrap"><button type="button" class="dash-name-link" onclick="event.stopPropagation(); openWorkspace('${r.w.id}','dashboard')">${esc(r.w.name)}</button>
+        <div class="cell-sub">${esc([r.industry, r.am].filter(Boolean).join(' · ') || '—')}</div></td>
       ${cols.map(c => `<td class="dash-nowrap ${colCellClass(c)}">${cell(r, c.key)}</td>`).join('')}
       <td onclick="event.stopPropagation()">${rowMenu(`dash-mm-${r.w.id}`, [
         { label: 'Go to workspace', icon: 'arrow-right', onClick: `openWorkspace('${r.w.id}','dashboard')` },
@@ -635,7 +681,7 @@ function dashManagedBody() {
       ])}</td>
     </tr>`).join('');
   const emptyText = term ? `No workspaces found matching “${esc(state.ui.dashMgrSearch)}”.` : 'No workspaces found matching these filters.';
-  return `<div class="table-wrap dash-table-wrap"><table class="table">
+  return `<div class="table-wrap dash-table-wrap"><table class="table table-wrap-heads">
       <thead>${colGroupHeaderRow('managed', layout, { lead: 1, trail: 1 })}
         <tr><th>${sortHeader('dash-managed', 'name', 'Client', fn)}</th>${cols.map(th).join('')}<th>Action</th></tr></thead>
       <tbody>${body || `<tr><td colspan="${cols.length + 2}" class="table-empty">${emptyText}</td></tr>`}</tbody>
@@ -1394,7 +1440,7 @@ function dashCampaignBody() {
     </tr>`).join('');
   const drill = u.dashDrill ? `<div class="dash-drill"><span>Filtered for ${DASH_LEVEL_LABEL[u.dashDrill.level]}: <b>${esc(u.dashDrill.name)}</b></span><button type="button" class="chip-remove" onclick="dashClearDrill()" aria-label="Clear filter"><i data-lucide="x"></i></button></div>` : '';
   return `${dashEntityChips(byId)}${drill}
-    <div class="table-wrap dash-table-wrap"><table class="table">
+    <div class="table-wrap dash-table-wrap"><table class="table table-wrap-heads">
       <thead>${head}</thead>
       <tbody>${body || `<tr><td colspan="${cols.length + 1 + (next ? 1 : 0)}" class="table-empty">No data matches criteria.</td></tr>`}</tbody>
     </table></div>
@@ -1856,10 +1902,13 @@ Central command dashboard for agency administrators managing many client ad acco
   - **SEO Critical** (High) and **SEO Off Track** (Medium): an SEO Cloud project below target, e.g. "50% of keywords in top 10 vs 55% target (5 pts below)" → View SEO (opens that workspace's dashboard on the SEO Performance tab).
   - **CRM Set-up** (Medium): an Agency CRM auto set-up with client invites awaiting approval, "N client invites awaiting approval" → Review set-up (the CRM module's set-up checklist; falls back to Team & Access › Client Organisation). Shown only when the CRM module is loaded.
   - The banner adds "N SEO projects below target" when any project is Off track or Critical.
-- **Managed Accounts table** (the V1 Client Workspace Directory, with Figma columns): Client, then Ad Platforms, Combined Spend, CPM, CPC, Cost Per Conversion, SEO Status, Top 10 %, Avg Position, Live Services, Monthly Budget, Action. Account columns (Status, Primary Contact, Last Activity) were removed on 22/10/2026 to keep the table focused on performance.
+- **Managed Accounts table** (the V1 Client Workspace Directory, with Figma columns): Client (with industry and account manager underneath), then Ads: Ad Platforms, Combined Spend, Budget Pacing, CPM, CPC, Cost Per Conversion, Contract Days Left; SEO: SEO Status, Top 10 %, Avg Position, Contract Days Left; then Action. Account columns (Status, Primary Contact, Last Activity) and the separate CRM columns (Live Services, Monthly Budget) were removed on 22/10/2026 to keep the table focused on performance; contract days now sit inside the Ads and SEO groups.
   - **SEO columns**: SEO Status pill ("—" when the workspace is not on SEO Cloud); Top 10 % as "current / target", coloured by status; Avg Position (mean position of keywords ranking in the top 100).
-  - **CRM columns**: Live Services as chips from the Agency CRM account (max 2, then "+N"); Monthly Budget = the sum of every live service's monthly budget (SGD).
-  - **Column groups**: columns sit under coloured, collapsible group bands, in the order Ads (Ad Platforms, Combined Spend, CPM, CPC, Cost Per Conversion) · SEO (SEO Status, Top 10 %, Avg Position) · CRM (Live Services, Monthly Budget). Collapsing a group leaves its summary column (Combined Spend, SEO Status, Monthly Budget), still sortable; the band shows how many columns are hidden. "Collapse all / Expand all" sits above the Client column. All groups start expanded; each viewer's choice is remembered (prototype: localStorage).
+  - **From the Agency CRM**:
+    - **Client sub-line**: industry and account manager.
+    - **Budget Pacing** (Ads): ad spend for the selected dates against the CRM media budget for the same days (monthly media budget × days ÷ 30). Same rule as the CRM: Ahead of pace above 115% (red), Under spend below 80% (orange), otherwise On track (green). The tooltip shows spend and budget.
+    - **Contract Days Left** (Ads and SEO): each service runs on its own CRM contract, so a client can have concurrent contracts. Ads shows one figure when the ad services share a contract, otherwise one per platform (e.g. "Google 18d · Meta 72d"). Amber at 60 days or fewer, red at 30 or fewer; the tooltip lists contract numbers and end dates.
+  - **Column groups**: columns sit under coloured, collapsible group bands, in the order Ads · SEO. Collapsing a group leaves its summary column (Combined Spend, SEO Status), still sortable; the band shows how many columns are hidden. "Collapse all / Expand all" sits above the Client column. All groups start expanded; each viewer's choice is remembered (prototype: localStorage).
   - **Column picker**: show or hide columns within those groups. A group with every column hidden disappears. Client and Action are always shown. Remembered per viewer (prototype: localStorage).
   - The ⋮ menu adds "View SEO performance" for workspaces on SEO Cloud.
   - Coloured dots on CPM / CPC / Cost per Conversion compare each workspace with the portfolio average. Green (Excellent) is at least 10% better; orange (Average) is within -10% to +15%; red (Bad) is more than 15% worse. This replaces V1's heat cells.

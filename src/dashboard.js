@@ -548,8 +548,10 @@ function dashManagedRows() {
 
 // Managed Accounts columns, in table order. Client and Action are always shown; the rest are in the column picker.
 const DASH_MG_COLS = [
-  { key: 'platforms', group: 'ads', label: 'Ad Platforms' },
   { key: 'status', group: 'account', label: 'Status' },
+  { key: 'contact', group: 'account', label: 'Primary Contact' },
+  { key: 'last', group: 'account', label: 'Last Activity' },
+  { key: 'platforms', group: 'ads', label: 'Ad Platforms' },
   { key: 'spend', group: 'ads', label: 'Combined Spend' },
   { key: 'cpm', group: 'ads', label: 'CPM' },
   { key: 'cpc', group: 'ads', label: 'CPC' },
@@ -558,13 +560,13 @@ const DASH_MG_COLS = [
   { key: 'top10', group: 'seo', label: 'Top 10 %', tip: 'Share of tracked keywords ranking in the top 10 today, against the contracted target.' },
   { key: 'avgPos', group: 'seo', label: 'Avg Position', tip: 'Mean position of keywords ranking in the top 100 (lower is better).' },
   { key: 'services', group: 'crm', label: 'Live Services', tip: 'Live services on the Agency CRM account.' },
-  { key: 'budget', group: 'crm', label: 'Monthly Budget', tip: 'Sum of the monthly budgets of every live CRM service (SGD).' },
-  { key: 'contact', group: 'account', label: 'Primary Contact' },
-  { key: 'last', group: 'account', label: 'Last Activity' }
+  { key: 'budget', group: 'crm', label: 'Monthly Budget', tip: 'Sum of the monthly budgets of every live CRM service (SGD).' }
 ];
 registerColumnPicker('managed', {
   columns: () => DASH_MG_COLS,
-  groups: [['ads', 'Ads'], ['seo', 'SEO'], ['crm', 'CRM'], ['account', 'Account']],
+  groups: [['account', 'Account', { summary: 'status', tone: 'neutral' }], ['ads', 'Ads', { summary: 'spend', tone: 'ads' }],
+    ['seo', 'SEO', { summary: 'seoStatus', tone: 'seo' }], ['crm', 'CRM', { summary: 'budget', tone: 'crm' }]],
+  collapsible: true,
   note: 'Client and Action are always shown',
   onChange: 'dashRefreshManaged',
   storageKey: 'galaxis-demo:managed-columns-hidden'
@@ -616,8 +618,10 @@ function dashManagedBody() {
   const total = rows.length;
   const page = paginate(rows, 'dash-managed', 10);
   const fn = 'dashRefreshManaged';
-  const cols = DASH_MG_COLS.filter(c => colVisible('managed', c.key));
-  const th = c => `<th${c.tip ? ` title="${esc(c.tip)}"` : ''}>${sortHeader('dash-managed', c.key, c.label, fn)}</th>`;
+  // Grouped, collapsible columns (core.js colLayout): Account · Ads · SEO · CRM.
+  const layout = colLayout('managed', DASH_MG_COLS.filter(c => colVisible('managed', c.key)));
+  const cols = layout.columns;
+  const th = c => `<th class="${colCellClass(c)}"${c.tip ? ` title="${esc(c.tip)}"` : ''}>${sortHeader('dash-managed', c.key, c.label, fn)}</th>`;
   const dash = '<span class="t-muted">—</span>';
   const money = (r, k) => r.linked ? dashDot(fmtMoney(r.t[k], 2), r.q[k]) : dash;
   const cell = (r, k) => {
@@ -639,7 +643,7 @@ function dashManagedBody() {
   const body = page.map(r => `
     <tr class="clickable" onclick="openWorkspace('${r.w.id}','dashboard')">
       <td class="dash-nowrap"><button type="button" class="dash-name-link" onclick="event.stopPropagation(); openWorkspace('${r.w.id}','dashboard')">${esc(r.w.name)}</button></td>
-      ${cols.map(c => `<td class="dash-nowrap">${cell(r, c.key)}</td>`).join('')}
+      ${cols.map(c => `<td class="dash-nowrap ${colCellClass(c)}">${cell(r, c.key)}</td>`).join('')}
       <td onclick="event.stopPropagation()">${rowMenu(`dash-mm-${r.w.id}`, [
         { label: 'Go to workspace', icon: 'arrow-right', onClick: `openWorkspace('${r.w.id}','dashboard')` },
         ...(r.seo ? [{ label: 'View SEO performance', icon: 'search', onClick: `openWorkspace('${r.w.id}','dashboard',{tab:'seo'})` }] : []),
@@ -649,7 +653,8 @@ function dashManagedBody() {
     </tr>`).join('');
   const emptyText = term ? `No workspaces found matching “${esc(state.ui.dashMgrSearch)}”.` : 'No workspaces found matching these filters.';
   return `<div class="table-wrap dash-table-wrap"><table class="table">
-      <thead><tr><th>${sortHeader('dash-managed', 'name', 'Client', fn)}</th>${cols.map(th).join('')}<th>Action</th></tr></thead>
+      <thead>${colGroupHeaderRow('managed', layout, { lead: 1, trail: 1 })}
+        <tr><th>${sortHeader('dash-managed', 'name', 'Client', fn)}</th>${cols.map(th).join('')}<th>Action</th></tr></thead>
       <tbody>${body || `<tr><td colspan="${cols.length + 2}" class="table-empty">${emptyText}</td></tr>`}</tbody>
     </table></div>
     ${paginationBar('dash-managed', total, fn)}`;
@@ -1341,11 +1346,16 @@ const DASH_CT_CRM_COLS = [
 ];
 
 // ---------- Column picker (show / hide columns; shared helper in core.js) ----------
-// Name, Status and Action are always shown.
+// Name and Action are always shown; every other column (Status included) can be hidden or collapsed with its group.
+// Details group: shown before the metrics; Status is now hideable too.
+const DASH_CT_DETAIL_COLS = [{ key: 'format', group: 'details', label: 'Ad Format' }, { key: 'status', group: 'details', label: 'Status' }];
 registerColumnPicker('campaigns', {
-  columns: () => [{ key: 'format', group: 'details', label: 'Ad Format' }].concat(DASH_CT_COLS, activeCrm(state.ctx) ? DASH_CT_CRM_COLS : []),
-  groups: [['details', 'Details'], ['delivery', 'Delivery'], ['clicks', 'Clicks'], ['conversions', 'Conversions'], ['engagement', 'Engagement'], ['crm', 'CRM']],
-  note: 'Name, Status and Action are always shown',
+  columns: () => DASH_CT_DETAIL_COLS.concat(DASH_CT_COLS, activeCrm(state.ctx) ? DASH_CT_CRM_COLS : []),
+  groups: [['details', 'Details', { summary: 'status', tone: 'neutral' }], ['delivery', 'Delivery', { summary: 'spend', tone: 'ads' }],
+    ['clicks', 'Clicks', { summary: 'ctr', tone: 'ads2' }], ['conversions', 'Conversions', { summary: 'conversions', tone: 'ads' }],
+    ['engagement', 'Engagement', { summary: 'engRate', tone: 'ads2' }], ['crm', 'CRM', { summary: 'roas', tone: 'crm' }]],
+  collapsible: true,
+  note: 'Name and Action are always shown',
   onChange: 'dashRefreshCampaignTable',
   storageKey: 'galaxis-demo:campaign-columns-hidden'
 });
@@ -1378,13 +1388,14 @@ function dashCampaignBody() {
   const page = paginate(rows, 'dash-ct', 10);
   const ref = m.total;
   const next = DASH_LEVELS[DASH_LEVELS.indexOf(level) + 1];
-  const cols = [['name', DASH_NAME_COL[level]], ['format', 'Ad Format'], ['status', 'Status']].concat(metricCols.map(c => [c.key, c.label]))
-    .filter(([c]) => c === 'name' || c === 'status' || colVisible('campaigns', c));
+  // Grouped, collapsible columns (core.js colLayout): Details · Delivery · Clicks · Conversions · Engagement · CRM.
+  const layout = colLayout('campaigns', DASH_CT_DETAIL_COLS.concat(metricCols).filter(c => colVisible('campaigns', c.key)));
+  const cols = layout.columns;
   const colDef = Object.fromEntries(metricCols.map(c => [c.key, c]));
   const fn = 'dashRefreshCampaignTable';
-  const head = cols.map(([c, l]) => `<th${colDef[c] ? ` title="${esc(colDef[c].tip)}"` : ''}>${sortHeader('dash-ct', c, l, fn)}</th>`).join('') + (next ? '<th>Action</th>' : '');
+  const head = `${colGroupHeaderRow('campaigns', layout, { lead: 1, trail: next ? 1 : 0 })}
+    <tr><th>${sortHeader('dash-ct', 'name', DASH_NAME_COL[level], fn)}</th>${cols.map(c => `<th class="${colCellClass(c)}"${colDef[c.key] ? ` title="${esc(colDef[c.key].tip)}"` : ''}>${sortHeader('dash-ct', c.key, c.label, fn)}</th>`).join('')}${next ? '<th>Action</th>' : ''}</tr>`;
   const cell = (e, c) => {
-    if (c === 'name') return dashNameCell(e, level);
     if (c === 'format') return dashFormatCell(e.formats);
     if (c === 'status') return statusPill(DASH_STATUS_KEY[e.status], e.status);
     const d = colDef[c];
@@ -1394,14 +1405,15 @@ function dashCampaignBody() {
   };
   const body = page.map(e => `
     <tr ${next ? `class="clickable" onclick="dashDrill('${q(e.id)}')"` : ''}>
-      ${cols.map(([c]) => `<td class="${c === 'name' ? '' : 'dash-nowrap'}">${cell(e, c)}</td>`).join('')}
+      <td>${dashNameCell(e, level)}</td>
+      ${cols.map(c => `<td class="dash-nowrap ${colCellClass(c)}">${cell(e, c.key)}</td>`).join('')}
       ${next ? `<td onclick="event.stopPropagation()">${rowMenu(`dash-ctm-${dashHash(e.id)}`, [{ label: `View ${DASH_LEVEL_TAB[next].toLowerCase()} (${e.childCount})`, icon: 'arrow-right', onClick: `dashDrill('${q(e.id)}')` }])}</td>` : ''}
     </tr>`).join('');
   const drill = u.dashDrill ? `<div class="dash-drill"><span>Filtered for ${DASH_LEVEL_LABEL[u.dashDrill.level]}: <b>${esc(u.dashDrill.name)}</b></span><button type="button" class="chip-remove" onclick="dashClearDrill()" aria-label="Clear filter"><i data-lucide="x"></i></button></div>` : '';
   return `${dashEntityChips(byId)}${drill}
     <div class="table-wrap dash-table-wrap"><table class="table">
-      <thead><tr>${head}</tr></thead>
-      <tbody>${body || `<tr><td colspan="${cols.length + (next ? 1 : 0)}" class="table-empty">No data matches criteria.</td></tr>`}</tbody>
+      <thead>${head}</thead>
+      <tbody>${body || `<tr><td colspan="${cols.length + 1 + (next ? 1 : 0)}" class="table-empty">No data matches criteria.</td></tr>`}</tbody>
     </table></div>
     ${paginationBar('dash-ct', total, fn)}`;
 }
@@ -1864,7 +1876,8 @@ Central command dashboard for agency administrators managing many client ad acco
 - **Managed Accounts table** (the V1 Client Workspace Directory, with Figma columns): Client, Ad Platforms, Status, Combined Spend, CPM, CPC, Cost Per Conversion, SEO Status, Top 10 %, Avg Position, Live Services, Monthly Budget, Primary Contact, Last Activity, Action.
   - **SEO columns**: SEO Status pill ("—" when the workspace is not on SEO Cloud); Top 10 % as "current / target", coloured by status; Avg Position (mean position of keywords ranking in the top 100).
   - **CRM columns**: Live Services as chips from the Agency CRM account (max 2, then "+N"); Monthly Budget = the sum of every live service's monthly budget (SGD).
-  - **Column picker**: show or hide columns, grouped as Ads, SEO, CRM and Account. Client and Action are always shown. Remembered per viewer (prototype: localStorage).
+  - **Column groups**: columns sit under coloured, collapsible group bands, in the order Account (Status, Primary Contact, Last Activity) · Ads (Ad Platforms, Combined Spend, CPM, CPC, Cost Per Conversion) · SEO (SEO Status, Top 10 %, Avg Position) · CRM (Live Services, Monthly Budget). Collapsing a group leaves its summary column (Status, Combined Spend, SEO Status, Monthly Budget), still sortable; the band shows how many columns are hidden. "Collapse all / Expand all" sits above the Client column. All groups start expanded; each viewer's choice is remembered (prototype: localStorage).
+  - **Column picker**: show or hide columns within those groups. A group with every column hidden disappears. Client and Action are always shown. Remembered per viewer (prototype: localStorage).
   - The ⋮ menu adds "View SEO performance" for workspaces on SEO Cloud.
   - Coloured dots on CPM / CPC / Cost per Conversion compare each workspace with the portfolio average. Green (Excellent) is at least 10% better; orange (Average) is within -10% to +15%; red (Bad) is more than 15% worse. This replaces V1's heat cells.
   - Search by client or contact.
@@ -1957,7 +1970,8 @@ Client-facing workspace dashboard giving a simplified, unified view of Meta and 
   - **Level tabs**: Platform / Campaigns / Ad Groups / Ads.
   - **Drill-down**: clicking a row, or "View …" in the ⋮ menu, opens the next level with a "Filtered for X ✕" badge. Clearing the badge returns to Platform.
   - **Columns**: Name (parent shown above), Ad Format (+N overflow), Status, then the platform metrics from the *Google & Meta Ads Metrics* sheet (Metrics (Dev Notes), green rows), in sheet order: Spend (Cost), Impressions, Reach, CPM, Frequency, Clicks, CTR, CPC, Conversions, Conversion Rate, Cost Per Conversion (kept from V1), Cost Per Lead, Cost Per Purchase, ROAS, Conversion Value, Engagement Rate, Engagement, Cost Per Engagement. In CRM mode, CRM Leads, CRM CPL, CRM Revenue and CRM ROAS follow ("CRM" prefix to separate CRM-attributed ROAS from platform-reported ROAS). Header tooltips show the sheet's definitions. Every column is sortable, including Status (Active → Attention Required → Paused) and Ad Format (first format).
-  - **Column picker** (columns icon next to the filter): show or hide columns, grouped as Details (Ad Format), Delivery, Clicks, Conversions, Engagement and CRM (CRM mode only), with Show all / Hide all per group and Show all columns. The badge counts hidden columns. Name, Status and Action are always shown. The choice is remembered per viewer in the browser (prototype: localStorage; product: save per user).
+  - **Column picker** (columns icon next to the filter): show or hide columns, grouped as Details (Ad Format, Status), Delivery, Clicks, Conversions, Engagement and CRM (CRM mode only), with Show all / Hide all per group and Show all columns. The badge counts hidden columns. Name and Action are always shown.
+  - **Column groups**: the same groups appear as coloured, collapsible bands above the column headers. Collapsing a group leaves its summary column: Details → Status, Delivery → Spend, Clicks → CTR, Conversions → Conversions, Engagement → Engagement Rate, CRM → CRM ROAS (or the group's first visible column if that one is hidden). "Collapse all / Expand all" sits above the name column. All groups start expanded; each viewer's choice is remembered. The choice is remembered per viewer in the browser (prototype: localStorage; product: save per user).
   - **API fields** (from the sheet, for development):
     - Cost — Meta \`spend\`; Google \`metrics.cost_micros\`
     - Impressions — Meta \`impressions\`; Google \`metrics.impressions\`

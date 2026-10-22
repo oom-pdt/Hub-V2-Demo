@@ -468,7 +468,8 @@ function applyDateFilter(scope, onApply) {
 // ---------- Column picker (show / hide table columns) ----------
 // registerColumnPicker('campaigns', {
 //   columns: () => [{ key, group, label }],   // toggleable columns (fixed columns are simply not listed)
-//   groups: [['delivery', 'Delivery'], …],     // group order and labels; empty groups are skipped
+//   groups: [['delivery', 'Delivery', { summary: 'spend', tone: 'ads' }], …],  // order, labels; empty groups are skipped
+//   collapsible: true,                          // optional: column groups get a band row and can collapse to their summary column
 //   note: 'Name and Action are always shown',
 //   onChange: 'dashRefreshCampaignTable',      // global fn re-rendering the table
 //   storageKey: 'galaxis-demo:…'               // optional; hidden columns are a per-viewer convenience
@@ -477,6 +478,8 @@ const columnPickers = {};
 function registerColumnPicker(id, def) {
   def.storageKey = def.storageKey || `galaxis-demo:${id}-columns-hidden`;
   try { def.hidden = JSON.parse(localStorage.getItem(def.storageKey)) || def.defaultHidden || []; } catch (e) { def.hidden = def.defaultHidden || []; }
+  def.collapsedKey = def.collapsedKey || `galaxis-demo:${id}-groups-collapsed`;
+  try { def.collapsed = JSON.parse(localStorage.getItem(def.collapsedKey)) || []; } catch (e) { def.collapsed = []; }   // default: all expanded
   columnPickers[id] = def;
 }
 function colVisible(id, key) { return !columnPickers[id].hidden.includes(key); }
@@ -531,13 +534,62 @@ function colChanged(id) {
   if (badge) { badge.textContent = n; badge.hidden = !n; }
 }
 
+// ---------- Collapsible column groups ----------
+// colLayout(id, cols): cols = the table's ordered, visible column defs (each with .group). Returns the columns to render
+// (a collapsed group keeps only its summary column, or its first visible column) and the band groups.
+function colLayout(id, cols) {
+  const d = columnPickers[id];
+  const columns = [], groups = [];
+  d.groups.forEach(([key, label, o = {}]) => {
+    const items = cols.filter(c => c.group === key);
+    if (!items.length) return;
+    const collapsed = !!d.collapsible && d.collapsed.includes(key);
+    const shown = collapsed ? [items.find(c => c.key === o.summary) || items[0]] : items;
+    const tone = o.tone || 'neutral';
+    groups.push({ key, label, tone, collapsed, span: shown.length, hidden: items.length - shown.length });
+    shown.forEach((c, i) => columns.push({ ...c, colGroup: key, colTone: tone, colStart: i === 0 }));
+  });
+  return { columns, groups };
+}
+// Classes for a grouped header or body cell: group tone, plus a separator on each group's first column.
+function colCellClass(c) { return c.colGroup ? `colgrp-${c.colTone}${c.colStart ? ' colgrp-start' : ''}` : ''; }
+// The band row above the column headers. lead/trail = fixed columns before/after the groups (name, Action).
+// The lead cell holds "Collapse all / Expand all".
+function colGroupHeaderRow(id, layout, { lead = 1, trail = 0 } = {}) {
+  const anyOpen = layout.groups.some(g => !g.collapsed);
+  const toggleAll = layout.groups.length > 1
+    ? `<button type="button" class="colgrp-all" onclick="colSetAllGroups('${id}', ${anyOpen})"><i data-lucide="${anyOpen ? 'chevrons-left-right' : 'chevrons-right-left'}"></i>${anyOpen ? 'Collapse all' : 'Expand all'}</button>` : '';
+  const blank = (n, cls, content = '') => n ? `<th class="colgrp-blank ${cls}"${n > 1 ? ` colspan="${n}"` : ''}>${content}</th>` : '';
+  return `<tr class="colgrp-row">${blank(lead, 'colgrp-lead', toggleAll)}${layout.groups.map(g => `
+    <th class="colgrp-band colgrp-${g.tone} colgrp-start ${g.collapsed ? 'is-collapsed' : ''}"${g.span > 1 ? ` colspan="${g.span}"` : ''}>
+      <button type="button" class="colgrp-btn" onclick="colToggleGroup('${id}', '${g.key}')" aria-expanded="${!g.collapsed}"
+        title="${g.collapsed ? `${g.hidden} more column${g.hidden === 1 ? '' : 's'} — click to expand` : 'Collapse this group'}">
+        <i data-lucide="${g.collapsed ? 'chevron-right' : 'chevron-down'}"></i>${esc(g.label)}${g.collapsed && g.hidden ? `<span class="colgrp-more">+${g.hidden}</span>` : ''}
+      </button></th>`).join('')}${blank(trail, 'colgrp-trail')}</tr>`;
+}
+function colToggleGroup(id, key) {
+  const d = columnPickers[id];
+  d.collapsed = d.collapsed.includes(key) ? d.collapsed.filter(k => k !== key) : [...d.collapsed, key];
+  colSaveGroups(id);
+}
+function colSetAllGroups(id, collapse) {
+  const d = columnPickers[id];
+  d.collapsed = collapse ? d.groups.map(g => g[0]) : [];
+  colSaveGroups(id);
+}
+function colSaveGroups(id) {
+  const d = columnPickers[id];
+  try { localStorage.setItem(d.collapsedKey, JSON.stringify(d.collapsed)); } catch (e) { /* storage unavailable: keep in memory */ }
+  if (d.onChange && window[d.onChange]) window[d.onChange]();
+}
+
 // ---------- Pinned first and action columns ----------
 // The first column of every table is pinned by CSS; this marks action columns and the scroll state.
 // A table's last column is pinned when it is an action column: its header says Action/Actions or carries an
 // *action* class, or the header is blank/Remove/Manage and every body row's last cell holds a button or row menu.
 function markActionColumns(root = document) {
   root.querySelectorAll('.table-wrap > .table').forEach(table => {
-    const head = table.querySelector('thead tr > :last-child');
+    const head = table.querySelector('thead tr:last-child > :last-child');   // the column-name row, not a group band row
     const rows = [...table.querySelectorAll('tbody tr')].filter(r => r.children.length > 1);
     const explicit = !!head && (/action/i.test(head.textContent) || /action/i.test(head.className));
     const implicit = !!head && /^(remove|manage|)$/i.test(head.textContent.trim()) && rows.length > 0 &&

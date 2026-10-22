@@ -14,6 +14,7 @@ Object.assign(state.ui, {
 });
 state.flags.integScenario = null;   // client dev toggle last applied: { name, ws }
 state.flags.integToken = 'healthy'; // agency dev toggle
+state.flags.integCrm = 'connected';  // agency dev toggle: Agency CRM connected / disconnected
 
 const INTEG_THIRD_CRMS = ['hubspot', 'salesforce', 'zoho', 'dynamics'];
 const INTEG_ROUTABLE = ['sleekflow', 'wati', 'delacon'];
@@ -610,11 +611,15 @@ function integRenderAgency() {
     ${expired.map(([k, t]) => `<div class="banner banner-error integ-banner"><i data-lucide="circle-alert"></i>
       <div><div class="banner-title">${esc(t.label)} token expired</div><div class="banner-text">Ad data from ${fmtNum(t.discovered)} ${PLATFORM_NAME[k]} accounts has stopped syncing since ${fmtDate(t.expires)}. Re-authenticate to resume.</div></div>
       <button type="button" class="banner-action" onclick="integReauth('${k}')">Re-authenticate</button></div>`).join('')}
+    ${agencyCrm.status !== 'connected' ? `<div class="banner banner-error integ-banner"><i data-lucide="circle-alert"></i>
+      <div><div class="banner-title">Agency CRM disconnected</div><div class="banner-text">Converted CRM accounts are not creating workspaces, and services and budgets were last synced ${fmtDateTime(agencyCrm.lastSynced)}. Reconnect to resume.</div></div>
+      <button type="button" class="banner-action" onclick="integCrmReconnect()">Reconnect</button></div>` : ''}
     <section class="integ-section">
-      <h2 class="h-section">Ad Platforms — master connections</h2>
-      <div class="integ-sub">Agency-level tokens Galaxis uses to discover and sync client ad accounts.</div>
-      <div class="integ-grid-2">${Object.keys(masterTokens).map(integTokenCard).join('')}</div>
+      <h2 class="h-section">Master connections</h2>
+      <div class="integ-sub">Agency-level connections Galaxis uses to discover client ad accounts and to set up workspaces from the agency CRM.</div>
+      <div class="integ-grid-3">${Object.keys(masterTokens).map(integTokenCard).join('')}${integCrmCard()}</div>
     </section>
+    <section class="integ-section card" id="integ-crm-map">${integCrmMapHTML()}</section>
     <section class="integ-section card" id="integ-unlinked">${integUnlinkedHTML()}</section>
     <section class="integ-section card" id="integ-queue">${integQueueHTML()}</section>
     <section class="integ-section card">
@@ -639,6 +644,78 @@ function integTokenCard(k) {
     </div>
     <div class="integ-card-foot"><button type="button" class="btn ${bad ? 'btn-primary' : 'btn-outline'}" id="integ-reauth-${k}" onclick="integReauth('${k}')"><i data-lucide="refresh-ccw"></i>Re-authenticate</button></div>
   </div>`;
+}
+
+// ---- Agency CRM (internal OOm CRM): converted accounts create workspaces automatically (crm.js) ----
+function integCrmCard() {
+  const on = agencyCrm.status === 'connected';
+  return `<div class="card integ-card ${on ? '' : 'integ-card-error'}" id="integ-crm-card">
+    <div class="integ-card-head"><span class="integ-plat-logo integ-crm-logo"><i data-lucide="contact-round"></i></span>
+      <div class="grow"><div class="h-card">Agency CRM</div><div class="integ-cat">Internal OOm CRM · API connection</div>
+        <div class="integ-dots">${on ? integDot('green', 'Connected') : integDot('red', 'Disconnected')}</div></div></div>
+    <div class="integ-meta">
+      <div class="integ-meta-row"><i data-lucide="refresh-cw"></i><div><div>Accounts synced</div><div class="integ-meta-val">${fmtNum(agencyCrm.accountsSynced)} accounts synced</div></div></div>
+      <div class="integ-meta-row"><i data-lucide="calendar-clock"></i><div><div>Last synced</div><div class="integ-meta-val ${on ? '' : 't-error'}">${fmtDateTime(agencyCrm.lastSynced)}</div></div></div>
+    </div>
+    <div class="integ-card-foot">${on
+      ? `<button type="button" class="btn btn-outline" id="integ-crm-sync" onclick="integCrmResync()"><i data-lucide="refresh-cw"></i>Re-sync</button>`
+      : `<button type="button" class="btn btn-primary" id="integ-crm-sync" onclick="integCrmReconnect()"><i data-lucide="plug"></i>Reconnect</button>`}</div>
+  </div>`;
+}
+// Simulated sync: refreshes the sync time and the synced account count.
+function integCrmResync() {
+  const b = document.getElementById('integ-crm-sync');
+  if (b) { b.disabled = true; b.textContent = 'Syncing…'; }
+  setTimeout(() => {
+    agencyCrm.lastSynced = new Date().toISOString();
+    agencyCrm.accountsSynced = Object.keys(crmAccounts).length;
+    if (state.page === 'integrations' && isAgency()) rerender();
+    showToast(`Agency CRM synced. ${fmtNum(agencyCrm.accountsSynced)} accounts up to date.`, 'refresh-cw');
+  }, 800);
+}
+function integCrmReconnect() {
+  const b = document.getElementById('integ-crm-sync');
+  if (b) { b.disabled = true; b.textContent = 'Connecting…'; }
+  setTimeout(() => {
+    agencyCrm.status = 'connected';
+    agencyCrm.lastSynced = new Date().toISOString();
+    state.flags.integCrm = 'connected';
+    if (state.page === 'integrations' && isAgency()) rerender();
+    showToast('Agency CRM reconnected. New conversions will create workspaces again.', 'plug');
+  }, 900);
+}
+function integRenderCrmMap() { renderRegion('integ-crm-map', integCrmMapHTML()); }
+function integCrmMapHTML() {
+  const agencyRoles = roles.filter(r => r.org === 'agency' && !r.locked);
+  const agencyTeams = teams.filter(t => t.org === 'agency' && t.status === 'active');
+  const rows = crmRoleMap.map((r, i) => {
+    const who = crmCandidates(r.crmRole);
+    return `<tr><td class="t-bold">${esc(r.crmRole)}</td>
+      <td><select class="select integ-map-select" aria-label="Galaxis role for ${esc(r.crmRole)}" onchange="integCrmMapSet(${i}, 'roleId', this.value)">
+        <option value="" ${r.roleId ? '' : 'selected'}>Do not assign</option>${agencyRoles.map(x => `<option value="${x.id}" ${x.id === r.roleId ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></td>
+      <td><select class="select integ-map-select" aria-label="Team for ${esc(r.crmRole)}" onchange="integCrmMapSet(${i}, 'teamId', this.value)" ${r.roleId ? '' : 'disabled'}>
+        <option value="" ${r.teamId ? '' : 'selected'}>Any team</option>${agencyTeams.map(t => `<option value="${t.id}" ${t.id === r.teamId ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></td>
+      <td>${!r.roleId ? '<span class="t-muted">Not assigned</span>' : who.length ? `<span class="integ-map-who">${esc(who.map(m => m.name).join(', '))}</span>` : '<span class="integ-pill-warn"><i data-lucide="triangle-alert"></i>No matching user</span>'}</td></tr>`;
+  }).join('');
+  return `<div class="card-header"><div><h2 class="h-section">Agency CRM — role mapping & auto set-up</h2>
+      <div class="card-sub">When an account converts in the agency CRM, Galaxis creates the client workspace, copies its services and budgets, assigns agency members by role and adds the client contacts.</div></div></div>
+    <div class="table-wrap"><table class="table integ-table">
+      <thead><tr><th>CRM role</th><th>Galaxis role</th><th>Team</th><th>Galaxis users who match</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="t-caption t-muted integ-map-note">The CRM’s named user is assigned when they hold the mapped role and team. Otherwise the matching member with the fewest client workspaces is picked. Owners and Agency Admins already see every workspace.</div>
+    <div class="integ-crm-toggle"><div><div class="t-bold">Send client invites only after account-manager approval</div>
+        <div class="field-hint">On: client contacts from the CRM wait as “Awaiting approval” until the account manager approves them in the set-up checklist. Off: they are invited as soon as the workspace is created.</div></div>
+      <label class="toggle"><input type="checkbox" ${crmSettings.approvalRequired ? 'checked' : ''} onchange="integCrmApproval(this.checked)" aria-label="Send client invites only after account-manager approval"><span></span></label></div>`;
+}
+function integCrmMapSet(i, key, val) {
+  const r = crmRoleMap[i];
+  r[key] = val;
+  if (key === 'roleId' && !val) r.teamId = '';
+  integRenderCrmMap();
+  showToast(`Role mapping saved for ${r.crmRole}. Applies to the next CRM conversion.`, 'check-circle');
+}
+function integCrmApproval(on) {
+  crmSettings.approvalRequired = on;
+  showToast(on ? 'Client invites will wait for account-manager approval' : 'Client invites will be sent automatically on conversion', on ? 'shield-check' : 'send');
 }
 
 // Simulated OAuth: resets the token to valid with a new expiry (Google 1 year, Meta 60 days).
@@ -865,16 +942,19 @@ registerDevToggles('client-integrations', () => Object.keys(INTEG_SCENARIOS).map
 })));
 registerDevToggles('agency-integrations', () => [
   { label: 'Healthy tokens', active: state.flags.integToken === 'healthy', run: () => { masterTokens.google.status = 'valid'; masterTokens.meta.status = 'valid'; if (masterTokens.meta.expires < '2026-10-21') masterTokens.meta.expires = '2026-12-01'; state.flags.integToken = 'healthy'; render(); } },
-  { label: 'Meta token expired', active: state.flags.integToken === 'expired', run: () => { masterTokens.meta.status = 'expired'; masterTokens.meta.expires = '2026-10-14'; state.flags.integToken = 'expired'; render(); } }
+  { label: 'Meta token expired', active: state.flags.integToken === 'expired', run: () => { masterTokens.meta.status = 'expired'; masterTokens.meta.expires = '2026-10-14'; state.flags.integToken = 'expired'; render(); } },
+  'sep',
+  { label: 'Agency CRM connected', active: agencyCrm.status === 'connected', run: () => { agencyCrm.status = 'connected'; state.flags.integCrm = 'connected'; render(); } },
+  { label: 'Agency CRM disconnected', active: agencyCrm.status !== 'connected', run: () => { agencyCrm.status = 'disconnected'; state.flags.integCrm = 'disconnected'; render(); } }
 ]);
 
 // ---------- Specs ----------
 Object.assign(screenSpecs, {
   'agency-integrations': {
-    title: 'Integrations — Ad Account Discovery & Workspace Linking (Agency)',
+    title: 'Integrations — Ad Account Discovery, Workspace Linking & Agency CRM (Agency)',
     status: 'In Review',
     author: 'Hannah',
-    updatedAt: '21/10/2026',
+    updatedAt: '22/10/2026',
     notes: `
 ### Screen purpose and objectives
 Agency-level integrations page ("My Workspace"). Bridges the external ad platforms with client workspaces: agency admins triage unlinked accounts and workspaces, keep the master connections healthy, and see integration health across every client. Ported from V1 \`agency-adaccounts\`; Figma has no frame for this context, so it reuses the Figma card, table and modal patterns.
@@ -883,6 +963,19 @@ Agency-level integrations page ("My Workspace"). Bridges the external ad platfor
 - One card each for the **Google Ads Manager Account (MCC)** and **Meta Business Manager**: status (Valid / Expired), token type, accounts discovered, expiry date.
 - **Re-authenticate** runs the OAuth flow and resets the token to Valid with a new expiry date.
 - An expired token shows a red banner at the top of the page and is also raised in the dashboard Attention list.
+
+### Agency CRM (new, Draft, 22/10/2026)
+- A third master-connection card, **Agency CRM** (OOm's internal CRM), next to Google MCC and Meta BM, using the same card pattern.
+  - Shows status (Connected / Disconnected), "{N} accounts synced" and the last sync time.
+  - **Re-sync** runs a sync (simulated) and refreshes the count and time. When disconnected the button becomes **Reconnect**.
+  - Disconnected shows a red banner at the top of the page ("Agency CRM disconnected") with Reconnect. While disconnected, converted CRM accounts don't create workspaces.
+- **Role mapping & auto set-up card** below the connections:
+  - Table: CRM role → Galaxis role (select, or "Do not assign") → Team (select, or "Any team") → the Galaxis users who currently match.
+  - Defaults: Account Manager → Account Manager; SEO Specialist → SEO Lead, SEO Research team; Project Lead → Project Lead; Ads Specialist → Account Manager, Marketing team.
+  - Resolution: the CRM's named user is assigned when they hold the mapped role and team; otherwise the matching member with the fewest client workspaces. A role with no matching user is flagged here and in the set-up checklist.
+  - Changes apply to the next conversion and don't re-assign existing workspaces.
+  - Toggle **"Send client invites only after account-manager approval"** — on by default (Hannah's decision). Off sends invites straight away.
+- What auto set-up does is specified on Team & Access › Client Organisation.
 
 ### Client workspaces without linked ad accounts (V1, In Review)
 - Lists every active client workspace with **zero** linked ad accounts. V1's cap of five rows is removed; the list paginates.
@@ -909,6 +1002,11 @@ Agency-level integrations page ("My Workspace"). Bridges the external ad platfor
 - Should re-authenticating a master token need a specific permission (e.g. Agency Admin only)?
 - Should an expired token also email the agency admins, and how far ahead of expiry?
 - Can an agency link an account that is already linked to an archived workspace?
+- Agency CRM: what happens on churn or when a service ends (archive, pause, or just update budgets)?
+- Agency CRM: can an agency make client invites fully automatic, and should that be a per-agency setting only Agency Admins can change?
+- Agency CRM: how do we map an account manager who isn't a Galaxis user yet?
+- Agency CRM: is the workspace ad budget taken from CRM services (SEM + Google Ads + Facebook Ads) or set per workspace?
+- Agency CRM: duplicate detection when a converted CRM account matches an existing workspace (name, domain, UEN)?
 `
   },
   'client-integrations': {

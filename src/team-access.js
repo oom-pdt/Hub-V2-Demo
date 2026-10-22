@@ -183,7 +183,7 @@ function teamFilterGroups(tab) {
   if (tab === 'members') return [
     { key: 'team', label: 'Team', options: [...opt(teamOrgTeams(org), 'id', 'name'), ['none', 'No team']] },
     { key: 'role', label: 'Assigned Role', options: opt(teamScopeRoles(), 'id', 'name') },
-    { key: 'status', label: 'Status', options: [['active', 'Active'], ['pending', 'Pending Invite'], ['inactive', 'Inactive'], ['deactivated', 'Deactivated']] },
+    { key: 'status', label: 'Status', options: [['active', 'Active'], ...(isAgency() ? [] : [['awaiting', 'Awaiting approval']]), ['pending', 'Pending Invite'], ['inactive', 'Inactive'], ['deactivated', 'Deactivated']] },
     { key: 'product', label: 'Product Access', options: productOpts }
   ];
   if (tab === 'teams') return [
@@ -333,6 +333,7 @@ function teamSeatCard() {
   const active = list.filter(m => m.status === 'active').length;
   const pending = list.filter(m => m.status === 'pending').length;
   const inactive = list.filter(m => m.status === 'inactive' || m.status === 'deactivated').length;
+  const awaiting = list.filter(m => m.status === 'awaiting').length;   // CRM contacts not invited yet: no seat until approved
   const used = active + pending + inactive;
   const pct = Math.min(100, Math.round(used / TEAM_SEATS_TOTAL * 100));
   return `<section class="card team-seat-card" aria-label="Seat usage">
@@ -342,6 +343,7 @@ function teamSeatCard() {
       <span><span class="dot dot-green-strong"></span>${active} Active Member${active === 1 ? '' : 's'}</span>
       <span><span class="dot team-dot-link"></span>${pending} Pending Invite${pending === 1 ? '' : 's'}</span>
       <span><span class="dot dot-grey"></span>${inactive} Inactive Member${inactive === 1 ? '' : 's'}</span>
+      ${awaiting ? `<span><span class="dot dot-orange"></span>${awaiting} Awaiting approval (no seat until invited)</span>` : ''}
     </div></section>`;
 }
 
@@ -377,8 +379,10 @@ function teamMembersTable() {
   const rows = page.map(m => {
     const self = m.id === CURRENT_USER_ID;
     const items = [{ label: 'Edit', icon: 'pencil', onClick: `teamOpenMemberModal('${m.id}')` }];
+    // Agency CRM contacts wait for the account manager's approval before they are invited (crm.js).
+    if (m.status === 'awaiting') items.push({ label: 'Approve & send invite', icon: 'send', onClick: `crmApproveContact('${m.id}')` });
     if (m.status === 'pending') items.push({ label: 'Resend Invite', icon: 'send', onClick: `teamResendInvite('${m.id}')` });
-    items.push(m.status === 'deactivated'
+    if (m.status !== 'awaiting') items.push(m.status === 'deactivated'
       ? { label: 'Reactivate', icon: 'user-check', onClick: `teamReactivateMember('${m.id}')` }
       : { label: 'Deactivate', icon: 'user-x', onClick: `teamConfirmDeactivate('${m.id}')`, disabled: self });
     items.push('sep', { label: self ? 'Remove (you)' : 'Remove', icon: 'trash-2', danger: true, disabled: self, onClick: `teamConfirmRemove('${m.id}')` });
@@ -387,7 +391,7 @@ function teamMembersTable() {
       <td><div class="team-name">${esc(m.name)}${m.isPrimary && !agency ? '<span class="team-primary-badge" title="Primary Contact for this workspace"><i data-lucide="star"></i>Primary Contact</span>' : ''}${self ? '<span class="chip team-you">You</span>' : ''}</div><div class="cell-sub">${esc(m.email)}</div></td>
       <td>${esc(teamById(m.teamId)?.name || '—')}</td>
       <td>${esc(role?.name || '—')}${!agency && m.canManage ? '<div class="cell-sub">Can manage members</div>' : ''}</td>
-      <td>${statusDot(m.status)}</td>
+      <td>${statusDot(m.status)}${m.status === 'awaiting' ? '<div class="cell-sub">From agency CRM · not invited yet</div>' : ''}</td>
       ${agency ? `<td class="team-ws-cell">${teamWsSummary(m)}</td>` : ''}
       <td>${productChips(m.products)}</td>
       <td>${esc(m.lastActive || '-')}<div class="cell-sub">${esc(m.lastProduct || '-')}</div></td>
@@ -892,11 +896,19 @@ function teamOrgCard(ws) {
   const pc = wsPrimaryContact(ws.id);
   const clientCount = teamOrgMembers(ws.id).filter(m => m.status !== 'deactivated').length;
   const agencyCount = teamWsAgencyMembers(ws.id).length;
+  // Agency CRM auto set-up (crm.js): badge, progress while incomplete, and the checklist.
+  const hasSetup = typeof crmSetups !== 'undefined' && !!crmSetups[ws.id];
+  const prog = hasSetup ? crmSetupProgress(ws.id) : null;
   const items = ws.archived
     ? [{ label: 'Restore', icon: 'archive-restore', onClick: `teamRestoreOrg('${ws.id}')` }]
     : [{ label: 'Open Workspace', icon: 'external-link', onClick: `openWorkspace('${ws.id}')` },
+       ...(hasSetup ? [{ label: 'View set-up', icon: 'list-checks', onClick: `crmOpenSetup('${ws.id}')` }] : []),
        { label: 'Assign Members', icon: 'user-plus', onClick: `teamOpenAssignMembers('${ws.id}')` },
        'sep', { label: 'Archive', icon: 'archive', danger: true, onClick: `teamConfirmArchive('${ws.id}')` }];
+  const setupHtml = prog && prog.done < prog.total && !ws.archived
+    ? `<button type="button" class="team-org-setup" onclick="crmOpenSetup('${ws.id}')" aria-label="View set-up checklist for ${esc(ws.name)}">
+        <span class="row-between"><span>Set-up: ${prog.done} of ${prog.total} steps</span><span class="t-link">View set-up</span></span>
+        <span class="progress team-org-setup-bar"><span style="width:${Math.round(prog.done / prog.total * 100)}%"></span></span></button>` : '';
   return `<article class="team-org-card ${ws.archived ? 'archived' : ''}">
     <div class="team-org-top">
       <span class="team-org-logo">${esc(initials(ws.name))}</span>
@@ -904,7 +916,8 @@ function teamOrgCard(ws) {
       ${statusDot(teamOrgStatus(ws))}
       ${rowMenu(`team-o-${ws.id}`, items)}
     </div>
-    <div class="team-org-line"><i data-lucide="briefcase"></i>${esc(ws.industry || '—')}</div>
+    <div class="team-org-line"><i data-lucide="briefcase"></i>${esc(ws.industry || '—')}${ws.source === 'crm' ? '<span class="crm-badge team-org-crm" title="Created automatically when the account converted in the agency CRM"><i data-lucide="sparkles"></i>From CRM</span>' : ''}</div>
+    ${setupHtml}
     <div class="team-org-contact"><span class="team-org-avatar"><i data-lucide="user"></i></span>
       <span>${pc ? `<span class="team-org-contact-name">${esc(pc.name)}</span><span class="cell-sub">${esc(pc.email)}</span>` : '<span class="team-org-contact-name t-muted">Unassigned</span><span class="cell-sub">No Primary Contact</span>'}</span></div>
     <div class="team-org-stats">
@@ -969,16 +982,24 @@ function teamOrgNameCheck() {
   document.getElementById('team-f-org').classList.toggle('invalid', taken);
   err.textContent = taken ? 'This organisation already exists. Please use the “Existing Organisation” tab.' : '';
 }
+// Shared workspace creation: Add Organisation (manual) and the agency CRM auto set-up (crm.js) both use it.
+// Callers validate the name first (teamOrgNameTaken). Returns the new workspace; it is in the switcher straight away.
+function teamCreateWorkspace({ name, site = '', industry = '', budget = 10000, status = 'new', source = 'manual' }) {
+  const id = uid('ws');
+  const ws = { id, name: name.trim(), industry, site: String(site).trim().replace(/^https?:\/\//i, '').replace(/\/+$/, ''), status, budget,
+    seed: Math.max(0, ...workspaces.map(w => w.seed || 0)) + 1, createdAt: teamToday(), archived: false, source };
+  workspaces.push(ws);
+  // orgProfiles[id] is left unset: Organisation › Business Information generates the placeholder profile on first view.
+  workspaceProducts[id] = workspaceProducts[id] || {};
+  return ws;
+}
 function teamCreateOrg() {
   const name = document.getElementById('team-f-org').value.trim();
   if (!name) return teamFieldError('team-f-org', 'Organisation name is required.');
   if (teamOrgNameTaken(name)) return teamFieldError('team-f-org', 'This organisation already exists. Please use the “Existing Organisation” tab.');
-  const site = document.getElementById('team-f-site').value.trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+  const site = document.getElementById('team-f-site').value.trim();
   const industry = document.getElementById('team-f-ind').value;
-  const id = uid('ws');
-  workspaces.push({ id, name, industry, site, status: 'new', budget: 10000, seed: Math.max(0, ...workspaces.map(w => w.seed || 0)) + 1, createdAt: teamToday(), archived: false });
-  orgProfiles[id] = {};
-  workspaceProducts[id] = {};
+  const { id } = teamCreateWorkspace({ name, site, industry });
   teamRefresh();
   showToast('Organisation created', 'building-2');
   openModal({
@@ -1198,7 +1219,8 @@ registerScreen('team', {
       ];
     });
   });
-  registerDevToggles('agency-team-clients', () => [emptyToggle('clients', 'Empty state (no client organisations)')]);
+  registerDevToggles('agency-team-clients', () => [emptyToggle('clients', 'Empty state (no client organisations)'),
+    { label: 'Simulate CRM conversion', active: false, run: () => crmSimulateConversion() }]);
   registerDevToggles('client-team-agency', () => [emptyToggle('agency', 'Empty state (no agency access)')]);
 })();
 
@@ -1224,7 +1246,7 @@ Central administration of agency (OOm) staff: invite members, set their team and
 - Permissions are not enforced in this prototype (V1 didn't either).`
   },
   'client-team-members': {
-    title: 'Team & Access › Members (Client workspace)', status: 'In Review', author: 'Hannah', updatedAt: '21/10/2026',
+    title: 'Team & Access › Members (Client workspace)', status: 'In Review', author: 'Hannah', updatedAt: '22/10/2026',
     notes: `### Screen Purpose & Objectives
 Manage the client's own members in this workspace. Ported from the V1 "Workspace Settings & Permissions" client member section, laid out to the Figma Members frame.
 
@@ -1234,7 +1256,8 @@ Manage the client's own members in this workspace. Ported from the V1 "Workspace
   - *Visibility/Editability:* Visible and editable by authorised client users and authorised agency users.
 - **Strict Single Primary Contact**: exactly one Primary Contact per workspace. Turning it on for one member clears the previous one. The Primary Contact shows a badge, and Organisation, Dashboard and the Client Organisation cards read it.
 - **Row actions**: Edit, Resend Invite, Deactivate / Reactivate, Remove *(Deactivate/Remove: Draft — Figma only)*. Deactivating the Primary Contact leaves the workspace without one until another is set.
-- Search, filters (Team / Role / Status / Product Access), sorting and pagination as on the agency list.`
+- Search, filters (Team / Role / Status / Product Access), sorting and pagination as on the agency list.
+- **Awaiting approval** *(Draft, 22/10/2026)*: client contacts added by the agency CRM auto set-up show "Awaiting approval" until the account manager approves them. Their row menu offers **Approve & send invite** (status becomes Pending Invite). They don't use a seat; the seat card lists them separately. The Status filter includes Awaiting approval.`
   },
   'agency-team-teams': {
     title: 'Team & Access › Teams', status: 'Draft', author: 'Hannah', updatedAt: '21/10/2026',
@@ -1301,7 +1324,7 @@ Full-page role builder (Figma "Create Role" / "Edit Role"), replacing V1's role 
 *(Draft.)* The same role editor for client roles. The Agency permission group is hidden.`
   },
   'agency-team-clients': {
-    title: 'Team & Access › Client Organisation', status: 'In Review', author: 'Hannah', updatedAt: '21/10/2026',
+    title: 'Team & Access › Client Organisation', status: 'In Review', author: 'Hannah', updatedAt: '22/10/2026',
     notes: `### Screen Purpose & Objectives
 Directory for creating and locating client organisations (workspaces). Ported from V1 "Client Workspaces Directory & Creation", shown as Figma cards.
 
@@ -1313,7 +1336,32 @@ Directory for creating and locating client organisations (workspaces). Ported fr
   - Existing: pick an organisation; archived ones are restored, then the workspace opens.
   - On create the organisation appears in this grid **and** the workspace switcher (fixes V1), then offers to go to its Team & Access.
 - **Assign Members** *(Draft — Figma only)*: searchable checklist of agency members; writes to each member's assigned workspaces.
-- **Archive** *(Draft — Figma only)*: confirmation; locks access, removes it from the switcher and lists.`
+- **Archive** *(Draft — Figma only)*: confirmation; locks access, removes it from the switcher and lists.
+- Manual creation and the CRM auto set-up share one function (\`teamCreateWorkspace\`), so both behave the same.
+
+### Auto set-up from the agency CRM *(Draft, 22/10/2026)*
+When an account converts in the agency CRM, Galaxis creates the client workspace automatically:
+1. **Workspace created**, marked "From CRM" (badge on the card).
+2. **Services & budgets synced** from the CRM (shown read-only in Organisation › Business Information › Services & Contract).
+3. **Agency assignees added** through the role mapping in agency Integrations. The CRM's named user is used when they hold the mapped Galaxis role and team; otherwise the agency member with that role and team and the fewest workspaces is picked. Assignment writes to each member's assigned workspaces, so the workspace appears in their switcher.
+4. **SEO Cloud project linked** (only when SEO is a live service). The project starts as *Pending setup* until keywords are set up in SEO Cloud.
+5. **Client contacts awaiting approval.** CRM contacts are added as members with status *Awaiting approval*. They are not invited and don't use a seat. The account manager approves them (all at once or one by one) or removes them; approved contacts become *Pending Invite*. The first primary contact becomes the workspace Primary Contact.
+6. **Ad accounts linked** — a manual step: "Link in Integrations" opens agency Integrations.
+- **Card**: while set-up is incomplete, the card shows "Set-up: N of M steps" with a progress bar. The action menu has **View set-up**.
+- **Set-up checklist** (slide-over): progress, each step with ✓ Done / Needs approval / Manual step, the contact list with Approve and Remove, Link in Integrations, Assign members (when a CRM role has no matching Galaxis user), **Open workspace** and **Approve & send invites**.
+- Steps are computed from live data, so linking ad accounts or approving contacts elsewhere ticks them off.
+- The agency dashboard lists incomplete set-ups as Attention rows ("N client invites awaiting approval").
+- If the agency turns approval off in Integrations, contacts are invited straight away.
+- If the Agency CRM is disconnected, no workspaces are created.
+- Seeded demo: Grizzly Bear Corp and Bean Tech Pte Ltd are CRM-created and still waiting for approval and ad accounts. Earlier workspaces count as fully set up.
+- Dev toggle "Simulate CRM conversion" converts the next placeholder account (Northstar Dental Pte Ltd, Harbourview Bakery, Lumen Fitness Studio — fictional [PLACEHOLDER] companies).
+
+### Open questions
+- What happens to the workspace, assignees and budgets when a CRM account churns or a service ends?
+- Should an agency be able to make client invites fully automatic (per-agency setting), and who can change it?
+- How do we map a CRM account manager who isn't a Galaxis user yet (invite them, fall back to the mapping, or block)?
+- Ad budget source: CRM services (SEM + Google Ads + Facebook Ads) or a per-workspace budget?
+- Duplicate detection: when a converted CRM account matches an existing workspace (name, domain or UEN), link it instead of creating one? The demo skips the conversion and flags it.`
   },
   'client-team-agency': {
     title: 'Team & Access › Agency (Client workspace)', status: 'In Review', author: 'Hannah', updatedAt: '21/10/2026',

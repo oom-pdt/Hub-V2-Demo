@@ -1,1 +1,33 @@
 /* crm module styles — component-specific only; shared components live in design.css */
+
+/* "From CRM" badge (Client Organisation cards, checklist drawer) */
+.crm-badge { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border-radius: var(--r-pill); background: var(--tint); color: var(--link); font-size: 10px; font-weight: 700; letter-spacing: .25px; white-space: nowrap; }
+.crm-badge svg.lucide { width: 11px; height: 11px; }
+
+/* Set-up checklist drawer */
+.crm-setup-head { display: flex; gap: 12px; align-items: flex-start; }
+.crm-setup-head .team-org-logo { width: 40px; height: 40px; font-size: 12px; }
+.crm-setup-meta { gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+.crm-progress-row { display: flex; justify-content: space-between; align-items: baseline; margin: 24px 0 8px; font-size: 14px; }
+.crm-progress { height: 8px; }
+.crm-setup-note { margin: 12px 0 0; }
+.crm-steps { list-style: none; padding: 0; margin: 20px 0 0; display: flex; flex-direction: column; }
+.crm-step { display: flex; gap: 12px; padding: 14px 0; border-top: 1px solid var(--border-light); font-size: 14px; }
+.crm-step-icon { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; }
+.crm-step-icon svg.lucide { width: 14px; height: 14px; stroke-width: 2.5; }
+.crm-step-done .crm-step-icon { background: var(--success-bg); color: var(--success); }
+.crm-step-pending .crm-step-icon { background: var(--warning-bg); color: var(--warning-dark); }
+.crm-step-manual .crm-step-icon { background: var(--tint); color: var(--link); }
+.crm-step-state { font-size: 11px; font-weight: 700; letter-spacing: .25px; white-space: nowrap; }
+.crm-step-done .crm-step-state { color: var(--success); }
+.crm-step-pending .crm-step-state { color: var(--warning-dark); }
+.crm-step-manual .crm-step-state { color: var(--link); }
+.crm-step-detail { margin-top: 4px; }
+.crm-step-btn { margin-top: 10px; }
+.crm-contacts { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.crm-contact { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--border-light); border-radius: var(--r-md); font-size: 12px; }
+.crm-contact-text { min-width: 0; }
+.crm-contact-name { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.crm-contact .chip { height: 18px; padding: 0 8px; font-size: 10px; }
+.crm-contact .cell-sub { overflow-wrap: anywhere; }
+.crm-foot { display: flex; justify-content: flex-end; gap: 10px; width: 100%; flex-wrap: wrap; }

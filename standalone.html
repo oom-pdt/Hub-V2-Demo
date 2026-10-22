@@ -485,17 +485,8 @@ svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
 .dash-hub-action { flex-shrink: 0; white-space: nowrap; }
 .dash-hub-action svg.lucide { width: 12px; height: 12px; }
 
-/* ---------- Campaigns column picker ---------- */
-.dash-cols-panel { width: 380px; max-height: min(70vh, 560px); overflow-y: auto; }
-.dash-cols-head { margin-bottom: 16px; }
-.dash-cols-head .card-sub { margin-top: 4px; }
-.dash-cols-group-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.dash-cols-group-head .filter-group-title { margin-bottom: 0; }
-.dash-cols-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
-.dash-cols-options .check { font-size: 12px; }
-
 /* ---------- Agency KPI grid ---------- */
-.dash-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; margin-bottom: 24px; }
+.dash-top { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 1fr); gap: 20px; margin-bottom: 24px; }
 .dash-donut-card { display: flex; flex-direction: column; padding: 20px; }
 .dash-metric { padding: 18px 20px; min-height: 150px; }
 .dash-metric .kpi-value { margin: 12px 0 14px; }
@@ -632,6 +623,87 @@ svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
 .dash-heat-ramp { flex: 1; height: 6px; border-radius: var(--r-pill); background: linear-gradient(90deg, rgb(191, 226, 176), rgb(249, 213, 143), rgb(243, 160, 156)); }
 .dash-heat-callout { display: flex; align-items: center; gap: 10px; margin-top: 20px; padding: 10px 12px; border-radius: var(--r-sm); background: var(--grey-light); font-size: 12px; letter-spacing: .25px; }
 
+/* ---------- Agency: SEO Portfolio card ---------- */
+.dash-kpi-unit { font-family: var(--font-body); font-weight: 400; font-size: 12px; letter-spacing: .5px; color: var(--text-secondary); }
+.dash-stack { display: flex; gap: 3px; height: 8px; border-radius: var(--r-pill); overflow: hidden; background: var(--grey-light); }
+.dash-stack > span { display: block; height: 100%; }
+.dash-stack-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; letter-spacing: .5px; margin: 10px 0 6px; }
+.dash-stack-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.dash-seo-port-rows { border-top: 1px solid var(--border-light); margin-top: 8px; padding-top: 4px; }
+.dash-seo-port-rows .dash-plat-row { min-height: 28px; }
+.dash-seo-port-rows .dash-plat-row > span:first-child { white-space: nowrap; }
+
+/* ---------- Client: tab bar ---------- */
+.dash-tabs { margin: 4px 0 24px; align-items: center; border-bottom: 1px solid var(--border-light); gap: 28px; }
+.dash-tabs .page-tab { padding: 8px 0 10px; margin-bottom: -1px; }
+.dash-tabs .page-tab[data-off] { color: var(--border); }
+.dash-tabs .page-tab[data-off].active { color: var(--text-muted); border-bottom-color: var(--text-muted); }
+.dash-tab-connect { margin-left: -12px; }
+.dash-tab-connect svg.lucide { width: 12px; height: 12px; }
+
+/* ---------- Client: SEO Performance ---------- */
+.dash-seo-strip { display: flex; align-items: center; gap: 16px; padding: 16px 20px; margin-bottom: 24px; flex-wrap: wrap; }
+.dash-seo-strip .grow { min-width: 260px; }
+.dash-seo-strip-title { display: flex; align-items: baseline; gap: 10px; }
+.dash-seo-facts { display: flex; flex-wrap: wrap; gap: 4px 0; font-size: 12px; letter-spacing: .25px; color: var(--text-secondary); margin-top: 6px; }
+.dash-seo-facts > span + span::before { content: '·'; margin: 0 8px; color: var(--text-muted); }
+.dash-seo-facts b { color: var(--text); }
+
+.dash-seo-buckets { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 12px; margin-bottom: 24px; }
+.dash-seo-bucket { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-height: 104px; padding: 14px; text-align: left;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); transition: border-color .15s, box-shadow .15s; }
+.dash-seo-bucket:hover { border-color: var(--blue-light); }
+.dash-seo-bucket.selected { border: 1.5px solid var(--primary); box-shadow: 0 0 0 3px rgba(57, 143, 247, .12); padding: 13.5px; }
+.dash-seo-bk-head { display: flex; align-items: baseline; gap: 4px; width: 100%; font-size: 12px; letter-spacing: .5px; flex-wrap: wrap; }
+.dash-seo-bk-label { font-weight: 700; white-space: nowrap; }
+.dash-seo-bk-count { color: var(--text-muted); font-size: 11px; }
+.dash-seo-bk-head .dash-delta { margin-left: auto; }
+.dash-seo-bk-val { font-family: var(--font-head); font-weight: 700; font-size: 24px; line-height: 28px; color: var(--primary); }
+.dash-seo-bk-sub { font-size: 11px; color: var(--text-muted); letter-spacing: .25px; }
+.dash-seo-goal { width: 100%; display: flex; flex-direction: column; gap: 4px; margin-top: auto; }
+.dash-seo-goal-bar { position: relative; height: 5px; border-radius: var(--r-pill); background: var(--grey-light); }
+.dash-seo-goal-bar > span { display: block; height: 100%; border-radius: var(--r-pill); }
+.dash-seo-goal-bar > i { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--text); border-radius: 1px; }
+.dash-seo-fill-on { background: var(--success); }
+.dash-seo-fill-off { background: var(--warning); }
+.dash-seo-fill-critical { background: var(--error); }
+.dash-delta { font-size: 11px; font-weight: 700; white-space: nowrap; letter-spacing: .25px; }
+.dash-delta.up { color: var(--success); }
+.dash-delta.down { color: var(--error); }
+.dash-delta.flat { color: var(--text-muted); font-weight: 400; }
+
+.dash-seo-trend { display: grid; grid-template-columns: minmax(220px, 260px) minmax(0, 1fr); gap: 20px; margin-bottom: 24px; }
+.dash-seo-side { display: flex; flex-direction: column; gap: 20px; }
+.dash-seo-mini { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 20px; }
+.dash-seo-mini-val { font-family: var(--font-head); font-weight: 700; font-size: 32px; line-height: 36px; margin: 14px 0 10px; }
+.dash-seo-mini .kpi-sub { line-height: 16px; }
+.dash-seo-chart-card .card-header { margin-bottom: 12px; }
+
+.dash-seo-kw-card { margin-bottom: 24px; }
+.dash-seo-view { display: inline-flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-secondary); letter-spacing: .5px; white-space: nowrap; }
+.dash-seo-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 12px; margin-bottom: 12px; }
+.dash-seo-meta .dash-drill { margin-bottom: 0; padding: 3px 10px; }
+.dash-seo-meta-right { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; }
+.dash-seo-table td.dash-seo-kwcell { min-width: 240px; }
+.dash-seo-cc { display: inline-grid; place-items: center; height: 16px; padding: 0 4px; margin-right: 8px; border-radius: var(--r-xs); background: var(--grey-light); color: var(--text-secondary); font-size: 9px; font-weight: 700; letter-spacing: .5px; vertical-align: 1px; }
+.dash-seo-url { display: inline-flex; align-items: center; gap: 4px; color: var(--link); }
+.dash-seo-url svg.lucide { width: 13px; height: 13px; }
+.dash-seo-intents { display: inline-flex; gap: 4px; }
+.dash-seo-intent { width: 20px; height: 20px; border-radius: 50%; display: inline-grid; place-items: center; background: var(--tint); color: var(--link); font-size: 10px; font-weight: 700; cursor: help; }
+.dash-seo-spark { display: block; }
+.dash-seo-table th.dash-seo-day, .dash-seo-table td.dash-seo-day { text-align: center; min-width: 72px; }
+.dash-seo-table th.dash-seo-day .th-sort { justify-content: center; }
+/* Higher specificity than the pinned-column background so the tint also shows on the pinned latest day. */
+.dash-seo-table td.dash-seo-better { background: var(--success-bg); color: #26762C; font-weight: 700; }
+.dash-seo-table td.dash-seo-worse { background: var(--error-bg); color: #A40C0A; font-weight: 700; }
+.dash-seo-table tr.dash-seo-grow > td { background: #F6FAFF; padding: 8px 10px; position: static; box-shadow: none; }
+.dash-seo-table tr.dash-seo-grow > td::before, .dash-seo-table td[colspan]::before { display: none; }
+.dash-seo-table td[colspan] { position: static; box-shadow: none; }
+.dash-seo-ghead { position: sticky; left: 10px; display: inline-flex; align-items: center; gap: 14px; }
+.dash-seo-gtoggle { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; padding: 2px 0; font-size: 12px; }
+.dash-seo-gtoggle:hover b { color: var(--link); }
+.dash-seo-gdate { font-size: 11px; font-style: italic; color: var(--text-muted); }
+
 /* ---------- No ad accounts ---------- */
 .dash-empty-card { text-align: center; padding: 56px 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .dash-empty-card p { max-width: 560px; margin: 0 0 8px; }
@@ -640,6 +712,9 @@ svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
 
 @media (max-width: 1280px) {
   .dash-charts { grid-template-columns: 1fr; }
+  .dash-seo-buckets { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .dash-donut-wrap { gap: 18px; }
+  .dash-donut { width: 150px; height: 150px; }
 }
 @media (max-width: 1100px) {
   .dash-hub-body { grid-template-columns: 1fr; }
@@ -649,6 +724,8 @@ svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
 @media (max-width: 960px) {
   .dash-welcome, .dash-ct-toolbar { flex-direction: column; align-items: stretch; }
   .dash-top { grid-template-columns: 1fr; }
+  .dash-seo-trend { grid-template-columns: 1fr; }
+  .dash-seo-side { flex-direction: row; }
   .dash-donut-card { grid-column: auto; }
   .dash-entity-trigger { width: 100%; }
 }
@@ -744,6 +821,19 @@ svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
   .org-plan-grid { grid-template-columns: 1fr; gap: 16px; }
   .org-plan-grid > div { padding: 0; border-left: 0; }
   .org-header-card { flex-direction: column; align-items: flex-start; }
+}
+
+/* Services & Contract (agency CRM) */
+.org-svc-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 24px; }
+.org-svc-kpis > div { padding: 0 24px; border-left: 1px solid var(--border); min-width: 0; }
+.org-svc-kpis > div:first-child { padding-left: 0; border-left: 0; }
+.org-svc-kpis .kv-label { margin-bottom: 8px; }
+.org-svc-kpis .org-plan-value { overflow-wrap: anywhere; }
+.org-svc-table { margin-top: 24px; }
+.org-svc-sync { margin-top: 14px; }
+@media (max-width: 960px) {
+  .org-svc-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 0; }
+  .org-svc-kpis > div:nth-child(3) { padding-left: 0; border-left: 0; }
 }
 
 /* team-access module styles — component-specific only; shared components live in design.css */
@@ -843,6 +933,12 @@ svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
 .team-org-stats > div + div { border-left: 1px solid var(--border); }
 .team-org-stat { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 12px; }
 .team-org-stat svg.lucide { width: 14px; height: 14px; }
+.team-org-crm { margin-left: auto; }
+.team-org-setup { display: flex; flex-direction: column; gap: 6px; border: 1px solid var(--warning-pill); background: var(--warning-bg); border-radius: var(--r-sm); padding: 8px 10px; font-size: 11px; color: var(--warning-dark); text-align: left; width: 100%; }
+.team-org-setup:hover { border-color: var(--warning); }
+.team-org-setup .t-link { font-size: 11px; }
+.team-org-setup-bar { display: block; height: 6px; background: #fff; }
+.team-org-setup-bar > span { background: var(--warning); }
 .team-org-stats .cell-sub { color: var(--text-muted); font-size: 10px; padding-left: 22px; }
 
 /* Agency tab */
@@ -1046,6 +1142,15 @@ svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
   .integ-dir-search { width: 100%; }
 }
 
+/* Agency CRM master connection + role mapping (crm.js) */
+.integ-crm-logo { background: var(--tint); color: var(--primary); }
+.integ-crm-logo svg.lucide { width: 18px; height: 18px; }
+.integ-map-select { height: 36px; min-width: 180px; font-size: 12px; }
+.integ-map-who { font-size: 12px; }
+.integ-map-note { margin-top: 12px; }
+.integ-crm-toggle { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 20px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--r-md); }
+.integ-crm-toggle .t-bold { font-size: 14px; }
+
 /* leads module styles — component-specific only; shared components live in design.css */
 
 .lead-card-title { font-size: 20px; line-height: 24px; }
@@ -1105,6 +1210,40 @@ svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
   .lead-layout { grid-template-columns: 1fr; }
   .lead-conv-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* crm module styles — component-specific only; shared components live in design.css */
+
+/* "From CRM" badge (Client Organisation cards, checklist drawer) */
+.crm-badge { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border-radius: var(--r-pill); background: var(--tint); color: var(--link); font-size: 10px; font-weight: 700; letter-spacing: .25px; white-space: nowrap; }
+.crm-badge svg.lucide { width: 11px; height: 11px; }
+
+/* Set-up checklist drawer */
+.crm-setup-head { display: flex; gap: 12px; align-items: flex-start; }
+.crm-setup-head .team-org-logo { width: 40px; height: 40px; font-size: 12px; }
+.crm-setup-meta { gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+.crm-progress-row { display: flex; justify-content: space-between; align-items: baseline; margin: 24px 0 8px; font-size: 14px; }
+.crm-progress { height: 8px; }
+.crm-setup-note { margin: 12px 0 0; }
+.crm-steps { list-style: none; padding: 0; margin: 20px 0 0; display: flex; flex-direction: column; }
+.crm-step { display: flex; gap: 12px; padding: 14px 0; border-top: 1px solid var(--border-light); font-size: 14px; }
+.crm-step-icon { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; }
+.crm-step-icon svg.lucide { width: 14px; height: 14px; stroke-width: 2.5; }
+.crm-step-done .crm-step-icon { background: var(--success-bg); color: var(--success); }
+.crm-step-pending .crm-step-icon { background: var(--warning-bg); color: var(--warning-dark); }
+.crm-step-manual .crm-step-icon { background: var(--tint); color: var(--link); }
+.crm-step-state { font-size: 11px; font-weight: 700; letter-spacing: .25px; white-space: nowrap; }
+.crm-step-done .crm-step-state { color: var(--success); }
+.crm-step-pending .crm-step-state { color: var(--warning-dark); }
+.crm-step-manual .crm-step-state { color: var(--link); }
+.crm-step-detail { margin-top: 4px; }
+.crm-step-btn { margin-top: 10px; }
+.crm-contacts { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.crm-contact { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--border-light); border-radius: var(--r-md); font-size: 12px; }
+.crm-contact-text { min-width: 0; }
+.crm-contact-name { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.crm-contact .chip { height: 18px; padding: 0 8px; font-size: 10px; }
+.crm-contact .cell-sub { overflow-wrap: anywhere; }
+.crm-foot { display: flex; justify-content: flex-end; gap: 10px; width: 100%; flex-wrap: wrap; }
 
 </style>
 </head>
@@ -1284,16 +1423,35 @@ const products = [
 const workspaceProducts = {
   'ws-visual':    { 'crm-lite': { status: 'connected', active: true,  lastSynced: '2026-10-21T11:32:00' },
                     'aurix':    { status: 'connected', active: true,  lastSynced: '2026-10-21T11:32:00' },
-                    'cdp':      { status: 'connected', active: true,  lastSynced: '2026-10-21T11:32:00' } },
+                    'cdp':      { status: 'connected', active: true,  lastSynced: '2026-10-21T11:32:00' },
+                    'seo-cloud': { status: 'connected', active: true, lastSynced: '2026-10-22T06:00:00' } },
   'ws-technova':  { 'hubspot':  { status: 'connected', active: true,  lastSynced: '2026-10-21T10:05:00' },
+                    'seo-cloud': { status: 'connected', active: true, lastSynced: '2026-10-22T06:00:00' },
                     'sleekflow': { status: 'error', active: true, lastSynced: '2026-10-19T08:41:00', error: 'Webhook verification failed. New messaging events are queued until the connection is fixed.' } },
   'ws-innowave':  { 'salesforce': { status: 'pending', active: false, lastSynced: null, error: 'OAuth authorisation incomplete.' } },
   'ws-kinspired': { 'aurix': { status: 'connected', active: true, lastSynced: '2026-10-21T07:00:00' },
                     'seo-cloud': { status: 'connected', active: true, lastSynced: '2026-10-20T23:00:00' } },
   'ws-nexgen':    { 'crm-lite': { status: 'connected', active: true, lastSynced: '2026-10-21T09:15:00' },
+                    'seo-cloud': { status: 'connected', active: true, lastSynced: '2026-10-22T06:00:00' },
                     'delacon': { status: 'error', active: true, lastSynced: '2026-10-17T16:20:00', error: 'Webhook access token expired. Real-time call logs are queued pending token renewal.' } },
-  'ws-bright':    { 'institute-crm': { status: 'connected', active: true, lastSynced: '2026-10-21T08:00:00' } },
-  'ws-visionary': { 'salesforce': { status: 'connected', active: true, lastSynced: '2026-10-21T06:45:00' } }
+  'ws-bright':    { 'institute-crm': { status: 'connected', active: true, lastSynced: '2026-10-21T08:00:00' },
+                    'seo-cloud': { status: 'connected', active: true, lastSynced: '2026-10-22T06:00:00' } },
+  'ws-visionary': { 'salesforce': { status: 'connected', active: true, lastSynced: '2026-10-21T06:45:00' },
+                    'seo-cloud': { status: 'connected', active: true, lastSynced: '2026-10-22T06:00:00' } },
+  'ws-lumaforge': { 'seo-cloud': { status: 'connected', active: true, lastSynced: '2026-10-22T06:00:00' } }
+};
+
+// ---------- SEO Cloud projects ----------
+// Contract and target per workspace with SEO Cloud connected (keywords and daily positions are generated in seo.js).
+// scenarioTop10Pct is the generator's aim for today's share of keywords in the top 10 (sets On track / Off track / Critical).
+const seoProjects = {
+  'ws-visual':    { contractedKeywords: 80,  targetTop10Pct: 55, scenarioTop10Pct: 50, startedAt: '2026-02-01' },
+  'ws-technova':  { contractedKeywords: 60,  targetTop10Pct: 50, scenarioTop10Pct: 55, startedAt: '2026-03-15' },
+  'ws-kinspired': { contractedKeywords: 40,  targetTop10Pct: 45, scenarioTop10Pct: 42, startedAt: '2025-09-01' },
+  'ws-nexgen':    { contractedKeywords: 100, targetTop10Pct: 50, scenarioTop10Pct: 58, startedAt: '2025-07-01' },
+  'ws-bright':    { contractedKeywords: 80,  targetTop10Pct: 60, scenarioTop10Pct: 52, startedAt: '2025-06-01' },
+  'ws-visionary': { contractedKeywords: 50,  targetTop10Pct: 40, scenarioTop10Pct: 37, startedAt: '2025-04-01' },
+  'ws-lumaforge': { contractedKeywords: 60,  targetTop10Pct: 55, scenarioTop10Pct: 57, startedAt: '2025-10-01' }
 };
 
 // ---------- People ----------
@@ -1368,6 +1526,37 @@ function seededRandom(seed) {
   };
 }
 
+// ---------- Agency CRM (internal) ----------
+// One converted CRM account per workspace: live services with monthly budgets (SGD), account manager,
+// agency assignees and client contacts. Built from the workspace data so budgets match the dashboard.
+const CRM_SERVICE_TYPES = ['SEO', 'Content Marketing', 'SEM', 'Google Ads', 'Facebook Ads', 'Social Media'];
+const CRM_AD_SERVICES = ['SEM', 'Google Ads', 'Facebook Ads'];   // services whose budget is ad spend
+const agencyCrm = { status: 'connected', lastSynced: '2026-10-22T07:30:00', accountsSynced: 0 };
+const crmAccounts = {};
+(function crmSeed() {
+  workspaces.forEach(ws => {
+    const r = seededRandom(ws.seed * 17 + 3);
+    const plats = ['google', 'meta'].filter(p => adAccounts.some(a => a.workspaceId === ws.id && a.platform === p));
+    const services = [];
+    const start = ws.createdAt;
+    const end = `${Number(ws.createdAt.slice(0, 4)) + 1}${ws.createdAt.slice(4)}`;
+    const ad = plats.length ? plats : ['google'];   // a live ad service can exist before its account is linked
+    const split = ad.length === 2 ? [0.6, 0.4] : [1];
+    ad.forEach((p, i) => services.push({ type: p === 'google' ? 'Google Ads' : 'Facebook Ads', monthlyBudget: Math.round(ws.budget * split[i]), start, end }));
+    if (seoProjects[ws.id]) services.push({ type: 'SEO', monthlyBudget: 2000 + Math.round(r() * 8) * 500, start, end });
+    if (ws.seed % 3 === 0) services.push({ type: 'Content Marketing', monthlyBudget: 1500 + Math.round(r() * 3) * 500, start, end });
+    const assigned = members.filter(m => m.org === 'agency' && m.workspaces.includes(ws.id));
+    const am = assigned.find(m => m.roleId === 'r-a-am') || members.find(m => m.id === 'm-a3');
+    const assignees = [{ role: 'Account Manager', memberId: am.id }];
+    if (seoProjects[ws.id]) assignees.push({ role: 'SEO Specialist', memberId: 'm-a2' });
+    const pl = assigned.find(m => m.roleId === 'r-a-pl');
+    if (pl) assignees.push({ role: 'Project Lead', memberId: pl.id });
+    const contacts = members.filter(m => m.org === ws.id).slice(0, 3).map(m => ({ name: m.name, email: m.email, role: m.isPrimary ? 'Primary contact' : 'Marketing' }));
+    crmAccounts[ws.id] = { crmId: `CRM-${1000 + ws.seed}`, stage: 'converted', convertedAt: ws.createdAt, services, accountManager: am.id, assignees, clientContacts: contacts, source: 'crm' };
+  });
+  agencyCrm.accountsSynced = Object.keys(crmAccounts).length;
+})();
+
 
 // ---- src/core.js ----
 // Galaxis Hub demo — core: state, routing, formatting and shared UI helpers.
@@ -1421,6 +1610,11 @@ function laneOccupant(wsId, pid) {
   if (!lane) return null;
   const hit = PRODUCT_LANES[lane].ids().find(id => id !== pid && wsProducts(wsId)[id]);
   return hit ? productById(hit) : null;
+}
+// Monthly ad budget for a workspace: the CRM's SEM + Google Ads + Facebook Ads services, else the workspace default.
+function wsAdBudget(wsId) {
+  const services = (crmAccounts[wsId]?.services || []).filter(x => CRM_AD_SERVICES.includes(x.type));
+  return services.length ? services.reduce((t, x) => t + x.monthlyBudget, 0) : (wsById(wsId)?.budget || 0);
 }
 function wsAdAccounts(wsId) { return adAccounts.filter(a => a.workspaceId === wsId); }
 function wsPlatforms(wsId) { return ['google', 'meta'].filter(p => wsAdAccounts(wsId).some(a => a.platform === p)); }
@@ -1532,7 +1726,7 @@ function statusPill(status, label) {
   const [text, cls] = STATUS_PILL[status] || [status, 'pill-grey'];
   return `<span class="pill ${cls}">${esc(label || text)}</span>`;
 }
-const STATUS_DOT = { active: ['Active', 'dot-green', 't-success'], pending: ['Pending Invite', 'dot-blue', 't-primary'], inactive: ['Inactive', 'dot-orange', 't-warning'], deactivated: ['Deactivated', 'dot-grey', 't-muted'], archived: ['Archived', 'dot-grey', 't-muted'] };
+const STATUS_DOT = { active: ['Active', 'dot-green', 't-success'], pending: ['Pending Invite', 'dot-blue', 't-primary'], awaiting: ['Awaiting approval', 'dot-orange', 't-warning'], inactive: ['Inactive', 'dot-orange', 't-warning'], deactivated: ['Deactivated', 'dot-grey', 't-muted'], archived: ['Archived', 'dot-grey', 't-muted'] };
 function statusDot(status, label) {
   const [text, dot, color] = STATUS_DOT[status] || [status, 'dot-grey', 't-muted'];
   return `<span class="dot-label ${color}"><span class="dot ${dot}"></span>${esc(label || text)}</span>`;
@@ -1832,6 +2026,72 @@ function applyDateFilter(scope, onApply) {
   if (onApply && window[onApply]) window[onApply]();
 }
 
+// ---------- Column picker (show / hide table columns) ----------
+// registerColumnPicker('campaigns', {
+//   columns: () => [{ key, group, label }],   // toggleable columns (fixed columns are simply not listed)
+//   groups: [['delivery', 'Delivery'], …],     // group order and labels; empty groups are skipped
+//   note: 'Name and Action are always shown',
+//   onChange: 'dashRefreshCampaignTable',      // global fn re-rendering the table
+//   storageKey: 'galaxis-demo:…'               // optional; hidden columns are a per-viewer convenience
+// })
+const columnPickers = {};
+function registerColumnPicker(id, def) {
+  def.storageKey = def.storageKey || `galaxis-demo:${id}-columns-hidden`;
+  try { def.hidden = JSON.parse(localStorage.getItem(def.storageKey)) || def.defaultHidden || []; } catch (e) { def.hidden = def.defaultHidden || []; }
+  columnPickers[id] = def;
+}
+function colVisible(id, key) { return !columnPickers[id].hidden.includes(key); }
+function colHiddenCount(id) { const d = columnPickers[id]; return d.columns().filter(c => d.hidden.includes(c.key)).length; }
+function colPickerButton(id) {
+  const n = colHiddenCount(id);
+  return `<div class="menu-anchor">
+    <button type="button" class="icon-btn" aria-label="Show or hide columns" title="Columns" onclick="toggleMenu('colpick-${id}', event)"><i data-lucide="columns-3"></i><span class="count" id="colpick-count-${id}" ${n ? '' : 'hidden'}>${n}</span></button>
+    <div class="filter-panel colpick-panel" id="colpick-${id}" onclick="event.stopPropagation()"><div id="colpick-inner-${id}">${colPickerInner(id)}</div></div>
+  </div>`;
+}
+function colPickerInner(id) {
+  const d = columnPickers[id];
+  const cols = d.columns();
+  const shown = cols.filter(c => colVisible(id, c.key)).length;
+  const groups = d.groups.map(([g, label]) => {
+    const items = cols.filter(c => c.group === g);
+    if (!items.length) return '';
+    const on = items.filter(c => colVisible(id, c.key)).length;
+    return `<div class="filter-group">
+      <div class="colpick-group-head"><span class="filter-group-title">${esc(label)}</span>
+        <button type="button" class="t-link" onclick="colSetGroup('${id}', '${g}', ${on !== items.length})">${on === items.length ? 'Hide all' : 'Show all'}</button></div>
+      <div class="colpick-options">${items.map(c => `<label class="check"><input type="checkbox" ${colVisible(id, c.key) ? 'checked' : ''} onchange="colSet('${id}', '${c.key}', this.checked)">${esc(c.label)}</label>`).join('')}</div>
+    </div>`;
+  }).join('');
+  return `<div class="colpick-head"><div class="h-card">Columns</div><div class="card-sub">${shown} of ${cols.length} shown${d.note ? ` · ${esc(d.note)}` : ''}</div></div>
+    ${groups}
+    <div class="filter-actions"><button type="button" class="btn btn-outline btn-sm" onclick="colShowAll('${id}')" ${shown === cols.length ? 'disabled' : ''}>Show all columns</button></div>`;
+}
+function colSet(id, key, on) {
+  const d = columnPickers[id];
+  const h = new Set(d.hidden);
+  if (on) h.delete(key); else h.add(key);
+  d.hidden = [...h];
+  colChanged(id);
+}
+function colSetGroup(id, group, on) {
+  const d = columnPickers[id];
+  const h = new Set(d.hidden);
+  d.columns().filter(c => c.group === group).forEach(c => on ? h.delete(c.key) : h.add(c.key));
+  d.hidden = [...h];
+  colChanged(id);
+}
+function colShowAll(id) { columnPickers[id].hidden = []; colChanged(id); }
+function colChanged(id) {
+  const d = columnPickers[id];
+  try { localStorage.setItem(d.storageKey, JSON.stringify(d.hidden)); } catch (e) { /* storage unavailable: keep in memory */ }
+  if (d.onChange && window[d.onChange]) window[d.onChange]();
+  renderRegion(`colpick-inner-${id}`, colPickerInner(id));
+  const n = colHiddenCount(id);
+  const badge = document.getElementById(`colpick-count-${id}`);
+  if (badge) { badge.textContent = n; badge.hidden = !n; }
+}
+
 // ---------- Pinned first and action columns ----------
 // The first column of every table is pinned by CSS; this marks action columns and the scroll state.
 // A table's last column is pinned when it is an action column: its header says Action/Actions or carries an
@@ -2052,6 +2312,161 @@ function renderDevBar() {
 const screenSpecs = {};
 
 
+// ---- src/seo.js ----
+// Galaxis Hub demo — SEO Cloud data: keywords, daily positions, position buckets and project status.
+// Mock data is generated per workspace from seoProjects (data.js) and cached. All keywords are placeholders.
+// Globals are prefixed `seo`.
+
+const SEO_HISTORY_DAYS = 120;   // daily position history kept per keyword
+const SEO_BUCKETS = [
+  { key: 'all', label: 'All', max: Infinity },
+  { key: 'top1', label: 'Top 1', max: 1 },
+  { key: 'top3', label: 'Top 3', max: 3 },
+  { key: 'top5', label: 'Top 5', max: 5 },
+  { key: 'top10', label: 'Top 10', max: 10 },
+  { key: 'top30', label: 'Top 30', max: 30 },
+  { key: 'over100', label: 'Top >100', max: null }   // not ranking in the top 100
+];
+const SEO_INTENTS = { C: 'Commercial', L: 'Local', I: 'Informational', N: 'Navigational' };
+const SEO_DIFFICULTY = ['Easy', 'Moderate', 'Hard'];
+
+// Keyword groups per industry. {loc} becomes "singapore" on some keywords.
+const SEO_TOPICS = {
+  'Digital Media': [['Video Production', ['video production company', 'corporate video production', 'video agency', 'explainer video company', 'event videography']], ['Content Studio', ['content production studio', 'social media video agency', 'branded content agency', 'photography studio']]],
+  Technology: [['IT Services', ['managed it services', 'it support company', 'cloud migration services', 'cyber security company']], ['Software', ['custom software development', 'app development company', 'saas development agency', 'erp implementation']]],
+  Logistics: [['Freight', ['freight forwarding company', 'air freight services', 'sea freight forwarder', 'customs brokerage']], ['Warehousing', ['warehouse storage', 'third party logistics', 'fulfilment services', 'last mile delivery']]],
+  Manufacturing: [['Fabrication', ['metal fabrication company', 'cnc machining services', 'precision engineering', 'sheet metal fabrication']], ['Industrial Supply', ['industrial equipment supplier', 'factory automation', 'packaging manufacturer']]],
+  Education: [['Courses', ['enrichment classes', 'tuition centre', 'coding classes for kids', 'adult learning courses']], ['Enrolment', ['open house', 'skillsfuture courses', 'diploma courses', 'part time degree']]],
+  'Professional Services': [['Consulting', ['business consulting firm', 'management consultancy', 'hr consulting services']], ['Accounting', ['accounting firm', 'corporate secretarial services', 'payroll services', 'tax filing services']]],
+  Finance: [['Advisory', ['financial advisory', 'wealth management', 'retirement planning', 'investment advisory']], ['Insurance', ['insurance agency', 'business insurance', 'health insurance plans']]],
+  Property: [['Property Search', ['new condo launch', 'property agent', 'commercial property for rent', 'office space for rent']], ['Valuation', ['property valuation', 'home loan advisory']]],
+  Retail: [['Shop', ['online furniture store', 'home decor shop', 'lighting store', 'mattress store']], ['Promotions', ['furniture sale', 'home decor sale']]],
+  'F&B': [['Dining', ['halal restaurant', 'family restaurant', 'private dining room', 'buffet restaurant']], ['Catering', ['corporate catering', 'event catering', 'bento delivery']]]
+};
+const SEO_GENERIC = [['Best / Top Brand', ['best {svc} company', 'top {svc} agency', 'best {svc} services']]];
+
+const seoCache = {};
+
+// Today at 00:00 SGT (local for the demo) and day arithmetic, matching the date filter.
+function seoToday() { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }
+function seoDayIso(offset) { const d = seoToday(); d.setDate(d.getDate() - offset); return toDateInput(d); }
+
+// SEO Cloud counts as connected when the product is connected and active and a project exists.
+function seoConnected(wsId) {
+  const e = wsProducts(wsId)['seo-cloud'];
+  return !!(e && e.status === 'connected' && e.active && seoProjects[wsId]);
+}
+
+// Status rule (Hannah): On track at or above target; Off track below by less than 5 points; Critical 5+ points below.
+function seoStatus(pct, target) {
+  const gap = Math.round((target - pct) * 10) / 10;
+  if (gap <= 0) return { key: 'on', label: 'On track', pill: 'pill-green', dot: 'green', gap };
+  if (gap < 5) return { key: 'off', label: 'Off track', pill: 'pill-orange', dot: 'orange', gap };
+  return { key: 'critical', label: 'Critical', pill: 'pill-red', dot: 'red', gap };
+}
+
+// Keywords with daily positions (index 0 = SEO_HISTORY_DAYS-1 days ago … last = today). null = not in the top 100.
+function seoProject(wsId) {
+  const cfg = seoProjects[wsId];
+  if (!cfg) return null;
+  const key = `${wsId}|${cfg.contractedKeywords}|${cfg.scenarioTop10Pct}`;
+  if (seoCache[key]) return seoCache[key];
+  const ws = wsById(wsId);
+  const r = seededRandom((ws?.seed || 1) * 131 + 7);
+  const svc = (SEO_TOPICS[ws?.industry]?.[0]?.[0] || 'digital marketing').toLowerCase();
+  const topics = [...SEO_GENERIC.map(([g, list]) => [g, list.map(t => t.replace('{svc}', svc))]), ...(SEO_TOPICS[ws?.industry] || SEO_TOPICS.Technology)];
+  // Expand terms with location / modifiers until the contracted count is reached.
+  const mods = ['', ' singapore', ' near me', ' price', ' sg'];
+  const terms = [];
+  for (let m = 0; terms.length < cfg.contractedKeywords && m < mods.length * 3; m++) {
+    topics.forEach(([group, list]) => list.forEach(t => {
+      if (terms.length >= cfg.contractedKeywords) return;
+      const term = `${t}${mods[m % mods.length]}${m >= mods.length ? ` ${['services', 'company', 'agency'][Math.floor(m / mods.length) - 1]}` : ''}`.replace(/\s+/g, ' ').trim();
+      if (!terms.some(x => x.term === term)) terms.push({ term, group });
+    }));
+  }
+  // Today's positions: exactly round(n × scenario%) keywords in the top 10.
+  const n = terms.length;
+  const inTop10 = Math.round(n * cfg.scenarioTop10Pct / 100);
+  const order = terms.map((_, i) => i).sort(() => r() - 0.5);
+  const today = new Array(n);
+  order.forEach((idx, rank) => {
+    if (rank < inTop10) today[idx] = 1 + Math.floor(Math.pow(r(), 1.6) * 10);
+    else {
+      const x = r();
+      today[idx] = x < 0.45 ? 11 + Math.floor(r() * 20) : x < 0.8 ? 31 + Math.floor(r() * 70) : null;
+    }
+  });
+  const lastChecked = `${seoDayIso(0)}T06:00:00+08:00`;
+  const keywords = terms.map((t, i) => {
+    // Walk backwards from today: positions were usually worse in the past (SEO improves over time), not always.
+    const pos = new Array(SEO_HISTORY_DAYS);
+    let p = today[i] === null ? 100 + Math.floor(r() * 30) : today[i];
+    const drift = -0.12 + r() * 0.36;   // most keywords improved over time, some slipped
+    for (let d = SEO_HISTORY_DAYS - 1; d >= 0; d--) {
+      if (d < SEO_HISTORY_DAYS - 1) p = Math.max(1, Math.round(p + drift * (r() < 0.6 ? 1 : 0) + (r() - 0.5) * 3));
+      pos[d] = d === SEO_HISTORY_DAYS - 1 ? today[i] : (p > 100 ? null : p);
+    }
+    const intents = ['C'].concat(t.term.includes('singapore') || t.term.includes('near me') || t.term.includes(' sg') ? ['L'] : [], r() < 0.2 ? ['I'] : []);
+    return {
+      id: `${wsId}-kw${i + 1}`, term: t.term, group: t.group, country: 'SG',
+      rankingUrls: today[i] === null ? 0 : 1 + (r() < 0.2 ? 1 : 0),
+      volume: [10, 20, 30, 50, 70, 90, 110, 140, 170, 210, 260, 320, 390, 480, 590, 720, 880, 1000, 1300, 1600][Math.floor(Math.pow(r(), 1.4) * 20)],
+      intent: intents, difficulty: SEO_DIFFICULTY[r() < 0.55 ? 0 : r() < 0.75 ? 1 : 2],
+      baseline: r() < 0.35 ? null : pos[0] ?? null,   // position when the keyword was added (often unranked)
+      positions: pos
+    };
+  });
+  const groups = [...new Set(keywords.map(k => k.group))].map(name => ({ name, keywords: keywords.filter(k => k.group === name), updatedAt: lastChecked }));
+  return (seoCache[key] = { wsId, ...cfg, tracked: n, keywords, groups, lastChecked, domain: ws?.site || '' });
+}
+
+function seoInBucket(pos, b) { return b.max === null ? pos === null : b.max === Infinity ? true : pos !== null && pos <= b.max; }
+function seoPosAt(k, daysAgo) { return k.positions[SEO_HISTORY_DAYS - 1 - Math.min(daysAgo, SEO_HISTORY_DAYS - 1)]; }
+
+// Stats for the selected range: bucket counts/% today and change vs the start of the range,
+// average position (keywords ranking in the top 100) with its daily series, and status vs target.
+function seoStats(wsId, days = 30) {
+  const p = seoProject(wsId);
+  if (!p) return null;
+  const span = Math.min(days, SEO_HISTORY_DAYS - 1);
+  const n = p.keywords.length || 1;
+  const buckets = SEO_BUCKETS.map(b => {
+    const count = p.keywords.filter(k => seoInBucket(seoPosAt(k, 0), b)).length;
+    const prev = p.keywords.filter(k => seoInBucket(seoPosAt(k, span), b)).length;
+    return { ...b, count, pct: Math.round(count / n * 100), delta: count - prev };
+  });
+  const avgOn = ago => {
+    const ranked = p.keywords.map(k => seoPosAt(k, ago)).filter(v => v !== null);
+    return ranked.length ? ranked.reduce((t, v) => t + v, 0) / ranked.length : null;
+  };
+  const series = [];
+  for (let ago = span; ago >= 0; ago--) series.push({ date: seoDayIso(ago), avg: avgOn(ago) });
+  const top10 = buckets.find(b => b.key === 'top10');
+  const top10Pct = p.keywords.length ? Math.round(top10.count / p.keywords.length * 1000) / 10 : 0;
+  return {
+    project: p, buckets, series, days: span,
+    avgPos: avgOn(0), avgPosPrev: avgOn(span),
+    top10Pct, target: p.targetTop10Pct,
+    status: seoStatus(top10Pct, p.targetTop10Pct)
+  };
+}
+
+// Agency roll-up across visible workspaces with SEO Cloud connected.
+function seoPortfolio(list) {
+  const rows = (list || activeWorkspaces()).filter(w => seoConnected(w.id)).map(w => ({ ws: w, stats: seoStats(w.id, dateRangeDays('agency')) }));
+  const by = k => rows.filter(x => x.stats.status.key === k).length;
+  const avg = f => rows.length ? rows.reduce((t, x) => t + f(x), 0) / rows.length : 0;
+  return {
+    rows, clients: rows.length,
+    onTrack: by('on'), offTrack: by('off'), critical: by('critical'),
+    avgTop10Pct: avg(x => x.stats.top10Pct), avgTarget: avg(x => x.stats.target),
+    keywords: rows.reduce((t, x) => t + x.stats.project.tracked, 0),
+    contracted: rows.reduce((t, x) => t + x.stats.project.contractedKeywords, 0)
+  };
+}
+
+
 // ---- src/dashboard.js ----
 // Galaxis Hub demo — Dashboard module: agency "My Workspace" dashboard and client workspace dashboard.
 // Owns src/dashboard.js + src/dashboard.css. Every global here is prefixed `dash`, except
@@ -2168,7 +2583,7 @@ function dashTree(wsId) {
   // Fit 30-day spend to 72–94% of the monthly budget so budget pacing looks plausible.
   const total = t.ads.reduce((s, a) => s + a.base.spend, 0);
   if (total) {
-    const f = ws.budget * (0.72 + dashRng(`${wsId}:budget`)() * 0.22) / total;
+    const f = wsAdBudget(wsId) * (0.72 + dashRng(`${wsId}:budget`)() * 0.22) / total;
     t.ads.forEach(a => Object.keys(a.base).forEach(k => { a.base[k] *= f; }));
   }
   dashCache.tree[key] = t;
@@ -2271,6 +2686,10 @@ function dashQuality(v, ref, higherBetter) {
 function dashDot(text, quality) {
   return quality ? `<span class="metric-dot ${quality}" title="${DASH_QUALITY_LABEL[quality]}">${text}</span>` : text;
 }
+// SEO number formatting: whole numbers stay whole, others get one decimal ("52.5%").
+function dashNum1(n) { const v = Math.round(Number(n || 0) * 10) / 10; return Number.isInteger(v) ? String(v) : v.toFixed(1); }
+function dashPctTxt(n) { return `${dashNum1(n)}%`; }
+const DASH_SEO_TEXT = { on: 't-success', off: 't-warning', critical: 't-error' };
 function dashFirstName() { const u = memberById(CURRENT_USER_ID); return u ? u.name.split(/\s+/)[0] : 'there'; }
 function dashAgencyWorkspaces() { return typeof visibleWorkspaces === 'function' ? visibleWorkspaces() : activeWorkspaces(); }
 
@@ -2284,14 +2703,15 @@ const DASH_FILTERS = {
     groups: () => [
       { key: 'platform', title: 'Ad Platforms', options: [['google', 'Google'], ['meta', 'Meta'], ['none', 'No platform linked']] },
       { key: 'status', title: 'Status', options: [['new', 'New'], ['active', 'Active'], ['inactive', 'Inactive'], ['attention', 'Attention Required']] },
-      { key: 'perf', title: 'Performance (Cost per Conversion)', options: [['good', 'Excellent'], ['mid', 'Average'], ['bad', 'Bad']] }
+      { key: 'perf', title: 'Performance (Cost per Conversion)', options: [['good', 'Excellent'], ['mid', 'Average'], ['bad', 'Bad']] },
+      { key: 'seo', title: 'SEO Status', options: [['on', 'On track'], ['off', 'Off track'], ['critical', 'Critical'], ['none', 'Not on SEO Cloud']] }
     ],
     refresh: () => { pager('dash-managed').page = 1; dashRefreshManaged(); }
   },
   attention: {
     store: () => state.ui.dashAttFilter,
     groups: () => [
-      { key: 'type', title: 'Issue Status', options: ['Performance Review', 'No Account Linked', 'Integration Error', 'Token Expired', 'Unlinked Ad Accounts'].map(t => [t, t]) },
+      { key: 'type', title: 'Issue Status', options: ['Performance Review', 'SEO Critical', 'SEO Off Track', 'No Account Linked', 'Integration Error', 'Token Expired', 'Unlinked Ad Accounts', 'CRM Set-up'].map(t => [t, t]) },
       { key: 'priority', title: 'Priority Status', options: [['High', 'High'], ['Medium', 'Medium'], ['Low', 'Low']] }
     ],
     refresh: () => renderRegion('dash-att-list', dashAttentionList())
@@ -2304,6 +2724,15 @@ const DASH_FILTERS = {
       { key: 'status', title: 'Status', options: DASH_STATUSES.map(s => [s, s]) }
     ],
     refresh: () => { pager('dash-ct').page = 1; dashRefreshCampaignTable(); }
+  },
+  seo: {
+    store: () => state.ui.dashSeoFilter,
+    groups: () => [
+      { key: 'intent', title: 'Search Intent', options: Object.entries(SEO_INTENTS) },
+      { key: 'difficulty', title: 'Difficulty', options: SEO_DIFFICULTY.map(d => [d, d]) },
+      { key: 'group', title: 'Keyword Group', options: (seoProject(state.ctx)?.groups || []).map(g => [g.name, g.name]) }
+    ],
+    refresh: () => { pager('dash-seo').page = 1; dashSeoRefreshTable(); }
   }
 };
 function dashFilterCount(fid) { return Object.values(DASH_FILTERS[fid].store()).reduce((n, a) => n + a.length, 0); }
@@ -2388,6 +2817,20 @@ function dashAttentionItems() {
     client: w.name, type: 'Performance Review', priority: i === 0 ? 'High' : 'Medium',
     desc: DASH_PERF_ISSUES[i % DASH_PERF_ISSUES.length], cta: 'View Account', action: `openWorkspace('${w.id}','dashboard')`
   }));
+  // SEO Cloud projects below their top-10 target (status rule in seoStatus()).
+  seoPortfolio(list).rows.filter(x => x.stats.status.key !== 'on').forEach(({ ws, stats }) => items.push({
+    client: ws.name, type: stats.status.key === 'critical' ? 'SEO Critical' : 'SEO Off Track', priority: stats.status.key === 'critical' ? 'High' : 'Medium',
+    desc: `${dashPctTxt(stats.top10Pct)} of keywords in top 10 vs ${dashPctTxt(stats.target)} target (${dashNum1(stats.status.gap)} pts below).`,
+    cta: 'View SEO', action: `openWorkspace('${ws.id}','dashboard',{tab:'seo'})`
+  }));
+  // Agency CRM auto set-up waiting for the account manager (provided by crm.js when loaded).
+  if (typeof crmPendingSetups === 'function') {
+    (crmPendingSetups() || []).filter(x => x.pendingInvites > 0).forEach(x => items.push({
+      client: x.wsName, type: 'CRM Set-up', priority: 'Medium',
+      desc: `${x.pendingInvites} client invite${x.pendingInvites === 1 ? '' : 's'} awaiting approval · ${x.stepsDone} of ${x.stepsTotal} set-up steps done.`,
+      cta: 'Review set-up', action: `typeof crmOpenSetup === 'function' ? crmOpenSetup('${q(x.wsId)}') : navigate('team', { tab: 'clients' })`
+    }));
+  }
   list.forEach(w => Object.entries(wsProducts(w.id)).forEach(([pid, s]) => {
     if (s.status !== 'error' && s.status !== 'pending') return;
     const p = productById(pid);
@@ -2426,6 +2869,7 @@ function dashRenderAgency() {
     <div class="dash-top">
       ${dashDonutCard()}
       ${dashSpendCard(port)}
+      ${dashSeoPortfolioCard()}
     </div>
     <div class="card dash-att-card" id="dash-attention">${dashAttentionCard()}</div>
     <div class="card" id="dash-managed">${dashManagedCard()}</div>`;
@@ -2437,9 +2881,10 @@ function dashBanner() {
   const missing = list.filter(w => !wsAdAccounts(w.id).length).length;
   const impacting = list.filter(w => w.status === 'attention').length;
   if (!missing && !impacting && !dashAttentionItems().length) return '';
+  const seoBehind = seoPortfolio(list).rows.filter(x => x.stats.status.key !== 'on').length;
   return `<div class="banner banner-warning dash-banner">
     <i data-lucide="triangle-alert"></i>
-    <div><div class="banner-title">Attention Required</div><div class="banner-text">${missing} account${missing === 1 ? '' : 's'} missing platform links, ${impacting} impacting overall performance.</div></div>
+    <div><div class="banner-title">Attention Required</div><div class="banner-text">${missing} account${missing === 1 ? '' : 's'} missing platform links, ${impacting} impacting overall performance${seoBehind ? `, ${seoBehind} SEO project${seoBehind === 1 ? '' : 's'} below target` : ''}.</div></div>
     <button type="button" class="banner-action" onclick="dashReviewAccounts()">Review Accounts</button>
   </div>`;
 }
@@ -2496,6 +2941,34 @@ function dashSpendCard(port) {
   </div>`;
 }
 
+// SEO Portfolio: SEO Cloud health across the managed workspaces (status rule in seoStatus()).
+const DASH_SEO_SEGS = [['on', 'On track', 'onTrack', 'var(--success-pill)'], ['off', 'Off track', 'offTrack', 'var(--warning-pill)'], ['critical', 'Critical', 'critical', 'var(--error-pill)']];
+function dashSeoPortfolioCard() {
+  const s = seoPortfolio(dashAgencyWorkspaces());
+  const tip = 'Client workspaces with SEO Cloud connected. Status compares the share of keywords in the top 10 with the contracted target: On track at or above target, Off track less than 5 points below, Critical 5 or more points below.';
+  if (!s.clients) {
+    return `<div class="card dash-metric dash-seo-port">
+      <div class="kpi-title">SEO Portfolio ${infoTip(tip)}</div>
+      <div class="kpi-value t-muted">0</div><div class="kpi-sub">No clients on SEO Cloud yet.</div>
+    </div>`;
+  }
+  const bar = DASH_SEO_SEGS.filter(([, , k]) => s[k]).map(([key, label, k, color]) =>
+    `<span style="width:${(s[k] / s.clients * 100).toFixed(2)}%;background:${color}" title="${esc(label)}: ${s[k]}"></span>`).join('');
+  const gap = Math.round((s.avgTop10Pct - s.avgTarget) * 10) / 10;
+  const avgStatus = seoStatus(s.avgTop10Pct, s.avgTarget);
+  return `<div class="card dash-metric dash-seo-port">
+    <div class="kpi-title">SEO Portfolio ${infoTip(tip)}</div>
+    <div class="kpi-value">${s.clients} <span class="dash-kpi-unit">client${s.clients === 1 ? '' : 's'} on SEO Cloud</span></div>
+    <div class="dash-stack" role="img" aria-label="${s.onTrack} on track, ${s.offTrack} off track, ${s.critical} critical">${bar}</div>
+    <div class="dash-stack-legend">${DASH_SEO_SEGS.map(([key, label, k, color]) =>
+      `<span><span class="dash-legend-sw" style="background:${color}"></span>${esc(label)} <b>${s[k]}</b></span>`).join('')}</div>
+    <div class="dash-seo-port-rows">
+      <div class="dash-plat-row"><span>Avg. top 10</span><span class="dash-plat-val"><b class="${DASH_SEO_TEXT[avgStatus.key]}">${dashPctTxt(s.avgTop10Pct)}</b> vs ${dashPctTxt(s.avgTarget)} target <span class="t-muted">(${gap >= 0 ? '+' : ''}${dashNum1(gap)} pts)</span></span></div>
+      <div class="dash-plat-row"><span>Keywords tracked</span><span class="dash-plat-val"><b>${fmtNum(s.keywords)}</b> of ${fmtNum(s.contracted)} contracted</span></div>
+    </div>
+  </div>`;
+}
+
 function dashAttentionCard() {
   const n = dashAttentionItems().length;
   return `<div class="card-header">
@@ -2528,28 +3001,64 @@ function dashLastActivity(w) {
 }
 function dashManagedRows() {
   const port = dashPortfolio().total;
+  const days = dateRangeDays('agency');
   return dashAgencyWorkspaces().map(w => {
     const t = dashMetrics(w.id, 'agency').total;
     const linked = t.spend > 0;
     const contact = wsPrimaryContact(w.id);
+    const services = crmAccounts[w.id]?.services || [];
     return {
       w, t, linked, plats: wsPlatforms(w.id), contact, last: dashLastActivity(w),
+      services, budget: services.reduce((s, x) => s + (x.monthlyBudget || 0), 0),
+      seo: seoConnected(w.id) ? seoStats(w.id, days) : null,
       q: { cpm: linked ? dashQuality(t.cpm, port.cpm) : '', cpc: linked ? dashQuality(t.cpc, port.cpc) : '', cpa: linked ? dashQuality(t.cpa, port.cpa) : '' }
     };
   });
 }
+
+// Managed Accounts columns, in table order. Client and Action are always shown; the rest are in the column picker.
+const DASH_MG_COLS = [
+  { key: 'platforms', group: 'ads', label: 'Ad Platforms' },
+  { key: 'status', group: 'account', label: 'Status' },
+  { key: 'spend', group: 'ads', label: 'Combined Spend' },
+  { key: 'cpm', group: 'ads', label: 'CPM' },
+  { key: 'cpc', group: 'ads', label: 'CPC' },
+  { key: 'cpa', group: 'ads', label: 'Cost Per Conversion' },
+  { key: 'seoStatus', group: 'seo', label: 'SEO Status', tip: 'SEO Cloud project status: On track at or above the top-10 target, Off track less than 5 points below, Critical 5 or more points below.' },
+  { key: 'top10', group: 'seo', label: 'Top 10 %', tip: 'Share of tracked keywords ranking in the top 10 today, against the contracted target.' },
+  { key: 'avgPos', group: 'seo', label: 'Avg Position', tip: 'Mean position of keywords ranking in the top 100 (lower is better).' },
+  { key: 'services', group: 'crm', label: 'Live Services', tip: 'Live services on the Agency CRM account.' },
+  { key: 'budget', group: 'crm', label: 'Monthly Budget', tip: 'Sum of the monthly budgets of every live CRM service (SGD).' },
+  { key: 'contact', group: 'account', label: 'Primary Contact' },
+  { key: 'last', group: 'account', label: 'Last Activity' }
+];
+registerColumnPicker('managed', {
+  columns: () => DASH_MG_COLS,
+  groups: [['ads', 'Ads'], ['seo', 'SEO'], ['crm', 'CRM'], ['account', 'Account']],
+  note: 'Client and Action are always shown',
+  onChange: 'dashRefreshManaged',
+  storageKey: 'galaxis-demo:managed-columns-hidden'
+});
+
 function dashManagedCard() {
   return `<div class="card-header">
       <div><h2 class="h-section">Managed Accounts</h2><div class="card-sub">A complete overview of all client accounts currently assigned to you.</div></div>
       <div class="row">
         <div class="search dash-search"><input class="input" placeholder="Search client or contact" value="${esc(state.ui.dashMgrSearch)}" oninput="dashManagedSearch(this.value)" aria-label="Search managed accounts"><i data-lucide="search"></i></div>
         ${dashFilterButton('managed')}
+        ${colPickerButton('managed')}
       </div>
     </div>
     <div id="dash-managed-body">${dashManagedBody()}</div>`;
 }
 function dashManagedSearch(v) { state.ui.dashMgrSearch = v; pager('dash-managed').page = 1; dashRefreshManaged(); }
 function dashRefreshManaged() { renderRegion('dash-managed-body', dashManagedBody()); }
+function dashServiceChips(services, max = 2) {
+  if (!services.length) return '<span class="t-muted">—</span>';
+  const names = services.map(x => x.type);
+  const more = names.length > max ? `<span class="more-count" title="${esc(names.slice(max).join(', '))}">+${names.length - max}</span>` : '';
+  return `<span class="chips dash-nowrap">${names.slice(0, max).map(n => `<span class="chip">${esc(n)}</span>`).join('')}${more}</span>`;
+}
 function dashManagedBody() {
   const term = state.ui.dashMgrSearch.trim().toLowerCase();
   const f = state.ui.dashMgrFilter;
@@ -2558,42 +3067,60 @@ function dashManagedBody() {
     if (f.status.length && !f.status.includes(r.w.status)) return false;
     if (f.platform.length && !f.platform.some(p => p === 'none' ? !r.plats.length : r.plats.includes(p))) return false;
     if (f.perf.length && !f.perf.includes(r.q.cpa)) return false;
+    if (f.seo.length && !f.seo.includes(r.seo ? r.seo.status.key : 'none')) return false;
     return true;
   });
   const statusRank = { attention: 0, new: 1, active: 2, inactive: 3 };
+  const seoRank = { critical: 0, off: 1, on: 2 };
   // Workspaces without data ("—") always sort last, whichever direction.
-  const num = v => v || ((state.sorts['dash-managed'] || {}).dir === 'asc' ? Infinity : -1);
+  const asc = (state.sorts['dash-managed'] || {}).dir === 'asc';
+  const num = v => v || (asc ? Infinity : -1);
+  const miss = v => v === null || v === undefined ? (asc ? Infinity : -Infinity) : v;
   rows = applySort(rows, 'dash-managed', {
     name: r => r.w.name.toLowerCase(), platforms: r => r.plats.length, status: r => statusRank[r.w.status],
     spend: r => num(r.t.spend), cpm: r => num(r.t.cpm), cpc: r => num(r.t.cpc), cpa: r => num(r.t.cpa),
+    seoStatus: r => miss(r.seo ? seoRank[r.seo.status.key] : null), top10: r => miss(r.seo ? r.seo.top10Pct : null),
+    avgPos: r => miss(r.seo ? r.seo.avgPos : null), services: r => num(r.services.length), budget: r => num(r.budget),
     contact: r => r.contact ? r.contact.email : '~', last: r => r.last
   });
   const total = rows.length;
   const page = paginate(rows, 'dash-managed', 10);
   const fn = 'dashRefreshManaged';
-  const th = (col, label, cls = '') => `<th class="${cls}">${sortHeader('dash-managed', col, label, fn)}</th>`;
-  const money = (r, k) => r.linked ? dashDot(fmtMoney(r.t[k], 2), r.q[k]) : '<span class="t-muted">—</span>';
+  const cols = DASH_MG_COLS.filter(c => colVisible('managed', c.key));
+  const th = c => `<th${c.tip ? ` title="${esc(c.tip)}"` : ''}>${sortHeader('dash-managed', c.key, c.label, fn)}</th>`;
+  const dash = '<span class="t-muted">—</span>';
+  const money = (r, k) => r.linked ? dashDot(fmtMoney(r.t[k], 2), r.q[k]) : dash;
+  const cell = (r, k) => {
+    switch (k) {
+      case 'platforms': return `<div class="chips dash-nowrap">${r.plats.map(p => platformBadge(p)).join('') || '<span class="t-muted">No platform linked</span>'}</div>`;
+      case 'status': return statusPill(r.w.status);
+      case 'spend': return r.linked ? fmtMoney(r.t.spend) : dash;
+      case 'cpm': case 'cpc': case 'cpa': return money(r, k);
+      case 'seoStatus': return r.seo ? `<span class="pill pill-sm ${r.seo.status.pill}">${esc(r.seo.status.label)}</span>` : dash;
+      case 'top10': return r.seo ? `<b class="${DASH_SEO_TEXT[r.seo.status.key]}">${dashPctTxt(r.seo.top10Pct)}</b><span class="t-muted"> / ${dashPctTxt(r.seo.target)}</span>` : dash;
+      case 'avgPos': return r.seo && r.seo.avgPos !== null ? dashNum1(r.seo.avgPos) : dash;
+      case 'services': return dashServiceChips(r.services);
+      case 'budget': return r.budget ? fmtMoney(r.budget) : dash;
+      case 'contact': return r.contact ? `<span class="dash-email" title="${esc(r.contact.name)} · ${esc(r.contact.email)}">${esc(r.contact.email)}</span>` : '<span class="t-muted">Unassigned</span>';
+      case 'last': return fmtDate(r.last);
+    }
+    return '';
+  };
   const body = page.map(r => `
     <tr class="clickable" onclick="openWorkspace('${r.w.id}','dashboard')">
       <td class="dash-nowrap"><button type="button" class="dash-name-link" onclick="event.stopPropagation(); openWorkspace('${r.w.id}','dashboard')">${esc(r.w.name)}</button></td>
-      <td><div class="chips dash-nowrap">${r.plats.map(p => platformBadge(p)).join('') || '<span class="t-muted">No platform linked</span>'}</div></td>
-      <td>${statusPill(r.w.status)}</td>
-      <td>${r.linked ? fmtMoney(r.t.spend) : '<span class="t-muted">—</span>'}</td>
-      <td>${money(r, 'cpm')}</td>
-      <td>${money(r, 'cpc')}</td>
-      <td>${money(r, 'cpa')}</td>
-      <td>${r.contact ? `<span class="dash-email" title="${esc(r.contact.name)} · ${esc(r.contact.email)}">${esc(r.contact.email)}</span>` : '<span class="t-muted">Unassigned</span>'}</td>
-      <td class="dash-nowrap">${fmtDate(r.last)}</td>
+      ${cols.map(c => `<td class="dash-nowrap">${cell(r, c.key)}</td>`).join('')}
       <td onclick="event.stopPropagation()">${rowMenu(`dash-mm-${r.w.id}`, [
         { label: 'Go to workspace', icon: 'arrow-right', onClick: `openWorkspace('${r.w.id}','dashboard')` },
+        ...(r.seo ? [{ label: 'View SEO performance', icon: 'search', onClick: `openWorkspace('${r.w.id}','dashboard',{tab:'seo'})` }] : []),
         { label: 'Organisation settings', icon: 'building-2', onClick: `openWorkspace('${r.w.id}','organisation')` },
         { label: 'Integrations', icon: 'blocks', onClick: `openWorkspace('${r.w.id}','integrations')` }
       ])}</td>
     </tr>`).join('');
   const emptyText = term ? `No workspaces found matching “${esc(state.ui.dashMgrSearch)}”.` : 'No workspaces found matching these filters.';
   return `<div class="table-wrap dash-table-wrap"><table class="table">
-      <thead><tr>${th('name', 'Client')}${th('platforms', 'Ad Platforms')}${th('status', 'Status')}${th('spend', 'Combined Spend')}${th('cpm', 'CPM')}${th('cpc', 'CPC')}${th('cpa', 'Cost Per Conversion')}${th('contact', 'Primary Contact')}${th('last', 'Last Activity')}<th>Action</th></tr></thead>
-      <tbody>${body || `<tr><td colspan="10" class="table-empty">${emptyText}</td></tr>`}</tbody>
+      <thead><tr><th>${sortHeader('dash-managed', 'name', 'Client', fn)}</th>${cols.map(th).join('')}<th>Action</th></tr></thead>
+      <tbody>${body || `<tr><td colspan="${cols.length + 2}" class="table-empty">${emptyText}</td></tr>`}</tbody>
     </table></div>
     ${paginationBar('dash-managed', total, fn)}`;
 }
@@ -2607,24 +3134,58 @@ function dashSyncClientState() {
   Object.assign(state.ui, {
     dashLevel: 'platform', dashDrill: null, dashCtSearch: '',
     dashCtFilter: { platform: [], format: [], status: [] },
-    dashEntSel: [], dashEntType: 'all', dashEntQ: ''
+    dashEntSel: [], dashEntType: 'all', dashEntQ: '',
+    dashSeoBucket: 'all', dashSeoSearch: '', dashSeoFilter: { intent: [], difficulty: [], group: [] }, dashSeoCollapsed: {}
   });
   pager('dash-ct').page = 1;
+  pager('dash-seo', 25).page = 1;
+}
+
+// ---------- Tabs: Ad Performance | SEO Performance ----------
+// state.params.tab ('ads' | 'seo') deep-links a tab; state.ui.dashTab remembers the last one used, so switching
+// workspace (which drops params on the dashboard) keeps the tab. A remembered SEO tab falls back to Ads when the
+// new workspace has no SEO Cloud; an explicit ?tab=seo shows the "not connected" state instead.
+function dashTab() {
+  if (isAgency()) return 'ads';
+  const explicit = state.params.tab;
+  const t = explicit || state.ui.dashTab || 'ads';
+  if (t !== 'seo') return 'ads';
+  return explicit || seoConnected(state.ctx) ? 'seo' : 'ads';
+}
+function dashSetTab(t) {
+  state.params = { ...state.params, tab: t };
+  state.ui.dashTab = t;
+  closeAllPopovers();
+  rerender();
+}
+function dashTabBar(tab, ws) {
+  const on = seoConnected(ws.id);
+  const btn = (key, icon, label, attrs = '') => `<button type="button" role="tab" aria-selected="${tab === key}" class="page-tab ${tab === key ? 'active' : ''}" onclick="dashSetTab('${key}')" ${attrs}><i data-lucide="${icon}"></i>${label}</button>`;
+  return `<div class="page-tabs dash-tabs" role="tablist" aria-label="Dashboard">
+    ${btn('ads', 'megaphone', 'Ad Performance')}
+    ${on ? btn('seo', 'search', 'SEO Performance') : btn('seo', 'lock', 'SEO Performance', 'data-off title="SEO Cloud is not connected to this workspace"')}
+    ${on ? '' : `<button type="button" class="t-link dash-tab-connect" onclick="navigate('integrations')">Connect SEO Cloud<i data-lucide="arrow-right"></i></button>`}
+  </div>`;
 }
 
 function dashRenderClient() {
   const ws = currentWs();
   if (!ws) return '';
   dashSyncClientState();
+  const tab = dashTab();
+  if (state.params.tab) state.ui.dashTab = state.params.tab;
+  const sub = tab === 'seo' ? 'Keyword rankings from SEO Cloud for this workspace.' : 'Google and Meta advertising performance for this workspace.';
   const header = `<div class="dash-welcome">
-      <div><h2 class="h-welcome">Welcome Back, ${esc(ws.name)}</h2><p class="dash-welcome-sub">Google and Meta advertising performance for this workspace.</p></div>
+      <div><h2 class="h-welcome">Welcome Back, ${esc(ws.name)}</h2><p class="dash-welcome-sub">${sub}</p></div>
       ${dateFilterHTML('client', 'dashRerender')}
-    </div>`;
-  if (!dashPlatforms(ws.id).length) return header + dashHubPanel(ws) + dashNoAccountsCard();
+    </div>
+    ${dashHubPanel(ws)}
+    ${dashTabBar(tab, ws)}`;
+  if (tab === 'seo') return header + dashRenderSeo(ws);
+  if (!dashPlatforms(ws.id).length) return header + dashNoAccountsCard();
   const m = dashMetrics(ws.id, 'client');
   const crm = activeCrm(ws.id);
   return `${header}
-    ${dashHubPanel(ws)}
     ${dashClientKpis(ws, m)}
     ${dashCrmSection(m, crm)}
     <div class="card dash-ct-card" id="dash-campaigns">${dashCampaignCard()}</div>
@@ -2644,6 +3205,305 @@ function dashRenderClient() {
         <div id="dash-heat-body">${dashHeatBody()}</div>
       </div>
     </div>`;
+}
+
+// =====================================================================
+// SEO PERFORMANCE TAB (client dashboard) — SEO Cloud data from seo.js, read-only, in the Figma card style.
+// =====================================================================
+const DASH_SEO_RULE = 'On track: at or above the target. Off track: below the target by less than 5 points. Critical: 5 or more points below the target.';
+function dashSeoDays() { return Math.min(dateRangeDays('client'), SEO_HISTORY_DAYS - 1); }
+function dashSeoStats() { return seoStats(state.ctx, dateRangeDays('client')); }
+function dashSeoDayLabel(ago) { const d = toDate(seoDayIso(ago)); return `${MONTHS[d.getMonth()].toUpperCase()}-${String(d.getDate()).padStart(2, '0')}`; }
+
+function dashRenderSeo(ws) {
+  if (!seoConnected(ws.id)) return dashSeoNotConnected();
+  const s = dashSeoStats();
+  return `${dashSeoStrip(s)}
+    ${dashSectionHead('Position Filter', `Share of tracked keywords in each position band today, with the change since ${fmtDate(seoDayIso(s.days))}. Select a band to filter the keyword table.`)}
+    <div class="dash-seo-buckets" id="dash-seo-buckets">${dashSeoBuckets(s)}</div>
+    <div class="dash-seo-trend">
+      <div class="dash-seo-side">${dashSeoAvgCard(s)}${dashSeoOverviewCard(s)}</div>
+      <div class="card dash-seo-chart-card">
+        <div class="card-header">
+          <div><h2 class="h-section">Average Position Trend</h2><div class="card-sub">Daily average position of keywords in the top 100. Lower is better, so position 1 is at the top.</div></div>
+        </div>
+        <div class="dash-chart" id="dash-seo-chart"><svg role="img" aria-label="Average position trend"></svg></div>
+      </div>
+    </div>
+    <div class="card dash-seo-kw-card" id="dash-seo-kw">${dashSeoKwCard()}</div>`;
+}
+
+function dashSeoNotConnected() {
+  return `<div class="card dash-empty-card">
+    <div class="dash-empty-icon"><i data-lucide="search"></i></div>
+    <h2 class="h-section">SEO Cloud is not connected</h2>
+    <p class="t-secondary">Connect SEO Cloud to see keyword rankings, the average position trend and progress against the contracted top-10 target for this workspace.</p>
+    <button type="button" class="btn btn-primary" onclick="navigate('integrations')"><i data-lucide="plug"></i>Connect SEO Cloud</button>
+  </div>`;
+}
+
+// 1. Contract strip
+function dashSeoStrip(s) {
+  const p = s.project;
+  const agency = state.persona !== 'client';
+  return `<div class="card dash-seo-strip">
+    ${productLogo('seo-cloud', 36)}
+    <div class="grow">
+      <div class="dash-seo-strip-title"><span class="h-card">SEO Cloud</span><span class="t-muted t-caption">${esc(p.domain)}</span></div>
+      <div class="dash-seo-facts"><span><b>${fmtNum(p.contractedKeywords)}</b> keywords contracted</span><span><b>${fmtNum(p.tracked)}</b> tracked</span><span>Target <b>${p.targetTop10Pct}%</b> in top 10</span><span>Last checked ${fmtDateTime(p.lastChecked)}</span></div>
+    </div>
+    <span class="pill ${s.status.pill}" title="${esc(DASH_SEO_RULE)}">${esc(s.status.label)}</span>
+    <button type="button" class="btn btn-outline btn-sm" onclick="dashSeoOpenCloud('open')">Open in SEO Cloud<i data-lucide="external-link"></i></button>
+    ${agency ? `<button type="button" class="btn btn-primary btn-sm" onclick="dashSeoOpenCloud('manage')">Manage in SEO Cloud<i data-lucide="external-link"></i></button>` : ''}
+  </div>`;
+}
+function dashSeoOpenCloud(mode) {
+  showToast(mode === 'manage' ? 'Opening the keyword manager in SEO Cloud…' : 'Opening this project in SEO Cloud…', 'external-link');
+}
+
+// 2. Position Filter cards (clickable filters for the keyword table)
+function dashSeoBuckets(s) {
+  const sel = state.ui.dashSeoBucket;
+  const since = fmtDate(seoDayIso(s.days));
+  return s.buckets.map(b => {
+    const top10 = b.key === 'top10';
+    let delta = '';
+    if (b.key !== 'all') {
+      // Fewer keywords outside the top 100 is an improvement; more in any top-N band is an improvement.
+      const good = b.key === 'over100' ? b.delta < 0 : b.delta > 0;
+      delta = b.delta
+        ? `<span class="dash-delta ${good ? 'up' : 'down'}" title="${b.delta > 0 ? '+' : ''}${b.delta} keyword${Math.abs(b.delta) === 1 ? '' : 's'} since ${since}">${b.delta > 0 ? '▲' : '▼'} ${Math.abs(b.delta)}</span>`
+        : `<span class="dash-delta flat" title="No change since ${since}">–</span>`;
+    }
+    const value = b.key === 'all' ? fmtNum(b.count) : top10 ? dashPctTxt(s.top10Pct) : `${b.pct}%`;
+    const extra = b.key === 'all' ? '<div class="dash-seo-bk-sub">keywords tracked</div>'
+      : top10 ? `<div class="dash-seo-goal"><div class="dash-seo-goal-bar" title="${dashPctTxt(s.top10Pct)} in top 10 · target ${s.target}%"><span class="dash-seo-fill-${s.status.key}" style="width:${Math.min(100, s.top10Pct)}%"></span><i style="left:${s.target}%"></i></div><div class="dash-seo-bk-sub">Target ${s.target}%</div></div>` : '';
+    return `<button type="button" class="dash-seo-bucket ${sel === b.key ? 'selected' : ''} ${top10 ? 'is-goal' : ''}" aria-pressed="${sel === b.key}" onclick="dashSeoSetBucket('${b.key}')">
+      <span class="dash-seo-bk-head"><span class="dash-seo-bk-label">${esc(b.label)}</span><span class="dash-seo-bk-count">(${b.count})</span>${delta}</span>
+      <span class="dash-seo-bk-val ${top10 ? DASH_SEO_TEXT[s.status.key] : ''}">${value}</span>
+      ${extra}
+    </button>`;
+  }).join('');
+}
+function dashSeoSetBucket(key) {
+  state.ui.dashSeoBucket = state.ui.dashSeoBucket === key && key !== 'all' ? 'all' : key;
+  pager('dash-seo', 25).page = 1;
+  renderRegion('dash-seo-buckets', dashSeoBuckets(dashSeoStats()));
+  dashSeoRefreshTable();
+}
+
+// 3. Average Position + Project Overview, and the trend chart
+function dashSeoAvgCard(s) {
+  const now = s.avgPos, prev = s.avgPosPrev;
+  const ch = now !== null && prev !== null ? Math.round((prev - now) * 10) / 10 : null;   // positive = moved up (better)
+  const since = fmtDate(seoDayIso(s.days));
+  const sub = ch === null ? 'No earlier data'
+    : ch > 0 ? `<span class="dash-delta up">▲ ${dashNum1(ch)}</span> better than ${since}`
+    : ch < 0 ? `<span class="dash-delta down">▼ ${dashNum1(-ch)}</span> worse than ${since}`
+    : `No change since ${since}`;
+  return `<div class="card dash-seo-mini">
+    <div class="kpi-title">Average Position ${infoTip('Mean position of the keywords ranking in the top 100 today. Keywords outside the top 100 are left out. Lower is better.')}</div>
+    <div class="dash-seo-mini-val">${now === null ? '—' : dashNum1(now)}</div>
+    <div class="kpi-sub">${sub}</div>
+  </div>`;
+}
+function dashSeoOverviewCard(s) {
+  const g = s.status.gap;
+  const pos = `${dashPctTxt(s.top10Pct)} in top 10`;
+  const reason = g > 0 ? `${pos} · ${dashNum1(g)} pts below ${s.target}% target` : g < 0 ? `${pos} · ${dashNum1(-g)} pts above ${s.target}% target` : `${pos} · at the ${s.target}% target`;
+  return `<div class="card dash-seo-mini">
+    <div class="kpi-title">Project Overview ${infoTip(DASH_SEO_RULE)}</div>
+    <div class="dash-seo-mini-val ${DASH_SEO_TEXT[s.status.key]}">${esc(s.status.label)}</div>
+    <div class="kpi-sub">${esc(reason)}</div>
+  </div>`;
+}
+function dashSeoRenderChart() {
+  const wrap = document.getElementById('dash-seo-chart');
+  if (!wrap || !seoConnected(state.ctx)) return;
+  const s = dashSeoStats();
+  const p = s.project;
+  const vals = s.series.map(x => x.avg).filter(v => v !== null);
+  if (!vals.length) { wrap.innerHTML = emptyState('chart-line', 'No ranked keywords yet', 'The trend appears once keywords rank in the top 100.'); return; }
+  const min = Math.min(...vals) - 0.5, max = Math.max(...vals) + 0.5;
+  const step = [1, 2, 5, 10, 20, 25, 50].find(st => (max - min) / st <= 6) || 50;
+  const lo = Math.max(0, Math.floor(min / step) * step), hi = Math.max(lo + step, Math.ceil(max / step) * step);
+  const ticks = [];
+  for (let v = lo; v <= hi + 1e-9; v += step) ticks.push(v);
+  const n = p.keywords.length || 1;
+  dashLineChart(wrap, {
+    id: 'dash-seo', invert: true, lo, hi, ticks, fmtAxis: v => String(v),
+    series: s.series.map(x => ({ d: toDate(x.date), v: x.avg === null ? hi : x.avg })),
+    tip: i => {
+      const ago = s.days - i;
+      const inTop10 = p.keywords.filter(k => { const v = seoPosAt(k, ago); return v !== null && v <= 10; }).length;
+      const x = s.series[i];
+      return `<div class="dash-tip-date">${fmtDate(x.date)}</div>
+        <div class="dash-tip-row on"><span>Avg. position</span><b>${x.avg === null ? '—' : dashNum1(x.avg)}</b></div>
+        <div class="dash-tip-row"><span>In top 10</span><b>${inTop10} (${dashPctTxt(inTop10 / n * 100)})</b></div>`;
+    }
+  });
+}
+
+// 4. Keyword table (read-only)
+const DASH_SEO_COLS = [
+  { key: 'urls', group: 'details', label: 'Ranking URL' },
+  { key: 'volume', group: 'details', label: 'Volume' },
+  { key: 'intent', group: 'details', label: 'Search Intent' },
+  { key: 'difficulty', group: 'details', label: 'Difficulty' },
+  { key: 'history', group: 'rank', label: 'History' },
+  { key: 'baseline', group: 'rank', label: 'Baseline' },
+  { key: 'days', group: 'rank', label: 'Previous 6 days' }
+];
+const DASH_SEO_DIFF_DOT = { Easy: 'good', Moderate: 'mid', Hard: 'bad' };
+registerColumnPicker('seo-keywords', {
+  columns: () => DASH_SEO_COLS,
+  groups: [['details', 'Keyword details'], ['rank', 'Rankings']],
+  note: 'Keyword and the latest day are always shown',
+  onChange: 'dashSeoRefreshTable',
+  storageKey: 'galaxis-demo:seo-keyword-columns-hidden'
+});
+
+function dashSeoKwCard() {
+  const mode = state.ui.dashSeoView;
+  return `<div class="card-header">
+      <div><h2 class="h-section">Keywords</h2><div class="card-sub">Rankings from SEO Cloud (read-only). Daily positions are green when better than the baseline and red when worse.</div></div>
+      <div class="dash-seo-view"><span>View mode</span><div class="seg" role="tablist">${[['group', 'Group'], ['list', 'List']].map(([k, l]) => `<button type="button" role="tab" class="${mode === k ? 'active' : ''}" onclick="dashSeoSetView('${k}')">${l}</button>`).join('')}</div></div>
+    </div>
+    <div class="dash-ct-toolbar">
+      <div class="search grow"><input class="input" placeholder="Search keywords or groups" value="${esc(state.ui.dashSeoSearch)}" oninput="dashSeoSearchInput(this.value)" aria-label="Search keywords"><i data-lucide="search"></i></div>
+      ${dashFilterButton('seo')}
+      ${colPickerButton('seo-keywords')}
+    </div>
+    <div id="dash-seo-body">${dashSeoBody()}</div>`;
+}
+function dashSeoRefreshTable() { renderRegion('dash-seo-body', dashSeoBody()); }
+function dashSeoSearchInput(v) { state.ui.dashSeoSearch = v; pager('dash-seo', 25).page = 1; dashSeoRefreshTable(); }
+function dashSeoSetView(m) { state.ui.dashSeoView = m; pager('dash-seo', 25).page = 1; renderRegion('dash-seo-kw', dashSeoKwCard()); }
+function dashSeoToggleGroup(name) { const c = state.ui.dashSeoCollapsed; c[name] = !c[name]; dashSeoRefreshTable(); }
+function dashSeoExpandAll(open) {
+  state.ui.dashSeoCollapsed = open ? {} : Object.fromEntries((seoProject(state.ctx)?.groups || []).map(g => [g.name, true]));
+  pager('dash-seo', 25).page = 1;
+  dashSeoRefreshTable();
+}
+
+function dashSeoRows() {
+  const p = seoProject(state.ctx);
+  const u = state.ui, f = u.dashSeoFilter;
+  const b = SEO_BUCKETS.find(x => x.key === u.dashSeoBucket) || SEO_BUCKETS[0];
+  const term = u.dashSeoSearch.trim().toLowerCase();
+  return p.keywords.filter(k => seoInBucket(seoPosAt(k, 0), b)
+    && (!term || `${k.term} ${k.group}`.toLowerCase().includes(term))
+    && (!f.intent.length || k.intent.some(i => f.intent.includes(i)))
+    && (!f.difficulty.length || f.difficulty.includes(k.difficulty))
+    && (!f.group.length || f.group.includes(k.group)));
+}
+
+// History sparkline over the selected range; inverted y-axis (position 1 at the top). Unranked days sit at the bottom.
+function dashSeoSpark(k, days) {
+  const vals = [];
+  for (let ago = days; ago >= 0; ago--) { const v = seoPosAt(k, ago); vals.push(v === null ? 101 : v); }
+  const W = 96, H = 28, pad = 3;
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  if (hi - lo < 4) { const mid = (hi + lo) / 2; lo = mid - 2; hi = mid + 2; }
+  const x = i => pad + i * (W - 2 * pad) / Math.max(1, vals.length - 1);
+  const y = v => pad + (v - lo) / (hi - lo) * (H - 2 * pad);
+  const pts = vals.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  const fmt = v => v > 100 ? 'not ranked' : `#${v}`;
+  const last = vals[vals.length - 1];
+  return `<svg class="dash-seo-spark" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Position history: ${fmt(vals[0])} to ${fmt(last)}"><title>${fmt(vals[0])} → ${fmt(last)} over ${days} days</title>
+    <polyline points="${pts}" fill="none" stroke="#398FF7" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${x(vals.length - 1).toFixed(1)}" cy="${y(last).toFixed(1)}" r="2.2" fill="#398FF7"/></svg>`;
+}
+// Day cell tint: better (green) or worse (red) than the baseline, or than the previous day when there is no baseline.
+function dashSeoDayClass(k, ago) {
+  const v = seoPosAt(k, ago);
+  const ref = k.baseline !== null ? k.baseline : seoPosAt(k, ago + 1);
+  if (v === null && ref === null) return '';
+  if (v === null) return 'dash-seo-worse';
+  if (ref === null || v < ref) return 'dash-seo-better';
+  return v > ref ? 'dash-seo-worse' : '';
+}
+
+function dashSeoBody() {
+  const p = seoProject(state.ctx);
+  const u = state.ui;
+  const days = dashSeoDays();
+  const fn = 'dashSeoRefreshTable';
+  // Positions sort with unranked keywords last, whichever the direction.
+  const asc = (state.sorts['dash-seo'] || {}).dir === 'asc';
+  const pos = v => v === null || v === undefined ? (asc ? Infinity : -Infinity) : v;
+  const rows = applySort(dashSeoRows(), 'dash-seo', {
+    term: k => k.term, volume: k => k.volume, difficulty: k => SEO_DIFFICULTY.indexOf(k.difficulty),
+    baseline: k => pos(k.baseline), latest: k => pos(seoPosAt(k, 0))
+  });
+  const dayAgos = (colVisible('seo-keywords', 'days') ? [6, 5, 4, 3, 2, 1] : []).concat([0]);
+  const cols = DASH_SEO_COLS.filter(c => c.key !== 'days' && colVisible('seo-keywords', c.key));
+  const ncols = 1 + cols.length + dayAgos.length;
+  const grouped = u.dashSeoView === 'group';
+
+  // Paging units: keywords, plus one unit per collapsed group (its header). Expanded group headers are drawn
+  // above the first keyword of the group on each page.
+  const groups = grouped ? p.groups.map(g => ({ g, rows: rows.filter(k => k.group === g.name) })).filter(x => x.rows.length) : [];
+  const units = grouped ? groups.flatMap(x => u.dashSeoCollapsed[x.g.name] ? [{ hdr: x }] : x.rows.map(k => ({ k, grp: x }))) : rows.map(k => ({ k }));
+  const total = units.length;
+  const page = paginate(units, 'dash-seo', 25);
+
+  const sortable = { term: 'Keyword', volume: 'Volume', difficulty: 'Difficulty', baseline: 'Baseline' };
+  const thCls = { volume: 'num', baseline: 'num', urls: 'num' };
+  const head = `<th>${sortHeader('dash-seo', 'term', 'Keyword', fn)}</th>`
+    + cols.map(c => `<th class="${thCls[c.key] || ''}">${sortable[c.key] ? sortHeader('dash-seo', c.key, c.label, fn) : esc(c.label)}</th>`).join('')
+    // The latest day is pinned as the table's last column (markActionColumns pins a header whose class says "action").
+    + dayAgos.map(ago => `<th class="dash-seo-day ${ago === 0 ? 'dash-seo-latest dash-pin-action' : ''}" title="${fmtDate(seoDayIso(ago))}">${ago === 0 ? sortHeader('dash-seo', 'latest', dashSeoDayLabel(0), fn) : dashSeoDayLabel(ago)}</th>`).join('');
+
+  const dash = '<span class="t-muted">–</span>';
+  const cell = (k, key) => {
+    switch (key) {
+      case 'urls': return `<span class="dash-seo-url ${k.rankingUrls ? '' : 't-muted'}" title="${k.rankingUrls} ranking URL${k.rankingUrls === 1 ? '' : 's'}"><i data-lucide="link"></i>${k.rankingUrls}</span>`;
+      case 'volume': return fmtNum(k.volume);
+      case 'intent': return `<span class="dash-seo-intents">${k.intent.map(i => `<span class="dash-seo-intent" title="${esc(SEO_INTENTS[i])}">${i}</span>`).join('')}</span>`;
+      case 'difficulty': return `<span class="metric-dot ${DASH_SEO_DIFF_DOT[k.difficulty]}">${esc(k.difficulty)}</span>`;
+      case 'history': return dashSeoSpark(k, days);
+      case 'baseline': return k.baseline === null ? `<span class="t-muted" title="Not in the top 100 when the keyword was added">–</span>` : k.baseline;
+    }
+    return '';
+  };
+  const kwRow = k => `<tr>
+      <td class="dash-seo-kwcell"><span class="dash-seo-cc" title="${k.country === 'SG' ? 'Singapore' : esc(k.country)}">${esc(k.country)}</span><span class="dash-seo-term">${esc(k.term)}</span></td>
+      ${cols.map(c => `<td class="${thCls[c.key] || ''} dash-nowrap">${cell(k, c.key)}</td>`).join('')}
+      ${dayAgos.map(ago => { const v = seoPosAt(k, ago); return `<td class="dash-seo-day ${dashSeoDayClass(k, ago)}">${v === null ? dash : v}</td>`; }).join('')}
+    </tr>`;
+  const grpRow = (x, cont) => {
+    const open = !u.dashSeoCollapsed[x.g.name];
+    return `<tr class="dash-seo-grow"><td colspan="${ncols}"><div class="dash-seo-ghead">
+      <button type="button" class="dash-seo-gtoggle" aria-expanded="${open}" onclick="dashSeoToggleGroup('${q(x.g.name)}')"><i data-lucide="chevron-${open ? 'down' : 'right'}"></i><b>${esc(x.g.name)}</b><span class="t-muted">(${x.rows.length})</span></button>
+      <span class="dash-seo-gdate">${cont ? 'continued · ' : ''}Updated on ${fmtDate(x.g.updatedAt)}</span>
+    </div></td></tr>`;
+  };
+  let lastGrp = null;
+  const body = page.map(un => {
+    if (un.hdr) { lastGrp = un.hdr; return grpRow(un.hdr, false); }
+    let out = '';
+    if (grouped && un.grp !== lastGrp) { out = grpRow(un.grp, un.grp.rows[0] !== un.k); lastGrp = un.grp; }
+    return out + kwRow(un.k);
+  }).join('');
+
+  const u2 = state.ui;
+  const bucket = SEO_BUCKETS.find(b => b.key === u2.dashSeoBucket);
+  const meta = `<div class="dash-seo-meta">
+      <span>Total Keywords: <span class="chip chip-dark">${rows.length}</span>${rows.length !== p.keywords.length ? `<span class="t-muted"> of ${p.keywords.length}</span>` : ''}</span>
+      ${bucket && bucket.key !== 'all' ? `<span class="dash-drill">Position: <b>${esc(bucket.label)}</b><button type="button" class="chip-remove" onclick="dashSeoSetBucket('all')" aria-label="Clear position filter"><i data-lucide="x"></i></button></span>` : ''}
+      ${grouped && groups.length ? `<span class="dash-seo-meta-right"><button type="button" class="t-link" onclick="dashSeoExpandAll(true)">Expand all</button><span class="t-muted">·</span><button type="button" class="t-link" onclick="dashSeoExpandAll(false)">Collapse all</button></span>` : ''}
+    </div>`;
+  const empty = `<tr><td colspan="${ncols}" class="table-empty">No keywords match these filters.</td></tr>`;
+  // 25 per page by default for keywords; the shared bar offers 10 / 20 / 50, so add 25 to its options.
+  const pg = pager('dash-seo', 25);
+  const bar = paginationBar('dash-seo', total, fn).replace('<option value="50"', `<option value="25" ${pg.perPage === 25 ? 'selected' : ''}>25</option><option value="50"`);
+  return `${meta}
+    <div class="table-wrap dash-table-wrap dash-seo-wrap"><table class="table dash-seo-table">
+      <thead><tr>${head}</tr></thead>
+      <tbody>${body || empty}</tbody>
+    </table></div>
+    ${bar}`;
 }
 
 // ---------- Products & Connections panel (V2 client-home hero, in the Figma card style) ----------
@@ -2810,7 +3670,7 @@ function dashKpi(title, tip, value, sub, extra = '') {
 }
 function dashClientKpis(ws, m) {
   const t = m.total;
-  const budget = Math.round(ws.budget * m.days / 30);
+  const budget = Math.round(wsAdBudget(ws.id) * m.days / 30);
   const used = budget ? Math.round(t.spend / budget * 100) : 0;
   const unique = Math.round(t.impressions * (0.6 + dashRng(`${ws.id}:reach`)() * 0.12));
   const g = m.byPlatform.google, mt = m.byPlatform.meta;
@@ -2893,7 +3753,7 @@ function dashCampaignCard() {
       </div>
       <div class="search grow"><input class="input" placeholder="Search by name" value="${esc(state.ui.dashCtSearch)}" oninput="dashCtSearchInput(this.value)" aria-label="Search campaigns and ads"><i data-lucide="search"></i></div>
       ${dashFilterButton('campaigns')}
-      ${dashColPickerButton()}
+      ${colPickerButton('campaigns')}
     </div>
     <div id="dash-ct-body">${dashCampaignBody()}</div>`;
 }
@@ -2948,67 +3808,15 @@ const DASH_CT_CRM_COLS = [
   { key: 'roas', group: 'crm', label: 'CRM ROAS', tip: 'CRM-attributed revenue ÷ spend.', fmt: v => `${v.toFixed(2)}x`, needs: 'spend' }
 ];
 
-// ---------- Column picker (show / hide columns) ----------
-// Name, Status and Action are always shown. Hidden columns are a per-viewer convenience kept in localStorage.
-const DASH_COL_GROUPS = [['details', 'Details'], ['delivery', 'Delivery'], ['clicks', 'Clicks'], ['conversions', 'Conversions'], ['engagement', 'Engagement'], ['crm', 'CRM']];
-const DASH_COL_STORE = 'galaxis-demo:campaign-columns-hidden';
-state.ui.dashHiddenCols = (() => { try { return JSON.parse(localStorage.getItem(DASH_COL_STORE)) || []; } catch (e) { return []; } })();
-
-// Columns the picker can toggle, for the current CRM mode.
-function dashPickableCols() {
-  const crm = !!activeCrm(state.ctx);
-  return [{ key: 'format', group: 'details', label: 'Ad Format' }].concat(DASH_CT_COLS, crm ? DASH_CT_CRM_COLS : []);
-}
-function dashColVisible(key) { return !state.ui.dashHiddenCols.includes(key); }
-function dashSaveCols() { try { localStorage.setItem(DASH_COL_STORE, JSON.stringify(state.ui.dashHiddenCols)); } catch (e) { /* storage unavailable: keep in memory */ } }
-function dashSetCol(key, on) {
-  const h = new Set(state.ui.dashHiddenCols);
-  if (on) h.delete(key); else h.add(key);
-  state.ui.dashHiddenCols = [...h];
-  dashColsChanged();
-}
-function dashSetColGroup(group, on) {
-  const keys = dashPickableCols().filter(c => c.group === group).map(c => c.key);
-  const h = new Set(state.ui.dashHiddenCols);
-  keys.forEach(k => on ? h.delete(k) : h.add(k));
-  state.ui.dashHiddenCols = [...h];
-  dashColsChanged();
-}
-function dashShowAllCols() { state.ui.dashHiddenCols = []; dashColsChanged(); }
-function dashColsChanged() {
-  dashSaveCols();
-  dashRefreshCampaignTable();
-  renderRegion('dash-cols-inner', dashColPickerInner());
-  const n = dashHiddenCount();
-  const badge = document.getElementById('dash-cols-count');
-  if (badge) { badge.textContent = n; badge.hidden = !n; }
-}
-function dashHiddenCount() { return dashPickableCols().filter(c => !dashColVisible(c.key)).length; }
-
-function dashColPickerButton() {
-  const n = dashHiddenCount();
-  return `<div class="menu-anchor">
-    <button type="button" class="icon-btn" aria-label="Show or hide columns" title="Columns" onclick="toggleMenu('dash-cols-panel', event)"><i data-lucide="columns-3"></i><span class="count" id="dash-cols-count" ${n ? '' : 'hidden'}>${n}</span></button>
-    <div class="filter-panel dash-cols-panel" id="dash-cols-panel" onclick="event.stopPropagation()"><div id="dash-cols-inner">${dashColPickerInner()}</div></div>
-  </div>`;
-}
-function dashColPickerInner() {
-  const cols = dashPickableCols();
-  const shown = cols.filter(c => dashColVisible(c.key)).length;
-  const groups = DASH_COL_GROUPS.map(([g, label]) => {
-    const items = cols.filter(c => c.group === g);
-    if (!items.length) return '';
-    const on = items.filter(c => dashColVisible(c.key)).length;
-    return `<div class="filter-group">
-      <div class="dash-cols-group-head"><span class="filter-group-title">${esc(label)}</span>
-        <button type="button" class="t-link" onclick="dashSetColGroup('${g}', ${on !== items.length})">${on === items.length ? 'Hide all' : 'Show all'}</button></div>
-      <div class="dash-cols-options">${items.map(c => `<label class="check"><input type="checkbox" ${dashColVisible(c.key) ? 'checked' : ''} onchange="dashSetCol('${c.key}', this.checked)">${esc(c.label)}</label>`).join('')}</div>
-    </div>`;
-  }).join('');
-  return `<div class="dash-cols-head"><div><div class="h-card">Columns</div><div class="card-sub">${shown} of ${cols.length} shown · Name, Status and Action are always shown</div></div></div>
-    ${groups}
-    <div class="filter-actions"><button type="button" class="btn btn-outline btn-sm" onclick="dashShowAllCols()" ${shown === cols.length ? 'disabled' : ''}>Show all columns</button></div>`;
-}
+// ---------- Column picker (show / hide columns; shared helper in core.js) ----------
+// Name, Status and Action are always shown.
+registerColumnPicker('campaigns', {
+  columns: () => [{ key: 'format', group: 'details', label: 'Ad Format' }].concat(DASH_CT_COLS, activeCrm(state.ctx) ? DASH_CT_CRM_COLS : []),
+  groups: [['details', 'Details'], ['delivery', 'Delivery'], ['clicks', 'Clicks'], ['conversions', 'Conversions'], ['engagement', 'Engagement'], ['crm', 'CRM']],
+  note: 'Name, Status and Action are always shown',
+  onChange: 'dashRefreshCampaignTable',
+  storageKey: 'galaxis-demo:campaign-columns-hidden'
+});
 
 function dashCampaignBody() {
   const u = state.ui;
@@ -3039,7 +3847,7 @@ function dashCampaignBody() {
   const ref = m.total;
   const next = DASH_LEVELS[DASH_LEVELS.indexOf(level) + 1];
   const cols = [['name', DASH_NAME_COL[level]], ['format', 'Ad Format'], ['status', 'Status']].concat(metricCols.map(c => [c.key, c.label]))
-    .filter(([c]) => c === 'name' || c === 'status' || dashColVisible(c));
+    .filter(([c]) => c === 'name' || c === 'status' || colVisible('campaigns', c));
   const colDef = Object.fromEntries(metricCols.map(c => [c.key, c]));
   const fn = 'dashRefreshCampaignTable';
   const head = cols.map(([c, l]) => `<th${colDef[c] ? ` title="${esc(colDef[c].tip)}"` : ''}>${sortHeader('dash-ct', c, l, fn)}</th>`).join('') + (next ? '<th>Action</th>' : '');
@@ -3207,55 +4015,70 @@ function dashSmoothPath(pts, floor) {
   }
   return d;
 }
-function dashRenderDaily() {
-  const wrap = document.getElementById('dash-daily');
+// Smooth line chart with area fill, axis labels, hover guide and tooltip. Used by Daily Performance and the
+// SEO Average Position trend. o: { id, series: [{ d: Date, v }], lo, hi, ticks: [values], fmtAxis(v),
+// invert (lo at the top, e.g. ranking positions), tip(i) -> tooltip html, height }
+function dashLineChart(wrap, o) {
   if (!wrap) return;
   const svg = wrap.querySelector('svg');
-  const metric = state.ui.dashChartMetric;
-  const series = dashDailySeries();
+  const series = o.series;
   const n = series.length;
-  const W = Math.max(320, wrap.clientWidth || 600), H = 280;
-  const fmtV = v => metric === 'spend' ? fmtMoney(v) : fmtNum(Math.round(v));
-  const max = dashNiceMax(Math.max(1, ...series.map(s => s[metric])));
-  const p = { l: 18 + fmtV(max).length * 7, r: 16, t: 12, b: 34 };
+  const W = Math.max(320, wrap.clientWidth || 600), H = o.height || 280;
+  const p = { l: 18 + Math.max(...o.ticks.map(v => o.fmtAxis(v).length)) * 7, r: 16, t: 12, b: 34 };
   const iw = W - p.l - p.r, ih = H - p.t - p.b;
+  const span = (o.hi - o.lo) || 1;
   const x = i => p.l + (n === 1 ? iw / 2 : i * iw / (n - 1));
-  const y = v => p.t + ih - v / max * ih;
+  const y = v => o.invert ? p.t + (v - o.lo) / span * ih : p.t + ih - (v - o.lo) / span * ih;
   const ticks = n <= 6 ? series.map((_, i) => i) : Array.from({ length: 6 }, (_, j) => Math.round(j * (n - 1) / 5));
-  const lbl = d => `${String(d.getDate()).padStart(2, '0')} ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()]}`;
-  let o = `<defs><linearGradient id="dash-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#398FF7" stop-opacity=".14"/><stop offset="1" stop-color="#398FF7" stop-opacity="0"/></linearGradient></defs>`;
-  for (let k = 0; k <= 5; k++) {
-    const v = max * k / 5;
-    o += `<text x="${p.l - 14}" y="${y(v) + 4}" text-anchor="end" class="dash-axis">${fmtV(v)}</text>`;
-    if (k) o += `<line x1="${p.l}" x2="${W - p.r}" y1="${y(v)}" y2="${y(v)}" class="dash-grid"/>`;
-  }
-  o += `<line x1="${p.l}" y1="${p.t}" x2="${p.l}" y2="${p.t + ih}" class="dash-axis-line"/><line x1="${p.l}" y1="${p.t + ih}" x2="${W - p.r}" y2="${p.t + ih}" class="dash-axis-line"/>`;
-  ticks.forEach(i => { o += `<text x="${x(i)}" y="${H - 8}" text-anchor="middle" class="dash-axis">${lbl(series[i].d)}</text>`; });
-  const pts = series.map((s, i) => [x(i), y(s[metric])]);
+  const lbl = d => `${String(d.getDate()).padStart(2, '0')} ${MONTHS[d.getMonth()]}`;
+  const bottom = o.invert ? o.hi : o.lo;
+  let out = `<defs><linearGradient id="${o.id}-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#398FF7" stop-opacity=".14"/><stop offset="1" stop-color="#398FF7" stop-opacity="0"/></linearGradient></defs>`;
+  o.ticks.forEach(v => {
+    out += `<text x="${p.l - 14}" y="${y(v) + 4}" text-anchor="end" class="dash-axis">${o.fmtAxis(v)}</text>`;
+    if (v !== bottom) out += `<line x1="${p.l}" x2="${W - p.r}" y1="${y(v)}" y2="${y(v)}" class="dash-grid"/>`;
+  });
+  out += `<line x1="${p.l}" y1="${p.t}" x2="${p.l}" y2="${p.t + ih}" class="dash-axis-line"/><line x1="${p.l}" y1="${p.t + ih}" x2="${W - p.r}" y2="${p.t + ih}" class="dash-axis-line"/>`;
+  ticks.forEach(i => { out += `<text x="${x(i)}" y="${H - 8}" text-anchor="middle" class="dash-axis">${lbl(series[i].d)}</text>`; });
+  const pts = series.map((s, i) => [x(i), y(s.v)]);
   const line = dashSmoothPath(pts, p.t + ih);
-  o += `<path d="${line} L ${x(n - 1)} ${p.t + ih} L ${x(0)} ${p.t + ih} Z" fill="url(#dash-area)"/>`;
-  o += `<path d="${line}" fill="none" stroke="#398FF7" stroke-width="1.75" stroke-linejoin="round"/>`;
-  ticks.forEach(i => { o += `<circle cx="${pts[i][0]}" cy="${pts[i][1]}" r="3.5" fill="#66ACFD" stroke="#398FF7" stroke-width="1"/>`; });
-  o += `<line id="dash-guide" x1="0" x2="0" y1="${p.t}" y2="${p.t + ih}" stroke="#AEAEAE" stroke-dasharray="3 3" visibility="hidden"/>`;
-  o += `<circle id="dash-hover-dot" r="5" fill="#fff" stroke="#398FF7" stroke-width="2" visibility="hidden"/>`;
-  o += `<rect id="dash-hover-rect" x="${p.l}" y="${p.t}" width="${iw}" height="${ih}" fill="transparent"/>`;
+  out += `<path d="${line} L ${x(n - 1)} ${p.t + ih} L ${x(0)} ${p.t + ih} Z" fill="url(#${o.id}-area)"/>`;
+  out += `<path d="${line}" fill="none" stroke="#398FF7" stroke-width="1.75" stroke-linejoin="round"/>`;
+  ticks.forEach(i => { out += `<circle cx="${pts[i][0]}" cy="${pts[i][1]}" r="3.5" fill="#66ACFD" stroke="#398FF7" stroke-width="1"/>`; });
+  out += `<line class="dash-guide" x1="0" x2="0" y1="${p.t}" y2="${p.t + ih}" stroke="#AEAEAE" stroke-dasharray="3 3" visibility="hidden"/>`;
+  out += `<circle class="dash-hover-dot" r="5" fill="#fff" stroke="#398FF7" stroke-width="2" visibility="hidden"/>`;
+  out += `<rect class="dash-hover-rect" x="${p.l}" y="${p.t}" width="${iw}" height="${ih}" fill="transparent"/>`;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   svg.setAttribute('height', H);
-  svg.innerHTML = o;
-  const rect = svg.querySelector('#dash-hover-rect');
-  const guide = svg.querySelector('#dash-guide');
-  const dot = svg.querySelector('#dash-hover-dot');
+  svg.innerHTML = out;
+  const rect = svg.querySelector('.dash-hover-rect');
+  const guide = svg.querySelector('.dash-guide');
+  const dot = svg.querySelector('.dash-hover-dot');
   rect.addEventListener('mousemove', ev => {
     const bb = svg.getBoundingClientRect();
     const px = (ev.clientX - bb.left) * (W / bb.width);
     const i = Math.max(0, Math.min(n - 1, Math.round((px - p.l) / (iw || 1) * (n - 1))));
-    const s = series[i];
     guide.setAttribute('x1', pts[i][0]); guide.setAttribute('x2', pts[i][0]); guide.setAttribute('visibility', 'visible');
     dot.setAttribute('cx', pts[i][0]); dot.setAttribute('cy', pts[i][1]); dot.setAttribute('visibility', 'visible');
-    const row = (k, l, v) => `<div class="dash-tip-row ${k === metric ? 'on' : ''}"><span>${l}</span><b>${v}</b></div>`;
-    dashTip(ev, `<div class="dash-tip-date">${fmtDate(s.d)}</div>${row('spend', 'Spend (SGD)', fmtMoney(s.spend, 2))}${row('conversions', 'Conversions', fmtNum(s.conversions))}${row('clicks', 'Clicks', fmtNum(s.clicks))}`);
+    dashTip(ev, o.tip(i));
   });
   rect.addEventListener('mouseleave', () => { guide.setAttribute('visibility', 'hidden'); dot.setAttribute('visibility', 'hidden'); dashTipHide(); });
+}
+function dashRenderDaily() {
+  const wrap = document.getElementById('dash-daily');
+  if (!wrap) return;
+  const metric = state.ui.dashChartMetric;
+  const series = dashDailySeries();
+  const fmtV = v => metric === 'spend' ? fmtMoney(v) : fmtNum(Math.round(v));
+  const max = dashNiceMax(Math.max(1, ...series.map(s => s[metric])));
+  dashLineChart(wrap, {
+    id: 'dash-daily', series: series.map(s => ({ d: s.d, v: s[metric] })), lo: 0, hi: max,
+    ticks: [0, 1, 2, 3, 4, 5].map(k => max * k / 5), fmtAxis: fmtV,
+    tip: i => {
+      const s = series[i];
+      const row = (k, l, v) => `<div class="dash-tip-row ${k === metric ? 'on' : ''}"><span>${l}</span><b>${v}</b></div>`;
+      return `<div class="dash-tip-date">${fmtDate(s.d)}</div>${row('spend', 'Spend (SGD)', fmtMoney(s.spend, 2))}${row('conversions', 'Conversions', fmtNum(s.conversions))}${row('clicks', 'Clicks', fmtNum(s.clicks))}`;
+    }
+  });
 }
 
 function dashTip(ev, html) {
@@ -3275,7 +4098,7 @@ function dashTipHide() { const t = document.getElementById('chart-tooltip'); if 
 let dashResizeTimer;
 window.addEventListener('resize', () => {
   clearTimeout(dashResizeTimer);
-  dashResizeTimer = setTimeout(() => { if (document.getElementById('dash-daily')) dashRenderDaily(); }, 120);
+  dashResizeTimer = setTimeout(() => { dashRenderDaily(); dashSeoRenderChart(); }, 120);
 });
 
 // ---------- Best Time of Day heatmap (V1, restyled) ----------
@@ -3361,22 +4184,40 @@ function dashBindHeatmap() {
 // Screen registration, dev toggles
 // =====================================================================
 Object.assign(state.ui, {
-  dashMgrSearch: '', dashMgrFilter: { platform: [], status: [], perf: [] },
+  dashMgrSearch: '', dashMgrFilter: { platform: [], status: [], perf: [], seo: [] },
   dashAttFilter: { type: [], priority: [] },
   dashModel: 'mta', dashChartMetric: 'spend', dashHeatMetric: 'spend',
   dashFpSnap: {}, dashFpCollapsed: {},
-  dashCtWs: undefined, dashCtFilter: { platform: [], format: [], status: [] }, dashEntSel: [], dashEntType: 'all', dashEntQ: '', dashCtSearch: '', dashLevel: 'platform', dashDrill: null
+  dashCtWs: undefined, dashCtFilter: { platform: [], format: [], status: [] }, dashEntSel: [], dashEntType: 'all', dashEntQ: '', dashCtSearch: '', dashLevel: 'platform', dashDrill: null,
+  dashTab: 'ads', dashSeoView: 'group', dashSeoBucket: 'all', dashSeoSearch: '', dashSeoFilter: { intent: [], difficulty: [], group: [] }, dashSeoCollapsed: {}, dashSeoRemoved: {}
 });
 
 registerScreen('dashboard', {
   contexts: ['agency', 'client'],
   title: () => 'Dashboard',
   desc: () => '',
+  key: () => isAgency() ? 'agency-dashboard' : `client-dashboard-${dashTab()}`,
   render: () => isAgency() ? dashRenderAgency() : dashRenderClient(),
   afterRender: () => {
     dashTipHide();
-    if (!isAgency()) { dashRenderDaily(); dashBindHeatmap(); }
+    if (!isAgency()) { dashRenderDaily(); dashBindHeatmap(); dashSeoRenderChart(); }
   }
+});
+
+// Dev screens. Registering these keys makes app.js skip its generic agency-dashboard / client-dashboard entries.
+const DASH_DEV_KEYS = ['agency-dashboard', 'client-dashboard-ads', 'client-dashboard-seo'];
+registerDevScreen('Agency', 'agency-dashboard', 'Dashboard', () => { state.ctx = null; state.persona = 'agency'; navigate('dashboard'); });
+registerDevScreen('Client workspace', 'client-dashboard-ads', 'Dashboard › Ad Performance', () => { state.ctx = devClientCtx(); navigate('dashboard', { tab: 'ads' }); });
+registerDevScreen('Client workspace', 'client-dashboard-seo', 'Dashboard › SEO Performance', () => { state.ctx = devClientCtx(); navigate('dashboard', { tab: 'seo' }); });
+// app.js lists core pages before module-registered screens; move the dashboard entries back to the top of each group.
+document.addEventListener('DOMContentLoaded', () => {
+  const mine = DASH_DEV_KEYS.map(k => devScreens.find(d => d.key === k)).filter(Boolean);
+  mine.forEach(d => devScreens.splice(devScreens.indexOf(d), 1));
+  ['Client workspace', 'Agency'].forEach(g => {
+    const at = devScreens.findIndex(d => d.group === g);
+    devScreens.splice(at < 0 ? devScreens.length : at, 0, ...mine.filter(d => d.group === g));
+  });
+  if (document.getElementById('devbar')) renderDevBar();
 });
 
 function dashSetAdOnly() {
@@ -3391,16 +4232,61 @@ function dashSetCrmConnected() {
   render();
 }
 
+// SEO scenarios: set the generator's top-10 share relative to the target (seoProject() regenerates on change).
+const DASH_SEO_SCENARIO = { on: 3, off: -2, critical: -8 };
+function dashSeoScenario(kind) {
+  const cfg = seoProjects[state.ctx];
+  if (!cfg) return;
+  cfg.scenarioTop10Pct = cfg.targetTop10Pct + DASH_SEO_SCENARIO[kind];
+  rerender();
+}
+// "SEO Cloud not connected": removes the product entry (kept so it can be restored), or adds it back.
+// A workspace without an SEO Cloud project gets a placeholder project so the tab can be demoed.
+function dashSeoToggleConnected() {
+  const id = state.ctx;
+  const wp = wsProducts(id);
+  state.ui.dashSeoRemoved = state.ui.dashSeoRemoved || {};
+  if (seoConnected(id)) {
+    state.ui.dashSeoRemoved[id] = wp['seo-cloud'];
+    delete wp['seo-cloud'];
+  } else {
+    wp['seo-cloud'] = state.ui.dashSeoRemoved[id] || { status: 'connected', active: true, lastSynced: new Date().toISOString() };
+    Object.assign(wp['seo-cloud'], { status: 'connected', active: true });
+    if (!seoProjects[id]) seoProjects[id] = { contractedKeywords: 40, targetTop10Pct: 50, scenarioTop10Pct: 47, startedAt: seoDayIso(30), placeholder: true };
+  }
+  state.params = { ...state.params, tab: 'seo' };
+  render();
+}
+
+function dashSimulateCrm() {
+  if (typeof crmSimulateConversion === 'function') crmSimulateConversion();
+  else showToast('CRM module not loaded', 'triangle-alert');
+}
+
 registerDevToggles('agency-dashboard', () => [
   { label: 'Alerts on', active: !state.flags.dashAlertsOff, run: () => { state.flags.dashAlertsOff = false; rerender(); } },
-  { label: 'Alerts off', active: !!state.flags.dashAlertsOff, run: () => { state.flags.dashAlertsOff = true; rerender(); } }
+  { label: 'Alerts off', active: !!state.flags.dashAlertsOff, run: () => { state.flags.dashAlertsOff = true; rerender(); } },
+  'sep',
+  { label: 'Simulate CRM conversion', active: false, run: dashSimulateCrm }
 ]);
-registerDevToggles('client-dashboard', () => {
+registerDevToggles('client-dashboard-ads', () => {
   const crm = !!activeCrm(state.ctx);
   return [
     { label: 'Ad-only (no CRM)', active: !crm, run: dashSetAdOnly },
     { label: 'CRM connected', active: crm, run: dashSetCrmConnected },
     { label: 'No ad accounts linked', active: !!state.flags.dashNoAccounts, run: () => { state.flags.dashNoAccounts = !state.flags.dashNoAccounts; rerender(); } }
+  ];
+});
+registerDevToggles('client-dashboard-seo', () => {
+  const on = seoConnected(state.ctx);
+  const key = on ? dashSeoStats().status.key : null;
+  return [
+    ...(on ? [
+      { label: 'On track', active: key === 'on', run: () => dashSeoScenario('on') },
+      { label: 'Off track', active: key === 'off', run: () => dashSeoScenario('off') },
+      { label: 'Critical', active: key === 'critical', run: () => dashSeoScenario('critical') },
+      'sep'] : []),
+    { label: 'SEO Cloud not connected', active: !on, run: dashSeoToggleConnected }
   ];
 });
 
@@ -3412,7 +4298,7 @@ Object.assign(screenSpecs, {
     title: '1. Agency Dashboard (My Workspace)',
     status: 'In Review',
     author: 'Hannah',
-    updatedAt: '21/10/2026',
+    updatedAt: '22/10/2026',
     notes: `
 ### Screen Purpose & Objectives
 Central command dashboard for agency administrators managing many client ad accounts and workspaces. Designed for portfolio-level performance monitoring and account triage. Layout follows the Figma "Desktop -> Dashboard" frame.
@@ -3425,6 +4311,8 @@ Central command dashboard for agency administrators managing many client ad acco
 - **Unified Portfolio KPIs (KPIs TBC)**: All figures are computed from per-workspace data, with no hard-coded totals.
   - **Total Accounts Managed**: donut by status (Active / New / Inactive / Attention Required).
   - **Portfolio Spend**: total, with a Google / Meta split.
+  - **SEO Portfolio** (added 22/10/2026): clients on SEO Cloud; a stacked bar of On track / Off track / Critical with a legend and counts; the average top-10 % against the average target; total keywords tracked against the contracted total. Built with \`seoPortfolio()\` over the visible workspaces with SEO Cloud connected.
+    - **Status rule** (\`seoStatus\`): On track when the top-10 % is at or above target; Off track when it is below target by less than 5 points; Critical when it is 5 or more points below. Example with a 55% target: 55% on track, 52% off track, 50% critical.
   - Overall CPM, CPC and Cost per Conversion cards were removed from the agency dashboard on 21/10/2026. These metrics remain per workspace in the Managed Accounts table.
 - **Attention Required list**: Merges V1 triage with V2 pipeline alerts. Each row has a type, a priority (High / Medium / Low) and a one-click CTA. Filtered by issue type and priority (Figma "Attention Account Filter").
   - **Performance Review**: workspace status Attention Required → View Account (High for the first, Medium after that).
@@ -3432,11 +4320,18 @@ Central command dashboard for agency administrators managing many client ad acco
   - **Token Expired**: an agency master token (Google MCC / Meta Business Manager) that is not valid → Re-authorise (High).
   - **Unlinked Ad Accounts**: one agency-level row for discovered but unlinked ad accounts → Review accounts (agency Integrations › Ad Platforms) (Medium).
   - **No Account Linked**: a workspace with zero linked ad accounts → Link Ad Account (Low).
-- **Managed Accounts table** (the V1 Client Workspace Directory, with Figma columns): Client, Ad Platforms, Status, Combined Spend, CPM, CPC, Cost Per Conversion, Primary Contact, Last Activity, Action.
+  - **SEO Critical** (High) and **SEO Off Track** (Medium): an SEO Cloud project below target, e.g. "50% of keywords in top 10 vs 55% target (5 pts below)" → View SEO (opens that workspace's dashboard on the SEO Performance tab).
+  - **CRM Set-up** (Medium): an Agency CRM auto set-up with client invites awaiting approval, "N client invites awaiting approval" → Review set-up (the CRM module's set-up checklist; falls back to Team & Access › Client Organisation). Shown only when the CRM module is loaded.
+  - The banner adds "N SEO projects below target" when any project is Off track or Critical.
+- **Managed Accounts table** (the V1 Client Workspace Directory, with Figma columns): Client, Ad Platforms, Status, Combined Spend, CPM, CPC, Cost Per Conversion, SEO Status, Top 10 %, Avg Position, Live Services, Monthly Budget, Primary Contact, Last Activity, Action.
+  - **SEO columns**: SEO Status pill ("—" when the workspace is not on SEO Cloud); Top 10 % as "current / target", coloured by status; Avg Position (mean position of keywords ranking in the top 100).
+  - **CRM columns**: Live Services as chips from the Agency CRM account (max 2, then "+N"); Monthly Budget = the sum of every live service's monthly budget (SGD).
+  - **Column picker**: show or hide columns, grouped as Ads, SEO, CRM and Account. Client and Action are always shown. Remembered per viewer (prototype: localStorage).
+  - The ⋮ menu adds "View SEO performance" for workspaces on SEO Cloud.
   - Coloured dots on CPM / CPC / Cost per Conversion compare each workspace with the portfolio average. Green (Excellent) is at least 10% better; orange (Average) is within -10% to +15%; red (Bad) is more than 15% worse. This replaces V1's heat cells.
   - Search by client or contact.
-  - Figma "Managed Account Filter": Ad Platforms, Status, and Performance band (on Cost per Conversion).
-  - Every column is sortable. Pagination uses "Showing Per Page".
+  - Figma "Managed Account Filter": Ad Platforms, Status, Performance band (on Cost per Conversion) and SEO Status (On track / Off track / Critical / Not on SEO Cloud).
+  - Every column is sortable. Rows without SEO or CRM data sort last in both directions. Pagination uses "Showing Per Page".
   - Clicking a row or a client name opens that workspace's dashboard.
   - The ⋮ menu has Go to workspace, Organisation settings and Integrations.
   - Workspaces with no linked accounts show "—" for metrics. Primary Contact shows "Unassigned" when a workspace has none.
@@ -3448,24 +4343,69 @@ Central command dashboard for agency administrators managing many client ad acco
 - Should "missing platform links" also count workspaces linked to only one of Google / Meta?
 - Performance-review triggers (CTR drop, budget pacing) are placeholders. Thresholds are TBC.
 - "Last Activity" is mock data. Its source (last login, last sync or last edit) is TBC.
+- Is the keyword contract (X keywords, Y% top-10 target) owned by SEO Cloud or by the Agency CRM?
+- Should the average position count keywords outside the top 100 as position 100, instead of leaving them out?
 
 ### Dev toolbar states
 - **Alerts on / Alerts off**: Off hides the banner and empties the Attention list (the healthy state).
+- **Simulate CRM conversion**: runs the Agency CRM auto set-up (owned by the CRM module). Shows "CRM module not loaded" when that module is missing.
 `
   },
-  'client-dashboard': {
-    title: '1. Workspace Dashboard & Analytics',
+  'client-dashboard-seo': {
+    title: '1b. Workspace Dashboard › SEO Performance',
+    status: 'Draft',
+    author: 'Hannah',
+    updatedAt: '22/10/2026',
+    notes: `
+### Screen Purpose & Objectives
+Read-only SEO Cloud results inside the client workspace, next to ad performance, so clients do not need SEO Cloud's own dashboard. Rebuilt from the SEO Cloud dashboard in the Galaxis Figma style. Staff actions (Recheck Data, Recheck Metrics, Keyword Manager, Add) stay in SEO Cloud.
+
+### Key Functional Specifications
+- **Availability**: the tab is enabled when SEO Cloud is connected and active for the workspace and an SEO project exists. Otherwise the tab is greyed out with "Connect SEO Cloud" (Integrations); opening it directly shows a "SEO Cloud is not connected" empty state.
+- **Contract strip**: "{contracted} keywords contracted · {tracked} tracked · Target {target}% in top 10 · Last checked {date, time}", the status pill, and "Open in SEO Cloud ↗". The agency persona also sees "Manage in SEO Cloud ↗".
+- **Status rule** (\`seoStatus\`): **On track** when the top-10 % is at or above target; **Off track** when it is below target by less than 5 points; **Critical** when it is 5 or more points below. Example with a 55% target: 55% on track, 52% off track, 50% critical. Pills: green / orange / red.
+- **Position Filter cards**: All, Top 1, Top 3, Top 5, Top 10, Top 30, Top >100. Each shows the count in brackets, the share of tracked keywords as the big value (All shows the count) and the ▲/▼ change in keywords since the start of the date range. Green = improvement; for Top >100 an increase is bad, so it is red. The Top 10 card shows a progress bar with a target marker ("Target 55%"), coloured by status. Cards filter the keyword table (selected card has a primary border; click again or ✕ to return to All).
+- **Average Position**: mean position today of the keywords ranking in the top 100 (keywords outside the top 100 are left out), with the change since the start of the range. Lower is better, so a lower number is shown as ▲ better (green).
+- **Project Overview**: the status in its colour, with the reason, e.g. "50% in top 10 · 5 pts below 55% target".
+- **Average Position Trend**: daily average position over the date range, with an inverted y-axis (position 1 at the top), date labels, a hover tooltip (average position and top-10 share that day), and redraw on resize.
+- **Keyword table** (read-only):
+  - Header: Keywords, View mode Group | List; toolbar with search (keyword or group), filter (Search Intent, Difficulty, Keyword Group) and the column picker; "Total Keywords: N" (of the total when filtered) above the table.
+  - **Group mode**: collapsible group header rows, "Best / Top Brand (21)" and "Updated on {date}", with Expand all / Collapse all.
+  - **Columns**: Keyword (country chip "SG" + term), Ranking URL (link icon + count), Volume, Search Intent (round C / L / I / N chips; tooltip names the intent: Commercial, Local, Informational, Navigational), Difficulty (Easy / Moderate / Hard dot), History (sparkline over the date range, inverted y-axis), Baseline (position when added; "–" if it was not in the top 100), then one column per day for the last 7 days ("OCT-16"), with the position or "–".
+  - **Day cell colour**: green when better than the baseline, red when worse. With no baseline, the cell is compared with the previous day.
+  - Sortable: Keyword, Volume, Difficulty, Baseline and the latest day. Unranked keywords sort last in both directions. In Group mode, rows are sorted within each group.
+  - 25 keywords per page by default (Showing Per Page also offers 10 / 20 / 50).
+  - The Keyword column and the latest day are pinned. There is no Action column.
+  - Column picker groups: Keyword details (Ranking URL, Volume, Search Intent, Difficulty) and Rankings (History, Baseline, Previous 6 days). Keyword and the latest day are always shown.
+  - Empty state when nothing matches.
+- **Date filter** (shared with Ad Performance): sets the trend range, the sparkline range and the comparison point for every ▲/▼ change. History is kept for 120 days.
+
+### Open questions
+- Is the keyword contract (X keywords, Y% target) owned by SEO Cloud or by the Agency CRM?
+- Should the average position include keywords outside the top 100 as position 100? Today they are left out, which can make the average improve when keywords drop out.
+- Should GEO / AI-visibility metrics from SEO Cloud appear on this tab later?
+- Should clients see keyword groups that are marked internal-only in SEO Cloud? The prototype shows every group.
+
+### Dev toolbar states
+- **Viewing as Agency Admin / Client User** (shared). Client users do not see "Manage in SEO Cloud".
+- **On track / Off track / Critical**: sets this workspace's mock top-10 share to target +3, -2 or -8 points; the keyword data regenerates.
+- **SEO Cloud not connected**: removes SEO Cloud from the workspace (or adds it back) to show the not-connected state.
+`
+  },
+  'client-dashboard-ads': {
+    title: '1. Workspace Dashboard › Ad Performance',
     status: 'In Review',
     author: 'Hannah',
     updatedAt: '21/10/2026',
     notes: `
 ### Screen Purpose & Objectives
-Client-facing workspace dashboard giving a simplified, unified view of Meta and Google Ads performance. It aims to remove the client's need to log in to the native ad platforms, and it doubles as an inspection view for agency administrators. Layout follows the Figma "Dashboard - Platform / Campaign / Ad Group / Ads" frames.
+Client-facing workspace dashboard giving a simplified, unified view of Meta and Google Ads performance. Since 22/10/2026 the dashboard has two tabs below the welcome header and Products & Connections panel: **Ad Performance** (this spec) and **SEO Performance** (\`client-dashboard-seo\`). It aims to remove the client's need to log in to the native ad platforms, and it doubles as an inspection view for agency administrators. Layout follows the Figma "Dashboard - Platform / Campaign / Ad Group / Ads" frames.
 
 ### Key Functional Specifications (All metrics TBC)
 - **Top-Level KPI Cards**: Total Ad Spend (with budget used and a progress bar), Impressions (unique users), Clicks (CTR and average CPC), Platform Conversions (% from Google Ads) and Cost per Conversion (per-platform split). Each card has an ⓘ definition.
   - Exact KPIs are placeholders pending feedback from performance marketing and account management.
   - The budget shown is the workspace monthly budget pro-rated to the selected range.
+- **Tabs**: Ad Performance | SEO Performance (page tabs with icons). The active tab is in the route (\`tab: 'ads' | 'seo'\`) and is remembered when switching workspace; a remembered SEO tab falls back to Ad Performance in a workspace without SEO Cloud. Without SEO Cloud the SEO tab is greyed out, with a "Connect SEO Cloud" link to Integrations.
 - **Global Event-Based Date Filter**: Filters all dashboard data by the exact date the action (e.g. click or conversion) happened within the selected timeframe, independent of events higher up the funnel.
   - **Prototype note:** the date filter scales mock data to the selected range, and the Daily Performance chart plots one point per day of the range. It does **not** yet filter by event date.
 - **CRM mode (from V2)**: shown when the workspace has a connected, active CRM.
@@ -3737,7 +4677,7 @@ function orgRender() {
   orgSyncEditScope();
   const tab = orgTab();
   const tabs = ORG_TABS.map(t => `<button type="button" class="page-tab ${t.id === tab ? 'active' : ''}" onclick="navigate('organisation', { tab: '${t.id}' })"><i data-lucide="${t.icon}"></i>${esc(t.label)}</button>`).join('');
-  const body = tab === 'brand' ? orgBrandHTML() : tab === 'billing' ? orgBillingHTML() : orgBusinessHTML();
+  const body = tab === 'brand' ? orgBrandHTML() : tab === 'billing' ? orgBillingHTML() : orgBusinessHTML() + (isAgency() ? '' : orgServicesHTML());
   return `<div class="page-tabs" role="tablist">${tabs}</div>
     <div class="stack">${orgHeaderCard()}${body}</div>`;
 }
@@ -3897,6 +4837,36 @@ function orgSaveBusiness() {
   state.ui.orgEdit.business = false; state.ui.orgDraft = null; state.ui.orgErrors = {};
   render(); // full render: the workspace switcher and header show the new name
   showToast(renamed ? `Saved — organisation renamed to ${d.name}` : 'Business information saved');
+}
+
+// ---------- Services & Contract (client workspace, read-only from the agency CRM) ----------
+function orgServicesHTML() {
+  const id = currentOrgId();
+  const acc = crmAccounts[id];
+  const crmLink = viewerIsAgency() && acc ? `<button type="button" class="org-link" onclick="showToast('Opening ${q(acc.crmId)} in the agency CRM (demo)', 'external-link')">View in CRM<i data-lucide="arrow-up-right"></i></button>` : '';
+  const head = orgCardHead('Services & Contract', 'Live services and monthly budgets from the agency CRM. Read-only.', crmLink);
+  if (!acc) {
+    return `<section class="card org-section">${head}${emptyState('file-x', 'No CRM record linked', 'This workspace was created manually. Services and budgets appear here once the account is linked in the agency CRM.')}</section>`;
+  }
+  const today = toDateInput(new Date());
+  const live = x => (!x.start || x.start <= today) && (!x.end || x.end >= today);
+  const total = acc.services.filter(live).reduce((t, x) => t + x.monthlyBudget, 0);
+  const am = memberById(acc.accountManager);
+  const rows = acc.services.map(x => `<tr><td class="t-bold">${esc(x.type)}${CRM_AD_SERVICES.includes(x.type) ? '<div class="cell-sub">Ad spend</div>' : ''}</td>
+      <td class="num">${fmtMoney(x.monthlyBudget)}</td><td>${fmtDate(x.start)}</td><td>${fmtDate(x.end)}</td>
+      <td>${live(x) ? '<span class="pill pill-sm pill-green">Live</span>' : x.start > today ? '<span class="pill pill-sm pill-blue">Upcoming</span>' : '<span class="pill pill-sm pill-grey">Ended</span>'}</td></tr>`).join('');
+  return `<section class="card org-section">${head}
+    <div class="org-svc-kpis">
+      <div><div class="kv-label">Total monthly budget</div><div class="org-plan-value">${fmtMoney(total)}</div><div class="org-plan-sub">Live services only</div></div>
+      <div><div class="kv-label">Monthly ad-spend budget</div><div class="org-plan-value">${fmtMoney(wsAdBudget(id))}</div><div class="org-plan-sub">${CRM_AD_SERVICES.join(' + ')}</div></div>
+      <div><div class="kv-label">CRM ID</div><div class="org-plan-value">${esc(acc.crmId)}</div><div class="org-plan-sub">Converted ${fmtDate(acc.convertedAt)}</div></div>
+      <div><div class="kv-label">Account manager</div><div class="org-plan-value">${esc(am?.name || '—')}</div><div class="org-plan-sub">${esc(am?.email || 'Not mapped to a Galaxis user')}</div></div>
+    </div>
+    <div class="table-wrap org-svc-table"><table class="table">
+      <thead><tr><th>Service</th><th class="num">Monthly budget</th><th>Start date</th><th>End date</th><th>Status</th></tr></thead>
+      <tbody>${rows || '<tr><td class="table-empty" colspan="5">No services in the CRM record.</td></tr>'}</tbody></table></div>
+    <div class="org-sync-note org-svc-sync"><i data-lucide="refresh-cw"></i>Synced from Agency CRM · ${esc(fmtDateTime(agencyCrm.lastSynced))}${agencyCrm.status !== 'connected' ? ' · connection paused, figures may be out of date' : ''}</div>
+  </section>`;
 }
 
 // ---------- Billing Information ----------
@@ -4391,6 +5361,14 @@ ${common}
   - Contact email must be a valid email; phone numbers allow digits, spaces, + and -.
 - Saving updates the organisation everywhere (workspace switcher, header card, Client Organisation list) and shows a toast.
 ${ctx === 'client' ? `
+## Services & Contract card (client workspace, Draft, 22/10/2026)
+- Read-only card below Business Information, from the workspace's agency CRM record. Labelled "Synced from Agency CRM" with the last sync time.
+- Summary: total monthly budget (live services), monthly ad-spend budget (SEM + Google Ads + Facebook Ads, the same figure as the dashboard's ad budget), CRM ID with conversion date, account manager.
+- Table: Service, Monthly budget (SGD), Start date, End date, Status (Live / Upcoming / Ended, from the dates).
+- **View in CRM ↗** (agency persona only) opens the account in the agency CRM (toast in the demo).
+- Empty state when the workspace has no CRM record (created manually): "No CRM record linked".
+- Open questions: what happens when a service ends or the account churns; is the ad budget taken from the CRM or set per workspace; should client users see budgets at all?
+
 ## Primary Business Contact (client workspace)
 - Synced with the workspace **Primary Contact** in Team & Access.
 - In edit mode, Contact Person is a member picker; Email follows the chosen member.
@@ -4467,7 +5445,7 @@ ${common}
   const meta = { status: 'Draft', author: 'Hannah', updatedAt: '21/10/2026' };
   Object.assign(screenSpecs, {
     'agency-organisation-business': { ...meta, title: 'Organisation — Business Information (Agency)', notes: business('agency') },
-    'client-organisation-business': { ...meta, title: 'Organisation — Business Information (Client workspace)', notes: business('client') },
+    'client-organisation-business': { ...meta, updatedAt: '22/10/2026', title: 'Organisation — Business Information (Client workspace)', notes: business('client') },
     'agency-organisation-billing': { ...meta, title: 'Organisation — Billing Information (Agency)', notes: billing },
     'client-organisation-billing': { ...meta, title: 'Organisation — Billing Information (Client workspace)', notes: billing },
     'agency-organisation-brand': { ...meta, title: 'Organisation — Brand Identity (Agency)', notes: brand },
@@ -4662,7 +5640,7 @@ function teamFilterGroups(tab) {
   if (tab === 'members') return [
     { key: 'team', label: 'Team', options: [...opt(teamOrgTeams(org), 'id', 'name'), ['none', 'No team']] },
     { key: 'role', label: 'Assigned Role', options: opt(teamScopeRoles(), 'id', 'name') },
-    { key: 'status', label: 'Status', options: [['active', 'Active'], ['pending', 'Pending Invite'], ['inactive', 'Inactive'], ['deactivated', 'Deactivated']] },
+    { key: 'status', label: 'Status', options: [['active', 'Active'], ...(isAgency() ? [] : [['awaiting', 'Awaiting approval']]), ['pending', 'Pending Invite'], ['inactive', 'Inactive'], ['deactivated', 'Deactivated']] },
     { key: 'product', label: 'Product Access', options: productOpts }
   ];
   if (tab === 'teams') return [
@@ -4812,6 +5790,7 @@ function teamSeatCard() {
   const active = list.filter(m => m.status === 'active').length;
   const pending = list.filter(m => m.status === 'pending').length;
   const inactive = list.filter(m => m.status === 'inactive' || m.status === 'deactivated').length;
+  const awaiting = list.filter(m => m.status === 'awaiting').length;   // CRM contacts not invited yet: no seat until approved
   const used = active + pending + inactive;
   const pct = Math.min(100, Math.round(used / TEAM_SEATS_TOTAL * 100));
   return `<section class="card team-seat-card" aria-label="Seat usage">
@@ -4821,6 +5800,7 @@ function teamSeatCard() {
       <span><span class="dot dot-green-strong"></span>${active} Active Member${active === 1 ? '' : 's'}</span>
       <span><span class="dot team-dot-link"></span>${pending} Pending Invite${pending === 1 ? '' : 's'}</span>
       <span><span class="dot dot-grey"></span>${inactive} Inactive Member${inactive === 1 ? '' : 's'}</span>
+      ${awaiting ? `<span><span class="dot dot-orange"></span>${awaiting} Awaiting approval (no seat until invited)</span>` : ''}
     </div></section>`;
 }
 
@@ -4856,8 +5836,10 @@ function teamMembersTable() {
   const rows = page.map(m => {
     const self = m.id === CURRENT_USER_ID;
     const items = [{ label: 'Edit', icon: 'pencil', onClick: `teamOpenMemberModal('${m.id}')` }];
+    // Agency CRM contacts wait for the account manager's approval before they are invited (crm.js).
+    if (m.status === 'awaiting') items.push({ label: 'Approve & send invite', icon: 'send', onClick: `crmApproveContact('${m.id}')` });
     if (m.status === 'pending') items.push({ label: 'Resend Invite', icon: 'send', onClick: `teamResendInvite('${m.id}')` });
-    items.push(m.status === 'deactivated'
+    if (m.status !== 'awaiting') items.push(m.status === 'deactivated'
       ? { label: 'Reactivate', icon: 'user-check', onClick: `teamReactivateMember('${m.id}')` }
       : { label: 'Deactivate', icon: 'user-x', onClick: `teamConfirmDeactivate('${m.id}')`, disabled: self });
     items.push('sep', { label: self ? 'Remove (you)' : 'Remove', icon: 'trash-2', danger: true, disabled: self, onClick: `teamConfirmRemove('${m.id}')` });
@@ -4866,7 +5848,7 @@ function teamMembersTable() {
       <td><div class="team-name">${esc(m.name)}${m.isPrimary && !agency ? '<span class="team-primary-badge" title="Primary Contact for this workspace"><i data-lucide="star"></i>Primary Contact</span>' : ''}${self ? '<span class="chip team-you">You</span>' : ''}</div><div class="cell-sub">${esc(m.email)}</div></td>
       <td>${esc(teamById(m.teamId)?.name || '—')}</td>
       <td>${esc(role?.name || '—')}${!agency && m.canManage ? '<div class="cell-sub">Can manage members</div>' : ''}</td>
-      <td>${statusDot(m.status)}</td>
+      <td>${statusDot(m.status)}${m.status === 'awaiting' ? '<div class="cell-sub">From agency CRM · not invited yet</div>' : ''}</td>
       ${agency ? `<td class="team-ws-cell">${teamWsSummary(m)}</td>` : ''}
       <td>${productChips(m.products)}</td>
       <td>${esc(m.lastActive || '-')}<div class="cell-sub">${esc(m.lastProduct || '-')}</div></td>
@@ -5371,11 +6353,19 @@ function teamOrgCard(ws) {
   const pc = wsPrimaryContact(ws.id);
   const clientCount = teamOrgMembers(ws.id).filter(m => m.status !== 'deactivated').length;
   const agencyCount = teamWsAgencyMembers(ws.id).length;
+  // Agency CRM auto set-up (crm.js): badge, progress while incomplete, and the checklist.
+  const hasSetup = typeof crmSetups !== 'undefined' && !!crmSetups[ws.id];
+  const prog = hasSetup ? crmSetupProgress(ws.id) : null;
   const items = ws.archived
     ? [{ label: 'Restore', icon: 'archive-restore', onClick: `teamRestoreOrg('${ws.id}')` }]
     : [{ label: 'Open Workspace', icon: 'external-link', onClick: `openWorkspace('${ws.id}')` },
+       ...(hasSetup ? [{ label: 'View set-up', icon: 'list-checks', onClick: `crmOpenSetup('${ws.id}')` }] : []),
        { label: 'Assign Members', icon: 'user-plus', onClick: `teamOpenAssignMembers('${ws.id}')` },
        'sep', { label: 'Archive', icon: 'archive', danger: true, onClick: `teamConfirmArchive('${ws.id}')` }];
+  const setupHtml = prog && prog.done < prog.total && !ws.archived
+    ? `<button type="button" class="team-org-setup" onclick="crmOpenSetup('${ws.id}')" aria-label="View set-up checklist for ${esc(ws.name)}">
+        <span class="row-between"><span>Set-up: ${prog.done} of ${prog.total} steps</span><span class="t-link">View set-up</span></span>
+        <span class="progress team-org-setup-bar"><span style="width:${Math.round(prog.done / prog.total * 100)}%"></span></span></button>` : '';
   return `<article class="team-org-card ${ws.archived ? 'archived' : ''}">
     <div class="team-org-top">
       <span class="team-org-logo">${esc(initials(ws.name))}</span>
@@ -5383,7 +6373,8 @@ function teamOrgCard(ws) {
       ${statusDot(teamOrgStatus(ws))}
       ${rowMenu(`team-o-${ws.id}`, items)}
     </div>
-    <div class="team-org-line"><i data-lucide="briefcase"></i>${esc(ws.industry || '—')}</div>
+    <div class="team-org-line"><i data-lucide="briefcase"></i>${esc(ws.industry || '—')}${ws.source === 'crm' ? '<span class="crm-badge team-org-crm" title="Created automatically when the account converted in the agency CRM"><i data-lucide="sparkles"></i>From CRM</span>' : ''}</div>
+    ${setupHtml}
     <div class="team-org-contact"><span class="team-org-avatar"><i data-lucide="user"></i></span>
       <span>${pc ? `<span class="team-org-contact-name">${esc(pc.name)}</span><span class="cell-sub">${esc(pc.email)}</span>` : '<span class="team-org-contact-name t-muted">Unassigned</span><span class="cell-sub">No Primary Contact</span>'}</span></div>
     <div class="team-org-stats">
@@ -5448,16 +6439,24 @@ function teamOrgNameCheck() {
   document.getElementById('team-f-org').classList.toggle('invalid', taken);
   err.textContent = taken ? 'This organisation already exists. Please use the “Existing Organisation” tab.' : '';
 }
+// Shared workspace creation: Add Organisation (manual) and the agency CRM auto set-up (crm.js) both use it.
+// Callers validate the name first (teamOrgNameTaken). Returns the new workspace; it is in the switcher straight away.
+function teamCreateWorkspace({ name, site = '', industry = '', budget = 10000, status = 'new', source = 'manual' }) {
+  const id = uid('ws');
+  const ws = { id, name: name.trim(), industry, site: String(site).trim().replace(/^https?:\/\//i, '').replace(/\/+$/, ''), status, budget,
+    seed: Math.max(0, ...workspaces.map(w => w.seed || 0)) + 1, createdAt: teamToday(), archived: false, source };
+  workspaces.push(ws);
+  // orgProfiles[id] is left unset: Organisation › Business Information generates the placeholder profile on first view.
+  workspaceProducts[id] = workspaceProducts[id] || {};
+  return ws;
+}
 function teamCreateOrg() {
   const name = document.getElementById('team-f-org').value.trim();
   if (!name) return teamFieldError('team-f-org', 'Organisation name is required.');
   if (teamOrgNameTaken(name)) return teamFieldError('team-f-org', 'This organisation already exists. Please use the “Existing Organisation” tab.');
-  const site = document.getElementById('team-f-site').value.trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+  const site = document.getElementById('team-f-site').value.trim();
   const industry = document.getElementById('team-f-ind').value;
-  const id = uid('ws');
-  workspaces.push({ id, name, industry, site, status: 'new', budget: 10000, seed: Math.max(0, ...workspaces.map(w => w.seed || 0)) + 1, createdAt: teamToday(), archived: false });
-  orgProfiles[id] = {};
-  workspaceProducts[id] = {};
+  const { id } = teamCreateWorkspace({ name, site, industry });
   teamRefresh();
   showToast('Organisation created', 'building-2');
   openModal({
@@ -5677,7 +6676,8 @@ registerScreen('team', {
       ];
     });
   });
-  registerDevToggles('agency-team-clients', () => [emptyToggle('clients', 'Empty state (no client organisations)')]);
+  registerDevToggles('agency-team-clients', () => [emptyToggle('clients', 'Empty state (no client organisations)'),
+    { label: 'Simulate CRM conversion', active: false, run: () => crmSimulateConversion() }]);
   registerDevToggles('client-team-agency', () => [emptyToggle('agency', 'Empty state (no agency access)')]);
 })();
 
@@ -5703,7 +6703,7 @@ Central administration of agency (OOm) staff: invite members, set their team and
 - Permissions are not enforced in this prototype (V1 didn't either).`
   },
   'client-team-members': {
-    title: 'Team & Access › Members (Client workspace)', status: 'In Review', author: 'Hannah', updatedAt: '21/10/2026',
+    title: 'Team & Access › Members (Client workspace)', status: 'In Review', author: 'Hannah', updatedAt: '22/10/2026',
     notes: `### Screen Purpose & Objectives
 Manage the client's own members in this workspace. Ported from the V1 "Workspace Settings & Permissions" client member section, laid out to the Figma Members frame.
 
@@ -5713,7 +6713,8 @@ Manage the client's own members in this workspace. Ported from the V1 "Workspace
   - *Visibility/Editability:* Visible and editable by authorised client users and authorised agency users.
 - **Strict Single Primary Contact**: exactly one Primary Contact per workspace. Turning it on for one member clears the previous one. The Primary Contact shows a badge, and Organisation, Dashboard and the Client Organisation cards read it.
 - **Row actions**: Edit, Resend Invite, Deactivate / Reactivate, Remove *(Deactivate/Remove: Draft — Figma only)*. Deactivating the Primary Contact leaves the workspace without one until another is set.
-- Search, filters (Team / Role / Status / Product Access), sorting and pagination as on the agency list.`
+- Search, filters (Team / Role / Status / Product Access), sorting and pagination as on the agency list.
+- **Awaiting approval** *(Draft, 22/10/2026)*: client contacts added by the agency CRM auto set-up show "Awaiting approval" until the account manager approves them. Their row menu offers **Approve & send invite** (status becomes Pending Invite). They don't use a seat; the seat card lists them separately. The Status filter includes Awaiting approval.`
   },
   'agency-team-teams': {
     title: 'Team & Access › Teams', status: 'Draft', author: 'Hannah', updatedAt: '21/10/2026',
@@ -5780,7 +6781,7 @@ Full-page role builder (Figma "Create Role" / "Edit Role"), replacing V1's role 
 *(Draft.)* The same role editor for client roles. The Agency permission group is hidden.`
   },
   'agency-team-clients': {
-    title: 'Team & Access › Client Organisation', status: 'In Review', author: 'Hannah', updatedAt: '21/10/2026',
+    title: 'Team & Access › Client Organisation', status: 'In Review', author: 'Hannah', updatedAt: '22/10/2026',
     notes: `### Screen Purpose & Objectives
 Directory for creating and locating client organisations (workspaces). Ported from V1 "Client Workspaces Directory & Creation", shown as Figma cards.
 
@@ -5792,7 +6793,32 @@ Directory for creating and locating client organisations (workspaces). Ported fr
   - Existing: pick an organisation; archived ones are restored, then the workspace opens.
   - On create the organisation appears in this grid **and** the workspace switcher (fixes V1), then offers to go to its Team & Access.
 - **Assign Members** *(Draft — Figma only)*: searchable checklist of agency members; writes to each member's assigned workspaces.
-- **Archive** *(Draft — Figma only)*: confirmation; locks access, removes it from the switcher and lists.`
+- **Archive** *(Draft — Figma only)*: confirmation; locks access, removes it from the switcher and lists.
+- Manual creation and the CRM auto set-up share one function (\`teamCreateWorkspace\`), so both behave the same.
+
+### Auto set-up from the agency CRM *(Draft, 22/10/2026)*
+When an account converts in the agency CRM, Galaxis creates the client workspace automatically:
+1. **Workspace created**, marked "From CRM" (badge on the card).
+2. **Services & budgets synced** from the CRM (shown read-only in Organisation › Business Information › Services & Contract).
+3. **Agency assignees added** through the role mapping in agency Integrations. The CRM's named user is used when they hold the mapped Galaxis role and team; otherwise the agency member with that role and team and the fewest workspaces is picked. Assignment writes to each member's assigned workspaces, so the workspace appears in their switcher.
+4. **SEO Cloud project linked** (only when SEO is a live service). The project starts as *Pending setup* until keywords are set up in SEO Cloud.
+5. **Client contacts awaiting approval.** CRM contacts are added as members with status *Awaiting approval*. They are not invited and don't use a seat. The account manager approves them (all at once or one by one) or removes them; approved contacts become *Pending Invite*. The first primary contact becomes the workspace Primary Contact.
+6. **Ad accounts linked** — a manual step: "Link in Integrations" opens agency Integrations.
+- **Card**: while set-up is incomplete, the card shows "Set-up: N of M steps" with a progress bar. The action menu has **View set-up**.
+- **Set-up checklist** (slide-over): progress, each step with ✓ Done / Needs approval / Manual step, the contact list with Approve and Remove, Link in Integrations, Assign members (when a CRM role has no matching Galaxis user), **Open workspace** and **Approve & send invites**.
+- Steps are computed from live data, so linking ad accounts or approving contacts elsewhere ticks them off.
+- The agency dashboard lists incomplete set-ups as Attention rows ("N client invites awaiting approval").
+- If the agency turns approval off in Integrations, contacts are invited straight away.
+- If the Agency CRM is disconnected, no workspaces are created.
+- Seeded demo: Grizzly Bear Corp and Bean Tech Pte Ltd are CRM-created and still waiting for approval and ad accounts. Earlier workspaces count as fully set up.
+- Dev toggle "Simulate CRM conversion" converts the next placeholder account (Northstar Dental Pte Ltd, Harbourview Bakery, Lumen Fitness Studio — fictional [PLACEHOLDER] companies).
+
+### Open questions
+- What happens to the workspace, assignees and budgets when a CRM account churns or a service ends?
+- Should an agency be able to make client invites fully automatic (per-agency setting), and who can change it?
+- How do we map a CRM account manager who isn't a Galaxis user yet (invite them, fall back to the mapping, or block)?
+- Ad budget source: CRM services (SEM + Google Ads + Facebook Ads) or a per-workspace budget?
+- Duplicate detection: when a converted CRM account matches an existing workspace (name, domain or UEN), link it instead of creating one? The demo skips the conversion and flags it.`
   },
   'client-team-agency': {
     title: 'Team & Access › Agency (Client workspace)', status: 'In Review', author: 'Hannah', updatedAt: '21/10/2026',
@@ -5828,6 +6854,7 @@ Object.assign(state.ui, {
 });
 state.flags.integScenario = null;   // client dev toggle last applied: { name, ws }
 state.flags.integToken = 'healthy'; // agency dev toggle
+state.flags.integCrm = 'connected';  // agency dev toggle: Agency CRM connected / disconnected
 
 const INTEG_THIRD_CRMS = ['hubspot', 'salesforce', 'zoho', 'dynamics'];
 const INTEG_ROUTABLE = ['sleekflow', 'wati', 'delacon'];
@@ -6424,11 +7451,15 @@ function integRenderAgency() {
     ${expired.map(([k, t]) => `<div class="banner banner-error integ-banner"><i data-lucide="circle-alert"></i>
       <div><div class="banner-title">${esc(t.label)} token expired</div><div class="banner-text">Ad data from ${fmtNum(t.discovered)} ${PLATFORM_NAME[k]} accounts has stopped syncing since ${fmtDate(t.expires)}. Re-authenticate to resume.</div></div>
       <button type="button" class="banner-action" onclick="integReauth('${k}')">Re-authenticate</button></div>`).join('')}
+    ${agencyCrm.status !== 'connected' ? `<div class="banner banner-error integ-banner"><i data-lucide="circle-alert"></i>
+      <div><div class="banner-title">Agency CRM disconnected</div><div class="banner-text">Converted CRM accounts are not creating workspaces, and services and budgets were last synced ${fmtDateTime(agencyCrm.lastSynced)}. Reconnect to resume.</div></div>
+      <button type="button" class="banner-action" onclick="integCrmReconnect()">Reconnect</button></div>` : ''}
     <section class="integ-section">
-      <h2 class="h-section">Ad Platforms — master connections</h2>
-      <div class="integ-sub">Agency-level tokens Galaxis uses to discover and sync client ad accounts.</div>
-      <div class="integ-grid-2">${Object.keys(masterTokens).map(integTokenCard).join('')}</div>
+      <h2 class="h-section">Master connections</h2>
+      <div class="integ-sub">Agency-level connections Galaxis uses to discover client ad accounts and to set up workspaces from the agency CRM.</div>
+      <div class="integ-grid-3">${Object.keys(masterTokens).map(integTokenCard).join('')}${integCrmCard()}</div>
     </section>
+    <section class="integ-section card" id="integ-crm-map">${integCrmMapHTML()}</section>
     <section class="integ-section card" id="integ-unlinked">${integUnlinkedHTML()}</section>
     <section class="integ-section card" id="integ-queue">${integQueueHTML()}</section>
     <section class="integ-section card">
@@ -6453,6 +7484,78 @@ function integTokenCard(k) {
     </div>
     <div class="integ-card-foot"><button type="button" class="btn ${bad ? 'btn-primary' : 'btn-outline'}" id="integ-reauth-${k}" onclick="integReauth('${k}')"><i data-lucide="refresh-ccw"></i>Re-authenticate</button></div>
   </div>`;
+}
+
+// ---- Agency CRM (internal OOm CRM): converted accounts create workspaces automatically (crm.js) ----
+function integCrmCard() {
+  const on = agencyCrm.status === 'connected';
+  return `<div class="card integ-card ${on ? '' : 'integ-card-error'}" id="integ-crm-card">
+    <div class="integ-card-head"><span class="integ-plat-logo integ-crm-logo"><i data-lucide="contact-round"></i></span>
+      <div class="grow"><div class="h-card">Agency CRM</div><div class="integ-cat">Internal OOm CRM · API connection</div>
+        <div class="integ-dots">${on ? integDot('green', 'Connected') : integDot('red', 'Disconnected')}</div></div></div>
+    <div class="integ-meta">
+      <div class="integ-meta-row"><i data-lucide="refresh-cw"></i><div><div>Accounts synced</div><div class="integ-meta-val">${fmtNum(agencyCrm.accountsSynced)} accounts synced</div></div></div>
+      <div class="integ-meta-row"><i data-lucide="calendar-clock"></i><div><div>Last synced</div><div class="integ-meta-val ${on ? '' : 't-error'}">${fmtDateTime(agencyCrm.lastSynced)}</div></div></div>
+    </div>
+    <div class="integ-card-foot">${on
+      ? `<button type="button" class="btn btn-outline" id="integ-crm-sync" onclick="integCrmResync()"><i data-lucide="refresh-cw"></i>Re-sync</button>`
+      : `<button type="button" class="btn btn-primary" id="integ-crm-sync" onclick="integCrmReconnect()"><i data-lucide="plug"></i>Reconnect</button>`}</div>
+  </div>`;
+}
+// Simulated sync: refreshes the sync time and the synced account count.
+function integCrmResync() {
+  const b = document.getElementById('integ-crm-sync');
+  if (b) { b.disabled = true; b.textContent = 'Syncing…'; }
+  setTimeout(() => {
+    agencyCrm.lastSynced = new Date().toISOString();
+    agencyCrm.accountsSynced = Object.keys(crmAccounts).length;
+    if (state.page === 'integrations' && isAgency()) rerender();
+    showToast(`Agency CRM synced. ${fmtNum(agencyCrm.accountsSynced)} accounts up to date.`, 'refresh-cw');
+  }, 800);
+}
+function integCrmReconnect() {
+  const b = document.getElementById('integ-crm-sync');
+  if (b) { b.disabled = true; b.textContent = 'Connecting…'; }
+  setTimeout(() => {
+    agencyCrm.status = 'connected';
+    agencyCrm.lastSynced = new Date().toISOString();
+    state.flags.integCrm = 'connected';
+    if (state.page === 'integrations' && isAgency()) rerender();
+    showToast('Agency CRM reconnected. New conversions will create workspaces again.', 'plug');
+  }, 900);
+}
+function integRenderCrmMap() { renderRegion('integ-crm-map', integCrmMapHTML()); }
+function integCrmMapHTML() {
+  const agencyRoles = roles.filter(r => r.org === 'agency' && !r.locked);
+  const agencyTeams = teams.filter(t => t.org === 'agency' && t.status === 'active');
+  const rows = crmRoleMap.map((r, i) => {
+    const who = crmCandidates(r.crmRole);
+    return `<tr><td class="t-bold">${esc(r.crmRole)}</td>
+      <td><select class="select integ-map-select" aria-label="Galaxis role for ${esc(r.crmRole)}" onchange="integCrmMapSet(${i}, 'roleId', this.value)">
+        <option value="" ${r.roleId ? '' : 'selected'}>Do not assign</option>${agencyRoles.map(x => `<option value="${x.id}" ${x.id === r.roleId ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></td>
+      <td><select class="select integ-map-select" aria-label="Team for ${esc(r.crmRole)}" onchange="integCrmMapSet(${i}, 'teamId', this.value)" ${r.roleId ? '' : 'disabled'}>
+        <option value="" ${r.teamId ? '' : 'selected'}>Any team</option>${agencyTeams.map(t => `<option value="${t.id}" ${t.id === r.teamId ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></td>
+      <td>${!r.roleId ? '<span class="t-muted">Not assigned</span>' : who.length ? `<span class="integ-map-who">${esc(who.map(m => m.name).join(', '))}</span>` : '<span class="integ-pill-warn"><i data-lucide="triangle-alert"></i>No matching user</span>'}</td></tr>`;
+  }).join('');
+  return `<div class="card-header"><div><h2 class="h-section">Agency CRM — role mapping & auto set-up</h2>
+      <div class="card-sub">When an account converts in the agency CRM, Galaxis creates the client workspace, copies its services and budgets, assigns agency members by role and adds the client contacts.</div></div></div>
+    <div class="table-wrap"><table class="table integ-table">
+      <thead><tr><th>CRM role</th><th>Galaxis role</th><th>Team</th><th>Galaxis users who match</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="t-caption t-muted integ-map-note">The CRM’s named user is assigned when they hold the mapped role and team. Otherwise the matching member with the fewest client workspaces is picked. Owners and Agency Admins already see every workspace.</div>
+    <div class="integ-crm-toggle"><div><div class="t-bold">Send client invites only after account-manager approval</div>
+        <div class="field-hint">On: client contacts from the CRM wait as “Awaiting approval” until the account manager approves them in the set-up checklist. Off: they are invited as soon as the workspace is created.</div></div>
+      <label class="toggle"><input type="checkbox" ${crmSettings.approvalRequired ? 'checked' : ''} onchange="integCrmApproval(this.checked)" aria-label="Send client invites only after account-manager approval"><span></span></label></div>`;
+}
+function integCrmMapSet(i, key, val) {
+  const r = crmRoleMap[i];
+  r[key] = val;
+  if (key === 'roleId' && !val) r.teamId = '';
+  integRenderCrmMap();
+  showToast(`Role mapping saved for ${r.crmRole}. Applies to the next CRM conversion.`, 'check-circle');
+}
+function integCrmApproval(on) {
+  crmSettings.approvalRequired = on;
+  showToast(on ? 'Client invites will wait for account-manager approval' : 'Client invites will be sent automatically on conversion', on ? 'shield-check' : 'send');
 }
 
 // Simulated OAuth: resets the token to valid with a new expiry (Google 1 year, Meta 60 days).
@@ -6679,16 +7782,19 @@ registerDevToggles('client-integrations', () => Object.keys(INTEG_SCENARIOS).map
 })));
 registerDevToggles('agency-integrations', () => [
   { label: 'Healthy tokens', active: state.flags.integToken === 'healthy', run: () => { masterTokens.google.status = 'valid'; masterTokens.meta.status = 'valid'; if (masterTokens.meta.expires < '2026-10-21') masterTokens.meta.expires = '2026-12-01'; state.flags.integToken = 'healthy'; render(); } },
-  { label: 'Meta token expired', active: state.flags.integToken === 'expired', run: () => { masterTokens.meta.status = 'expired'; masterTokens.meta.expires = '2026-10-14'; state.flags.integToken = 'expired'; render(); } }
+  { label: 'Meta token expired', active: state.flags.integToken === 'expired', run: () => { masterTokens.meta.status = 'expired'; masterTokens.meta.expires = '2026-10-14'; state.flags.integToken = 'expired'; render(); } },
+  'sep',
+  { label: 'Agency CRM connected', active: agencyCrm.status === 'connected', run: () => { agencyCrm.status = 'connected'; state.flags.integCrm = 'connected'; render(); } },
+  { label: 'Agency CRM disconnected', active: agencyCrm.status !== 'connected', run: () => { agencyCrm.status = 'disconnected'; state.flags.integCrm = 'disconnected'; render(); } }
 ]);
 
 // ---------- Specs ----------
 Object.assign(screenSpecs, {
   'agency-integrations': {
-    title: 'Integrations — Ad Account Discovery & Workspace Linking (Agency)',
+    title: 'Integrations — Ad Account Discovery, Workspace Linking & Agency CRM (Agency)',
     status: 'In Review',
     author: 'Hannah',
-    updatedAt: '21/10/2026',
+    updatedAt: '22/10/2026',
     notes: `
 ### Screen purpose and objectives
 Agency-level integrations page ("My Workspace"). Bridges the external ad platforms with client workspaces: agency admins triage unlinked accounts and workspaces, keep the master connections healthy, and see integration health across every client. Ported from V1 \`agency-adaccounts\`; Figma has no frame for this context, so it reuses the Figma card, table and modal patterns.
@@ -6697,6 +7803,19 @@ Agency-level integrations page ("My Workspace"). Bridges the external ad platfor
 - One card each for the **Google Ads Manager Account (MCC)** and **Meta Business Manager**: status (Valid / Expired), token type, accounts discovered, expiry date.
 - **Re-authenticate** runs the OAuth flow and resets the token to Valid with a new expiry date.
 - An expired token shows a red banner at the top of the page and is also raised in the dashboard Attention list.
+
+### Agency CRM (new, Draft, 22/10/2026)
+- A third master-connection card, **Agency CRM** (OOm's internal CRM), next to Google MCC and Meta BM, using the same card pattern.
+  - Shows status (Connected / Disconnected), "{N} accounts synced" and the last sync time.
+  - **Re-sync** runs a sync (simulated) and refreshes the count and time. When disconnected the button becomes **Reconnect**.
+  - Disconnected shows a red banner at the top of the page ("Agency CRM disconnected") with Reconnect. While disconnected, converted CRM accounts don't create workspaces.
+- **Role mapping & auto set-up card** below the connections:
+  - Table: CRM role → Galaxis role (select, or "Do not assign") → Team (select, or "Any team") → the Galaxis users who currently match.
+  - Defaults: Account Manager → Account Manager; SEO Specialist → SEO Lead, SEO Research team; Project Lead → Project Lead; Ads Specialist → Account Manager, Marketing team.
+  - Resolution: the CRM's named user is assigned when they hold the mapped role and team; otherwise the matching member with the fewest client workspaces. A role with no matching user is flagged here and in the set-up checklist.
+  - Changes apply to the next conversion and don't re-assign existing workspaces.
+  - Toggle **"Send client invites only after account-manager approval"** — on by default (Hannah's decision). Off sends invites straight away.
+- What auto set-up does is specified on Team & Access › Client Organisation.
 
 ### Client workspaces without linked ad accounts (V1, In Review)
 - Lists every active client workspace with **zero** linked ad accounts. V1's cap of five rows is removed; the list paginates.
@@ -6723,6 +7842,11 @@ Agency-level integrations page ("My Workspace"). Bridges the external ad platfor
 - Should re-authenticating a master token need a specific permission (e.g. Agency Admin only)?
 - Should an expired token also email the agency admins, and how far ahead of expiry?
 - Can an agency link an account that is already linked to an archived workspace?
+- Agency CRM: what happens on churn or when a service ends (archive, pause, or just update budgets)?
+- Agency CRM: can an agency make client invites fully automatic, and should that be a per-agency setting only Agency Admins can change?
+- Agency CRM: how do we map an account manager who isn't a Galaxis user yet?
+- Agency CRM: is the workspace ad budget taken from CRM services (SEM + Google Ads + Facebook Ads) or set per workspace?
+- Agency CRM: duplicate detection when a converted CRM account matches an existing workspace (name, domain, UEN)?
 `
   },
   'client-integrations': {
@@ -7330,6 +8454,325 @@ Ported from V2's Lead Intelligence profile: one lead's details, conversations, a
 - Should AI insights show a confidence level or source message?`
   }
 });
+
+
+// ---- src/crm.js ----
+// Galaxis Hub demo — agency CRM: role mapping, auto set-up when a CRM account converts, and the set-up checklist.
+// Data: crmAccounts / agencyCrm (data.js). This module owns crmRoleMap, crmSettings, crmSetups and the conversion queue.
+// Every global here is prefixed `crm`. Contract used by the dashboard: crmPendingSetups(), crmOpenSetup(wsId), crmSimulateConversion().
+// All companies, people and emails below are fictional placeholders.
+
+// ---------- Role mapping (edited in agency Integrations) ----------
+// Each CRM role maps to a Galaxis agency role and, optionally, a team. On conversion the CRM's named user is used when
+// they hold the mapped role (and team); otherwise the least-loaded agency member with that role and team is picked.
+// roleId '' means "do not assign".
+const crmRoleMap = [
+  { crmRole: 'Account Manager', roleId: 'r-a-am', teamId: '' },
+  { crmRole: 'SEO Specialist', roleId: 'r-a-seolead', teamId: 't-a-seo' },
+  { crmRole: 'Project Lead', roleId: 'r-a-pl', teamId: '' },
+  { crmRole: 'Ads Specialist', roleId: 'r-a-am', teamId: 't-a-mkt' }
+];
+// Hannah's decision: client invites wait for the account manager's approval.
+const crmSettings = { approvalRequired: true };
+// Set-up record per CRM-created workspace: { crmId, createdAt, assignees: [{ crmRole, memberId|null }], contactIds: [memberIds], removed: n }
+// Workspaces without a record were set up before the CRM integration and count as fully set up.
+const crmSetups = {};
+
+// Placeholder queue of CRM accounts that convert next. [PLACEHOLDER] — fictional companies, people and budgets.
+const crmQueue = [
+  { name: 'Northstar Dental Pte Ltd', industry: 'Healthcare', site: 'northstar-dental.example.com',
+    services: [{ type: 'SEO', monthlyBudget: 3500 }, { type: 'Google Ads', monthlyBudget: 8000 }, { type: 'Content Marketing', monthlyBudget: 2000 }],
+    seo: { contractedKeywords: 60, targetTop10Pct: 50 },
+    accountManager: 'melson.ng@example.com',
+    assignees: [{ crmRole: 'SEO Specialist', email: 'mary.lim@example.com' }, { crmRole: 'Project Lead', email: 'serah.chua@example.com' }],
+    contacts: [{ name: 'Alex Northstar', email: 'alex@northstar-dental.example.com', role: 'Primary contact' },
+      { name: 'Bea Practice', email: 'bea@northstar-dental.example.com', role: 'Marketing' }] },
+  { name: 'Harbourview Bakery', industry: 'F&B', site: 'harbourview-bakery.example.com',
+    services: [{ type: 'Facebook Ads', monthlyBudget: 3000 }, { type: 'Social Media', monthlyBudget: 1500 }],
+    accountManager: 'joseph.tan@example.com',
+    assignees: [{ crmRole: 'Ads Specialist', email: '' }],
+    contacts: [{ name: 'Casey Harbour', email: 'casey@harbourview.example.com', role: 'Primary contact' }] },
+  { name: 'Lumen Fitness Studio', industry: 'Other', site: 'lumen-fitness.example.com',
+    services: [{ type: 'SEO', monthlyBudget: 2500 }, { type: 'Google Ads', monthlyBudget: 5000 }, { type: 'Facebook Ads', monthlyBudget: 4000 }],
+    seo: { contractedKeywords: 40, targetTop10Pct: 45 },
+    accountManager: 'joseph.tan@example.com',
+    assignees: [{ crmRole: 'SEO Specialist', email: '' }, { crmRole: 'Ads Specialist', email: '' }, { crmRole: 'Project Lead', email: '' }],
+    contacts: [{ name: 'Dana Lumen', email: 'dana@lumen-fitness.example.com', role: 'Primary contact' },
+      { name: 'Eli Coach', email: 'eli@lumen-fitness.example.com', role: 'Marketing' },
+      { name: 'Fern Ledger', email: 'fern@lumen-fitness.example.com', role: 'Finance' }] }
+];
+
+// ---------- Helpers ----------
+function crmToday() { return toDateInput(new Date()); }
+function crmConnected() { return agencyCrm.status === 'connected'; }
+function crmMapFor(crmRole) { return crmRoleMap.find(r => r.crmRole === crmRole); }
+// Agency members who can fill a CRM role under the current mapping (active, not Owner / Agency Admin, who see every workspace anyway).
+function crmCandidates(crmRole) {
+  const map = crmMapFor(crmRole);
+  if (!map || !map.roleId) return [];
+  return members.filter(m => m.org === 'agency' && m.status === 'active' && !(m.workspaces || []).includes('*') &&
+    m.roleId === map.roleId && (!map.teamId || m.teamId === map.teamId));
+}
+// Pick the member for a CRM role: the CRM's named user if they qualify, else the one with the fewest assigned workspaces.
+function crmResolve(crmRole, email) {
+  const list = crmCandidates(crmRole);
+  const named = email && list.find(m => m.email.toLowerCase() === email.toLowerCase());
+  if (named) return named;
+  return [...list].sort((a, b) => (a.workspaces || []).length - (b.workspaces || []).length || a.name.localeCompare(b.name))[0] || null;
+}
+// Client role for a CRM contact. The primary contact becomes Super Admin and the workspace Primary Contact.
+function crmContactRole(role) {
+  if (/primary/i.test(role)) return 'r-c-super';
+  if (/marketing/i.test(role)) return 'r-c-hom';
+  return 'r-c-employee';
+}
+function crmAddContactMember(wsId, c, status) {
+  const m = { id: uid('m'), org: wsId, name: c.name, email: c.email, teamId: null, roleId: crmContactRole(c.role), status,
+    products: [], lastActive: null, lastProduct: null, crmContact: true, crmRole: c.role };
+  if (/primary/i.test(c.role) && !wsPrimaryContact(wsId)) m.isPrimary = true;
+  members.push(m);
+  return m;
+}
+function crmAwaiting(wsId) { return members.filter(m => m.org === wsId && m.status === 'awaiting'); }
+function crmSetupContacts(wsId) {
+  const s = crmSetups[wsId];
+  return s ? s.contactIds.map(memberById).filter(Boolean) : [];
+}
+
+// ---------- Set-up checklist (computed from live data, so manual changes elsewhere tick steps off) ----------
+// state: 'done' | 'pending' (needs the account manager) | 'manual' (done outside the checklist)
+function crmSetupSteps(wsId) {
+  const s = crmSetups[wsId];
+  const acc = crmAccounts[wsId];
+  if (!s || !acc) return [];
+  const steps = [];
+  const total = acc.services.reduce((t, x) => t + x.monthlyBudget, 0);
+  steps.push({ id: 'created', label: 'Workspace created', state: 'done', detail: `Created from CRM account ${acc.crmId} on ${fmtDate(s.createdAt)}.` });
+  steps.push({ id: 'services', label: 'Services & budgets synced', state: 'done', detail: `${acc.services.length} service${acc.services.length === 1 ? '' : 's'} · ${fmtMoney(total)} / month (${acc.services.map(x => x.type).join(', ')}).` });
+  const assigned = s.assignees.filter(a => a.memberId && memberById(a.memberId));
+  const missing = s.assignees.filter(a => !a.memberId);
+  steps.push({ id: 'assignees', label: 'Agency assignees added', state: missing.length ? 'pending' : 'done',
+    detail: assigned.map(a => `${memberById(a.memberId).name} (${a.crmRole})`).join(', ') || 'No agency members assigned.',
+    warn: missing.length ? `No Galaxis user matches ${missing.map(a => a.crmRole).join(', ')}. Assign one manually or update the role mapping.` : '' });
+  if (acc.services.some(x => x.type === 'SEO')) {
+    const e = wsProducts(wsId)['seo-cloud'];
+    steps.push({ id: 'seo', label: 'SEO Cloud project linked', state: seoProjects[wsId] ? 'done' : 'pending',
+      detail: seoProjects[wsId] ? `${seoProjects[wsId].contractedKeywords} keywords contracted · target ${seoProjects[wsId].targetTop10Pct}% in top 10.${e && e.status === 'pending' ? ' Keyword set-up in progress in SEO Cloud.' : ''}` : 'SEO is a live service but no SEO Cloud project is linked yet.' });
+  }
+  const contacts = crmSetupContacts(wsId);
+  const waiting = contacts.filter(m => m.status === 'awaiting');
+  const sent = contacts.filter(m => m.status !== 'awaiting');
+  steps.push({ id: 'invites', label: waiting.length ? 'Client contacts awaiting approval' : 'Client contacts approved', state: waiting.length ? 'pending' : 'done',
+    detail: waiting.length ? `${waiting.length} contact${waiting.length === 1 ? '' : 's'} from the CRM will be invited once you approve.`
+      : `${sent.length} invite${sent.length === 1 ? '' : 's'} sent${s.removed ? ` · ${s.removed} contact${s.removed === 1 ? '' : 's'} removed` : ''}.` });
+  const need = [...new Set(acc.services.filter(x => CRM_AD_SERVICES.includes(x.type)).map(x => x.type === 'Facebook Ads' ? 'meta' : 'google'))];
+  if (need.length) {
+    const linked = wsPlatforms(wsId);
+    const left = need.filter(p => !linked.includes(p));
+    steps.push({ id: 'ads', label: 'Ad accounts linked', state: left.length ? 'manual' : 'done',
+      detail: left.length ? `Link the ${left.map(p => PLATFORM_NAME[p]).join(' and ')} ad account${left.length === 1 ? '' : 's'} in Integrations. This step stays manual.` : `${need.map(p => PLATFORM_NAME[p]).join(' and ')} linked.` });
+  }
+  return steps;
+}
+function crmSetupProgress(wsId) {
+  const steps = crmSetupSteps(wsId);
+  return { done: steps.filter(x => x.state === 'done').length, total: steps.length };
+}
+
+// Contract: workspaces whose auto set-up still has steps to do.
+function crmPendingSetups() {
+  return Object.keys(crmSetups).map(wsById).filter(w => w && !w.archived).map(w => {
+    const p = crmSetupProgress(w.id);
+    return { wsId: w.id, wsName: w.name, pendingInvites: crmAwaiting(w.id).filter(m => m.crmContact).length, stepsDone: p.done, stepsTotal: p.total };
+  }).filter(x => x.stepsDone < x.stepsTotal);
+}
+
+// ---------- Conversion ----------
+// Contract: runs the whole auto set-up for the next account in the queue.
+function crmSimulateConversion() {
+  if (!crmConnected()) {
+    showToast('Agency CRM is disconnected. Reconnect it in Integrations to sync new accounts.', 'triangle-alert');
+    return null;
+  }
+  const next = crmQueue.shift();
+  if (!next) { showToast('No more CRM accounts waiting to convert in this demo', 'info'); return null; }
+  // Duplicate detection (open question): never create a second workspace with the same name.
+  if (typeof teamOrgNameTaken === 'function' && teamOrgNameTaken(next.name)) {
+    showToast(`${next.name} already has a workspace. Flagged for review instead of creating a duplicate.`, 'triangle-alert');
+    return null;
+  }
+  const today = crmToday();
+  const end = `${Number(today.slice(0, 4)) + 1}${today.slice(4)}`;
+  const adBudget = next.services.filter(x => CRM_AD_SERVICES.includes(x.type)).reduce((t, x) => t + x.monthlyBudget, 0);
+  const ws = teamCreateWorkspace({ name: next.name, site: next.site, industry: next.industry, budget: adBudget || 0, source: 'crm' });
+
+  // 1–2. CRM record: services and budgets.
+  const crmId = `CRM-${2000 + Object.keys(crmSetups).length + 1}`;
+  const am = crmResolve('Account Manager', next.accountManager);
+  const wanted = [{ crmRole: 'Account Manager', email: next.accountManager }, ...next.assignees];
+  const assignees = wanted.map(a => ({ crmRole: a.crmRole, memberId: (a.crmRole === 'Account Manager' ? am : crmResolve(a.crmRole, a.email))?.id || null }));
+  crmAccounts[ws.id] = {
+    crmId, stage: 'converted', convertedAt: today, source: 'crm',
+    services: next.services.map(x => ({ ...x, start: today, end })),
+    accountManager: am?.id || null,
+    assignees: assignees.filter(a => a.memberId).map(a => ({ role: a.crmRole, memberId: a.memberId })),
+    clientContacts: next.contacts.map(c => ({ ...c }))
+  };
+  // 3. Agency assignees via member.workspaces.
+  assignees.forEach(a => {
+    const m = a.memberId && memberById(a.memberId);
+    if (m && !(m.workspaces || []).includes(ws.id)) (m.workspaces = m.workspaces || []).push(ws.id);
+  });
+  // SEO Cloud project placeholder: pending until keywords are set up.
+  if (next.seo) {
+    seoProjects[ws.id] = { contractedKeywords: next.seo.contractedKeywords, targetTop10Pct: next.seo.targetTop10Pct, scenarioTop10Pct: 0, startedAt: today };
+    wsProducts(ws.id)['seo-cloud'] = { status: 'pending', active: false, lastSynced: null, error: 'SEO Cloud project created; keyword set-up in progress.' };
+  }
+  // 4. Client contacts: awaiting approval (or invited straight away when the agency turns approval off).
+  const status = crmSettings.approvalRequired ? 'awaiting' : 'pending';
+  const contactIds = next.contacts.map(c => crmAddContactMember(ws.id, c, status).id);
+  crmSetups[ws.id] = { crmId, createdAt: today, assignees, contactIds, removed: 0 };
+  agencyCrm.accountsSynced += 1;
+  agencyCrm.lastSynced = new Date().toISOString();
+
+  render();
+  showToast(`New workspace created from CRM: ${ws.name}`, 'sparkles');
+  return ws;
+}
+
+// ---------- Approval ----------
+function crmApproveAll(wsId) {
+  const list = crmAwaiting(wsId);
+  if (!list.length) { showToast('No client contacts are awaiting approval', 'info'); return; }
+  confirmDialog({
+    title: `Send ${list.length} client invite${list.length === 1 ? '' : 's'}?`,
+    text: `${list.map(m => m.email).join(', ')} will get an invitation to ${wsById(wsId).name}.`,
+    confirmLabel: 'Approve & send invites', icon: 'send',
+    onConfirm: () => { crmDoApprove(wsId, list.map(m => m.id)); }
+  });
+}
+function crmApproveContact(memberId) {
+  const m = memberById(memberId);
+  if (!m || m.status !== 'awaiting') return;
+  crmDoApprove(m.org, [m.id]);
+}
+function crmDoApprove(wsId, ids) {
+  ids.forEach(id => { const m = memberById(id); if (m && m.status === 'awaiting') m.status = 'pending'; });
+  crmChanged(wsId);
+  showToast(ids.length === 1 ? `Invitation sent to ${memberById(ids[0]).email}` : `Invitations sent to ${ids.length} client contacts`, 'send');
+}
+function crmRemoveContact(memberId) {
+  const m = memberById(memberId);
+  if (!m) return;
+  confirmDialog({
+    title: 'Remove client contact?',
+    text: `${m.name} (${m.email}) won’t be invited to ${wsById(m.org).name}. The contact stays in the agency CRM.`,
+    confirmLabel: 'Remove', danger: true, icon: 'user-minus',
+    onConfirm: () => {
+      members.splice(members.indexOf(m), 1);
+      const s = crmSetups[m.org];
+      if (s) { s.contactIds = s.contactIds.filter(x => x !== m.id); s.removed = (s.removed || 0) + 1; }
+      crmChanged(m.org);
+      showToast(`${m.name} removed`, 'user-minus');
+    }
+  });
+}
+// Re-render the page and, when it is open, the checklist drawer.
+function crmChanged(wsId) {
+  if (state.ui.crmDrawerWs === wsId && document.getElementById('crm-setup')) crmRenderSetup(wsId);
+  rerender();
+}
+
+// ---------- Set-up checklist drawer ----------
+state.ui.crmDrawerWs = null;
+// Contract: open a workspace's set-up checklist (from the dashboard Attention row or the Client Organisation card).
+function crmOpenSetup(wsId) {
+  const ws = wsById(wsId);
+  if (!ws) return;
+  if (!(isAgency() && state.page === 'team' && state.params.tab === 'clients')) {
+    state.ctx = null; state.persona = 'agency';
+    navigate('team', { tab: 'clients' });
+  }
+  state.ui.crmDrawerWs = wsId;
+  openDrawer('<div id="crm-setup"></div>', '<div id="crm-setup-foot" class="crm-foot"></div>');
+  crmRenderSetup(wsId);
+}
+function crmRenderSetup(wsId) {
+  const body = document.getElementById('crm-setup');
+  const foot = document.getElementById('crm-setup-foot');
+  if (!body) return;
+  body.innerHTML = crmSetupHTML(wsId);
+  const waiting = crmAwaiting(wsId).length;
+  if (foot) foot.innerHTML = `<button type="button" class="btn btn-outline" onclick="closeDrawer(); openWorkspace('${wsId}')">Open workspace</button>
+    ${waiting ? `<button type="button" class="btn btn-primary" onclick="crmApproveAll('${wsId}')" title="${waiting} contact${waiting === 1 ? '' : 's'} awaiting approval"><i data-lucide="send"></i>Approve & send invites</button>` : ''}`;
+  refreshIcons();
+}
+const CRM_STEP_ICON = { done: ['check', 'crm-step-done', 'Done'], pending: ['clock', 'crm-step-pending', 'Needs approval'], manual: ['hand', 'crm-step-manual', 'Manual step'] };
+function crmSetupHTML(wsId) {
+  const ws = wsById(wsId);
+  const s = crmSetups[wsId];
+  const acc = crmAccounts[wsId];
+  if (!s || !acc) {
+    return `<h3 class="h-section">${esc(ws.name)}</h3>${emptyState('circle-check', 'No auto set-up for this workspace', 'It was set up before the agency CRM integration, so there is no checklist.')}`;
+  }
+  const steps = crmSetupSteps(wsId);
+  const p = crmSetupProgress(wsId);
+  const am = memberById(acc.accountManager);
+  const pct = Math.round(p.done / Math.max(1, p.total) * 100);
+  const items = steps.map((st, i) => {
+    const [icon, cls, label] = CRM_STEP_ICON[st.state];
+    let extra = '';
+    if (st.id === 'invites') extra = crmContactList(wsId);
+    if (st.id === 'ads' && st.state !== 'done') extra = `<button type="button" class="btn btn-outline btn-sm crm-step-btn" onclick="crmLinkAds('${wsId}')"><i data-lucide="link"></i>Link in Integrations</button>`;
+    if (st.id === 'assignees' && st.state !== 'done') extra = `<button type="button" class="btn btn-outline btn-sm crm-step-btn" onclick="closeDrawer(); teamOpenAssignMembers('${wsId}')"><i data-lucide="user-plus"></i>Assign members</button>`;
+    return `<li class="crm-step ${cls}">
+      <span class="crm-step-icon" title="${label}"><i data-lucide="${icon}"></i></span>
+      <div class="grow"><div class="row-between"><span class="t-bold">${i + 1}. ${esc(st.label)}</span><span class="crm-step-state">${label}</span></div>
+        <div class="t-caption t-secondary crm-step-detail">${esc(st.detail)}</div>
+        ${st.warn ? `<div class="t-caption t-warning crm-step-detail">${esc(st.warn)}</div>` : ''}
+        ${extra}</div></li>`;
+  }).join('');
+  return `<div class="crm-setup-head"><span class="team-org-logo">${esc(initials(ws.name))}</span>
+      <div class="grow"><h3 class="h-section">${esc(ws.name)}</h3>
+        <div class="row crm-setup-meta"><span class="crm-badge"><i data-lucide="sparkles"></i>From CRM</span><span class="t-caption t-muted">${esc(acc.crmId)} · Account manager ${esc(am?.name || 'not mapped')}</span></div></div></div>
+    <div class="crm-progress-row"><span class="t-bold">Set-up checklist</span><span class="t-caption t-secondary">${p.done} of ${p.total} steps</span></div>
+    <div class="progress crm-progress" role="progressbar" aria-valuenow="${p.done}" aria-valuemin="0" aria-valuemax="${p.total}"><span style="width:${pct}%"></span></div>
+    <p class="t-caption t-muted crm-setup-note">Galaxis created this workspace automatically when the account converted in the agency CRM. ${crmSettings.approvalRequired ? 'Client invites wait for the account manager’s approval.' : 'Client invites were sent automatically (approval is turned off in Integrations).'}</p>
+    <ol class="crm-steps">${items}</ol>`;
+}
+function crmContactList(wsId) {
+  const list = crmSetupContacts(wsId);
+  if (!list.length) return '<div class="t-caption t-muted crm-step-detail">No client contacts left to invite.</div>';
+  return `<div class="crm-contacts">${list.map(m => `<div class="crm-contact">
+      <div class="grow crm-contact-text"><div class="crm-contact-name"><span class="t-bold">${esc(m.name)}</span><span class="chip">${esc(m.isPrimary ? 'Primary contact' : (m.crmRole || roleById(m.roleId)?.name || 'Contact'))}</span></div><div class="cell-sub">${esc(m.email)}</div></div>
+      ${m.status === 'awaiting'
+        ? `<button type="button" class="btn btn-outline btn-sm" onclick="crmRemoveContact('${m.id}')">Remove</button><button type="button" class="btn btn-primary btn-sm" onclick="crmApproveContact('${m.id}')">Approve</button>`
+        : statusDot(m.status)}</div>`).join('')}</div>`;
+}
+function crmLinkAds(wsId) {
+  closeDrawer();
+  state.ctx = null; state.persona = 'agency';
+  navigate('integrations');
+  showToast(`Link ${wsById(wsId).name}’s ad accounts under “Client workspaces without linked ad accounts”`, 'link');
+}
+
+// ---------- Seed: two new workspaces still waiting for approval (Attention row demo) ----------
+(function crmSeedPending() {
+  const seed = {
+    'ws-grizzly': [{ name: 'Gus Grizzly', email: 'gus@grizzly.example.com', role: 'Primary contact' }, { name: 'Hana Bear', email: 'hana@grizzly.example.com', role: 'Marketing' }],
+    'ws-beantech': [{ name: 'Ivan Bean', email: 'ivan@beantech.example.com', role: 'Primary contact' }]
+  };
+  Object.entries(seed).forEach(([wsId, contacts]) => {
+    const ws = wsById(wsId), acc = crmAccounts[wsId];
+    if (!ws || !acc) return;
+    ws.source = 'crm';
+    acc.clientContacts = contacts;
+    const contactIds = contacts.map(c => crmAddContactMember(wsId, c, 'awaiting').id);
+    const assignees = acc.assignees.map(a => ({ crmRole: a.role, memberId: a.memberId }));
+    assignees.forEach(a => { const m = memberById(a.memberId); if (m && !(m.workspaces || []).some(w => w === '*' || w === wsId)) m.workspaces.push(wsId); });
+    crmSetups[wsId] = { crmId: acc.crmId, createdAt: ws.createdAt, assignees, contactIds, removed: 0 };
+  });
+})();
 
 
 // ---- src/app.js ----

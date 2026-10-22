@@ -207,7 +207,7 @@ function orgRender() {
   orgSyncEditScope();
   const tab = orgTab();
   const tabs = ORG_TABS.map(t => `<button type="button" class="page-tab ${t.id === tab ? 'active' : ''}" onclick="navigate('organisation', { tab: '${t.id}' })"><i data-lucide="${t.icon}"></i>${esc(t.label)}</button>`).join('');
-  const body = tab === 'brand' ? orgBrandHTML() : tab === 'billing' ? orgBillingHTML() : orgBusinessHTML();
+  const body = tab === 'brand' ? orgBrandHTML() : tab === 'billing' ? orgBillingHTML() : orgBusinessHTML() + (isAgency() ? '' : orgServicesHTML());
   return `<div class="page-tabs" role="tablist">${tabs}</div>
     <div class="stack">${orgHeaderCard()}${body}</div>`;
 }
@@ -367,6 +367,36 @@ function orgSaveBusiness() {
   state.ui.orgEdit.business = false; state.ui.orgDraft = null; state.ui.orgErrors = {};
   render(); // full render: the workspace switcher and header show the new name
   showToast(renamed ? `Saved — organisation renamed to ${d.name}` : 'Business information saved');
+}
+
+// ---------- Services & Contract (client workspace, read-only from the agency CRM) ----------
+function orgServicesHTML() {
+  const id = currentOrgId();
+  const acc = crmAccounts[id];
+  const crmLink = viewerIsAgency() && acc ? `<button type="button" class="org-link" onclick="showToast('Opening ${q(acc.crmId)} in the agency CRM (demo)', 'external-link')">View in CRM<i data-lucide="arrow-up-right"></i></button>` : '';
+  const head = orgCardHead('Services & Contract', 'Live services and monthly budgets from the agency CRM. Read-only.', crmLink);
+  if (!acc) {
+    return `<section class="card org-section">${head}${emptyState('file-x', 'No CRM record linked', 'This workspace was created manually. Services and budgets appear here once the account is linked in the agency CRM.')}</section>`;
+  }
+  const today = toDateInput(new Date());
+  const live = x => (!x.start || x.start <= today) && (!x.end || x.end >= today);
+  const total = acc.services.filter(live).reduce((t, x) => t + x.monthlyBudget, 0);
+  const am = memberById(acc.accountManager);
+  const rows = acc.services.map(x => `<tr><td class="t-bold">${esc(x.type)}${CRM_AD_SERVICES.includes(x.type) ? '<div class="cell-sub">Ad spend</div>' : ''}</td>
+      <td class="num">${fmtMoney(x.monthlyBudget)}</td><td>${fmtDate(x.start)}</td><td>${fmtDate(x.end)}</td>
+      <td>${live(x) ? '<span class="pill pill-sm pill-green">Live</span>' : x.start > today ? '<span class="pill pill-sm pill-blue">Upcoming</span>' : '<span class="pill pill-sm pill-grey">Ended</span>'}</td></tr>`).join('');
+  return `<section class="card org-section">${head}
+    <div class="org-svc-kpis">
+      <div><div class="kv-label">Total monthly budget</div><div class="org-plan-value">${fmtMoney(total)}</div><div class="org-plan-sub">Live services only</div></div>
+      <div><div class="kv-label">Monthly ad-spend budget</div><div class="org-plan-value">${fmtMoney(wsAdBudget(id))}</div><div class="org-plan-sub">${CRM_AD_SERVICES.join(' + ')}</div></div>
+      <div><div class="kv-label">CRM ID</div><div class="org-plan-value">${esc(acc.crmId)}</div><div class="org-plan-sub">Converted ${fmtDate(acc.convertedAt)}</div></div>
+      <div><div class="kv-label">Account manager</div><div class="org-plan-value">${esc(am?.name || '—')}</div><div class="org-plan-sub">${esc(am?.email || 'Not mapped to a Galaxis user')}</div></div>
+    </div>
+    <div class="table-wrap org-svc-table"><table class="table">
+      <thead><tr><th>Service</th><th class="num">Monthly budget</th><th>Start date</th><th>End date</th><th>Status</th></tr></thead>
+      <tbody>${rows || '<tr><td class="table-empty" colspan="5">No services in the CRM record.</td></tr>'}</tbody></table></div>
+    <div class="org-sync-note org-svc-sync"><i data-lucide="refresh-cw"></i>Synced from Agency CRM · ${esc(fmtDateTime(agencyCrm.lastSynced))}${agencyCrm.status !== 'connected' ? ' · connection paused, figures may be out of date' : ''}</div>
+  </section>`;
 }
 
 // ---------- Billing Information ----------
@@ -861,6 +891,14 @@ ${common}
   - Contact email must be a valid email; phone numbers allow digits, spaces, + and -.
 - Saving updates the organisation everywhere (workspace switcher, header card, Client Organisation list) and shows a toast.
 ${ctx === 'client' ? `
+## Services & Contract card (client workspace, Draft, 22/10/2026)
+- Read-only card below Business Information, from the workspace's agency CRM record. Labelled "Synced from Agency CRM" with the last sync time.
+- Summary: total monthly budget (live services), monthly ad-spend budget (SEM + Google Ads + Facebook Ads, the same figure as the dashboard's ad budget), CRM ID with conversion date, account manager.
+- Table: Service, Monthly budget (SGD), Start date, End date, Status (Live / Upcoming / Ended, from the dates).
+- **View in CRM ↗** (agency persona only) opens the account in the agency CRM (toast in the demo).
+- Empty state when the workspace has no CRM record (created manually): "No CRM record linked".
+- Open questions: what happens when a service ends or the account churns; is the ad budget taken from the CRM or set per workspace; should client users see budgets at all?
+
 ## Primary Business Contact (client workspace)
 - Synced with the workspace **Primary Contact** in Team & Access.
 - In edit mode, Contact Person is a member picker; Email follows the chosen member.
@@ -937,7 +975,7 @@ ${common}
   const meta = { status: 'Draft', author: 'Hannah', updatedAt: '21/10/2026' };
   Object.assign(screenSpecs, {
     'agency-organisation-business': { ...meta, title: 'Organisation — Business Information (Agency)', notes: business('agency') },
-    'client-organisation-business': { ...meta, title: 'Organisation — Business Information (Client workspace)', notes: business('client') },
+    'client-organisation-business': { ...meta, updatedAt: '22/10/2026', title: 'Organisation — Business Information (Client workspace)', notes: business('client') },
     'agency-organisation-billing': { ...meta, title: 'Organisation — Billing Information (Agency)', notes: billing },
     'client-organisation-billing': { ...meta, title: 'Organisation — Billing Information (Client workspace)', notes: billing },
     'agency-organisation-brand': { ...meta, title: 'Organisation — Brand Identity (Agency)', notes: brand },

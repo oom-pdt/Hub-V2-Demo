@@ -90,3 +90,16 @@
   .org-plan-grid > div { padding: 0; border-left: 0; }
   .org-header-card { flex-direction: column; align-items: flex-start; }
 }
+
+/* Services & Contract (agency CRM) */
+.org-svc-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 24px; }
+.org-svc-kpis > div { padding: 0 24px; border-left: 1px solid var(--border); min-width: 0; }
+.org-svc-kpis > div:first-child { padding-left: 0; border-left: 0; }
+.org-svc-kpis .kv-label { margin-bottom: 8px; }
+.org-svc-kpis .org-plan-value { overflow-wrap: anywhere; }
+.org-svc-table { margin-top: 24px; }
+.org-svc-sync { margin-top: 14px; }
+@media (max-width: 960px) {
+  .org-svc-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 0; }
+  .org-svc-kpis > div:nth-child(3) { padding-left: 0; border-left: 0; }
+}

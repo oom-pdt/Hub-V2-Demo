@@ -143,3 +143,12 @@
   .integ-grid-2, .integ-grid-3, .integ-grid-4, .integ-route-grid { grid-template-columns: 1fr; }
   .integ-dir-search { width: 100%; }
 }
+
+/* Agency CRM master connection + role mapping (crm.js) */
+.integ-crm-logo { background: var(--tint); color: var(--primary); }
+.integ-crm-logo svg.lucide { width: 18px; height: 18px; }
+.integ-map-select { height: 36px; min-width: 180px; font-size: 12px; }
+.integ-map-who { font-size: 12px; }
+.integ-map-note { margin-top: 12px; }
+.integ-crm-toggle { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 20px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--r-md); }
+.integ-crm-toggle .t-bold { font-size: 14px; }

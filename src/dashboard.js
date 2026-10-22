@@ -216,6 +216,10 @@ function dashQuality(v, ref, higherBetter) {
 function dashDot(text, quality) {
   return quality ? `<span class="metric-dot ${quality}" title="${DASH_QUALITY_LABEL[quality]}">${text}</span>` : text;
 }
+// SEO number formatting: whole numbers stay whole, others get one decimal ("52.5%").
+function dashNum1(n) { const v = Math.round(Number(n || 0) * 10) / 10; return Number.isInteger(v) ? String(v) : v.toFixed(1); }
+function dashPctTxt(n) { return `${dashNum1(n)}%`; }
+const DASH_SEO_TEXT = { on: 't-success', off: 't-warning', critical: 't-error' };
 function dashFirstName() { const u = memberById(CURRENT_USER_ID); return u ? u.name.split(/\s+/)[0] : 'there'; }
 function dashAgencyWorkspaces() { return typeof visibleWorkspaces === 'function' ? visibleWorkspaces() : activeWorkspaces(); }
 
@@ -229,14 +233,15 @@ const DASH_FILTERS = {
     groups: () => [
       { key: 'platform', title: 'Ad Platforms', options: [['google', 'Google'], ['meta', 'Meta'], ['none', 'No platform linked']] },
       { key: 'status', title: 'Status', options: [['new', 'New'], ['active', 'Active'], ['inactive', 'Inactive'], ['attention', 'Attention Required']] },
-      { key: 'perf', title: 'Performance (Cost per Conversion)', options: [['good', 'Excellent'], ['mid', 'Average'], ['bad', 'Bad']] }
+      { key: 'perf', title: 'Performance (Cost per Conversion)', options: [['good', 'Excellent'], ['mid', 'Average'], ['bad', 'Bad']] },
+      { key: 'seo', title: 'SEO Status', options: [['on', 'On track'], ['off', 'Off track'], ['critical', 'Critical'], ['none', 'Not on SEO Cloud']] }
     ],
     refresh: () => { pager('dash-managed').page = 1; dashRefreshManaged(); }
   },
   attention: {
     store: () => state.ui.dashAttFilter,
     groups: () => [
-      { key: 'type', title: 'Issue Status', options: ['Performance Review', 'No Account Linked', 'Integration Error', 'Token Expired', 'Unlinked Ad Accounts'].map(t => [t, t]) },
+      { key: 'type', title: 'Issue Status', options: ['Performance Review', 'SEO Critical', 'SEO Off Track', 'No Account Linked', 'Integration Error', 'Token Expired', 'Unlinked Ad Accounts', 'CRM Set-up'].map(t => [t, t]) },
       { key: 'priority', title: 'Priority Status', options: [['High', 'High'], ['Medium', 'Medium'], ['Low', 'Low']] }
     ],
     refresh: () => renderRegion('dash-att-list', dashAttentionList())
@@ -249,6 +254,15 @@ const DASH_FILTERS = {
       { key: 'status', title: 'Status', options: DASH_STATUSES.map(s => [s, s]) }
     ],
     refresh: () => { pager('dash-ct').page = 1; dashRefreshCampaignTable(); }
+  },
+  seo: {
+    store: () => state.ui.dashSeoFilter,
+    groups: () => [
+      { key: 'intent', title: 'Search Intent', options: Object.entries(SEO_INTENTS) },
+      { key: 'difficulty', title: 'Difficulty', options: SEO_DIFFICULTY.map(d => [d, d]) },
+      { key: 'group', title: 'Keyword Group', options: (seoProject(state.ctx)?.groups || []).map(g => [g.name, g.name]) }
+    ],
+    refresh: () => { pager('dash-seo').page = 1; dashSeoRefreshTable(); }
   }
 };
 function dashFilterCount(fid) { return Object.values(DASH_FILTERS[fid].store()).reduce((n, a) => n + a.length, 0); }
@@ -333,6 +347,20 @@ function dashAttentionItems() {
     client: w.name, type: 'Performance Review', priority: i === 0 ? 'High' : 'Medium',
     desc: DASH_PERF_ISSUES[i % DASH_PERF_ISSUES.length], cta: 'View Account', action: `openWorkspace('${w.id}','dashboard')`
   }));
+  // SEO Cloud projects below their top-10 target (status rule in seoStatus()).
+  seoPortfolio(list).rows.filter(x => x.stats.status.key !== 'on').forEach(({ ws, stats }) => items.push({
+    client: ws.name, type: stats.status.key === 'critical' ? 'SEO Critical' : 'SEO Off Track', priority: stats.status.key === 'critical' ? 'High' : 'Medium',
+    desc: `${dashPctTxt(stats.top10Pct)} of keywords in top 10 vs ${dashPctTxt(stats.target)} target (${dashNum1(stats.status.gap)} pts below).`,
+    cta: 'View SEO', action: `openWorkspace('${ws.id}','dashboard',{tab:'seo'})`
+  }));
+  // Agency CRM auto set-up waiting for the account manager (provided by crm.js when loaded).
+  if (typeof crmPendingSetups === 'function') {
+    (crmPendingSetups() || []).filter(x => x.pendingInvites > 0).forEach(x => items.push({
+      client: x.wsName, type: 'CRM Set-up', priority: 'Medium',
+      desc: `${x.pendingInvites} client invite${x.pendingInvites === 1 ? '' : 's'} awaiting approval · ${x.stepsDone} of ${x.stepsTotal} set-up steps done.`,
+      cta: 'Review set-up', action: `typeof crmOpenSetup === 'function' ? crmOpenSetup('${q(x.wsId)}') : navigate('team', { tab: 'clients' })`
+    }));
+  }
   list.forEach(w => Object.entries(wsProducts(w.id)).forEach(([pid, s]) => {
     if (s.status !== 'error' && s.status !== 'pending') return;
     const p = productById(pid);
@@ -371,6 +399,7 @@ function dashRenderAgency() {
     <div class="dash-top">
       ${dashDonutCard()}
       ${dashSpendCard(port)}
+      ${dashSeoPortfolioCard()}
     </div>
     <div class="card dash-att-card" id="dash-attention">${dashAttentionCard()}</div>
     <div class="card" id="dash-managed">${dashManagedCard()}</div>`;
@@ -382,9 +411,10 @@ function dashBanner() {
   const missing = list.filter(w => !wsAdAccounts(w.id).length).length;
   const impacting = list.filter(w => w.status === 'attention').length;
   if (!missing && !impacting && !dashAttentionItems().length) return '';
+  const seoBehind = seoPortfolio(list).rows.filter(x => x.stats.status.key !== 'on').length;
   return `<div class="banner banner-warning dash-banner">
     <i data-lucide="triangle-alert"></i>
-    <div><div class="banner-title">Attention Required</div><div class="banner-text">${missing} account${missing === 1 ? '' : 's'} missing platform links, ${impacting} impacting overall performance.</div></div>
+    <div><div class="banner-title">Attention Required</div><div class="banner-text">${missing} account${missing === 1 ? '' : 's'} missing platform links, ${impacting} impacting overall performance${seoBehind ? `, ${seoBehind} SEO project${seoBehind === 1 ? '' : 's'} below target` : ''}.</div></div>
     <button type="button" class="banner-action" onclick="dashReviewAccounts()">Review Accounts</button>
   </div>`;
 }
@@ -441,6 +471,34 @@ function dashSpendCard(port) {
   </div>`;
 }
 
+// SEO Portfolio: SEO Cloud health across the managed workspaces (status rule in seoStatus()).
+const DASH_SEO_SEGS = [['on', 'On track', 'onTrack', 'var(--success-pill)'], ['off', 'Off track', 'offTrack', 'var(--warning-pill)'], ['critical', 'Critical', 'critical', 'var(--error-pill)']];
+function dashSeoPortfolioCard() {
+  const s = seoPortfolio(dashAgencyWorkspaces());
+  const tip = 'Client workspaces with SEO Cloud connected. Status compares the share of keywords in the top 10 with the contracted target: On track at or above target, Off track less than 5 points below, Critical 5 or more points below.';
+  if (!s.clients) {
+    return `<div class="card dash-metric dash-seo-port">
+      <div class="kpi-title">SEO Portfolio ${infoTip(tip)}</div>
+      <div class="kpi-value t-muted">0</div><div class="kpi-sub">No clients on SEO Cloud yet.</div>
+    </div>`;
+  }
+  const bar = DASH_SEO_SEGS.filter(([, , k]) => s[k]).map(([key, label, k, color]) =>
+    `<span style="width:${(s[k] / s.clients * 100).toFixed(2)}%;background:${color}" title="${esc(label)}: ${s[k]}"></span>`).join('');
+  const gap = Math.round((s.avgTop10Pct - s.avgTarget) * 10) / 10;
+  const avgStatus = seoStatus(s.avgTop10Pct, s.avgTarget);
+  return `<div class="card dash-metric dash-seo-port">
+    <div class="kpi-title">SEO Portfolio ${infoTip(tip)}</div>
+    <div class="kpi-value">${s.clients} <span class="dash-kpi-unit">client${s.clients === 1 ? '' : 's'} on SEO Cloud</span></div>
+    <div class="dash-stack" role="img" aria-label="${s.onTrack} on track, ${s.offTrack} off track, ${s.critical} critical">${bar}</div>
+    <div class="dash-stack-legend">${DASH_SEO_SEGS.map(([key, label, k, color]) =>
+      `<span><span class="dash-legend-sw" style="background:${color}"></span>${esc(label)} <b>${s[k]}</b></span>`).join('')}</div>
+    <div class="dash-seo-port-rows">
+      <div class="dash-plat-row"><span>Avg. top 10</span><span class="dash-plat-val"><b class="${DASH_SEO_TEXT[avgStatus.key]}">${dashPctTxt(s.avgTop10Pct)}</b> vs ${dashPctTxt(s.avgTarget)} target <span class="t-muted">(${gap >= 0 ? '+' : ''}${dashNum1(gap)} pts)</span></span></div>
+      <div class="dash-plat-row"><span>Keywords tracked</span><span class="dash-plat-val"><b>${fmtNum(s.keywords)}</b> of ${fmtNum(s.contracted)} contracted</span></div>
+    </div>
+  </div>`;
+}
+
 function dashAttentionCard() {
   const n = dashAttentionItems().length;
   return `<div class="card-header">
@@ -473,28 +531,64 @@ function dashLastActivity(w) {
 }
 function dashManagedRows() {
   const port = dashPortfolio().total;
+  const days = dateRangeDays('agency');
   return dashAgencyWorkspaces().map(w => {
     const t = dashMetrics(w.id, 'agency').total;
     const linked = t.spend > 0;
     const contact = wsPrimaryContact(w.id);
+    const services = crmAccounts[w.id]?.services || [];
     return {
       w, t, linked, plats: wsPlatforms(w.id), contact, last: dashLastActivity(w),
+      services, budget: services.reduce((s, x) => s + (x.monthlyBudget || 0), 0),
+      seo: seoConnected(w.id) ? seoStats(w.id, days) : null,
       q: { cpm: linked ? dashQuality(t.cpm, port.cpm) : '', cpc: linked ? dashQuality(t.cpc, port.cpc) : '', cpa: linked ? dashQuality(t.cpa, port.cpa) : '' }
     };
   });
 }
+
+// Managed Accounts columns, in table order. Client and Action are always shown; the rest are in the column picker.
+const DASH_MG_COLS = [
+  { key: 'platforms', group: 'ads', label: 'Ad Platforms' },
+  { key: 'status', group: 'account', label: 'Status' },
+  { key: 'spend', group: 'ads', label: 'Combined Spend' },
+  { key: 'cpm', group: 'ads', label: 'CPM' },
+  { key: 'cpc', group: 'ads', label: 'CPC' },
+  { key: 'cpa', group: 'ads', label: 'Cost Per Conversion' },
+  { key: 'seoStatus', group: 'seo', label: 'SEO Status', tip: 'SEO Cloud project status: On track at or above the top-10 target, Off track less than 5 points below, Critical 5 or more points below.' },
+  { key: 'top10', group: 'seo', label: 'Top 10 %', tip: 'Share of tracked keywords ranking in the top 10 today, against the contracted target.' },
+  { key: 'avgPos', group: 'seo', label: 'Avg Position', tip: 'Mean position of keywords ranking in the top 100 (lower is better).' },
+  { key: 'services', group: 'crm', label: 'Live Services', tip: 'Live services on the Agency CRM account.' },
+  { key: 'budget', group: 'crm', label: 'Monthly Budget', tip: 'Sum of the monthly budgets of every live CRM service (SGD).' },
+  { key: 'contact', group: 'account', label: 'Primary Contact' },
+  { key: 'last', group: 'account', label: 'Last Activity' }
+];
+registerColumnPicker('managed', {
+  columns: () => DASH_MG_COLS,
+  groups: [['ads', 'Ads'], ['seo', 'SEO'], ['crm', 'CRM'], ['account', 'Account']],
+  note: 'Client and Action are always shown',
+  onChange: 'dashRefreshManaged',
+  storageKey: 'galaxis-demo:managed-columns-hidden'
+});
+
 function dashManagedCard() {
   return `<div class="card-header">
       <div><h2 class="h-section">Managed Accounts</h2><div class="card-sub">A complete overview of all client accounts currently assigned to you.</div></div>
       <div class="row">
         <div class="search dash-search"><input class="input" placeholder="Search client or contact" value="${esc(state.ui.dashMgrSearch)}" oninput="dashManagedSearch(this.value)" aria-label="Search managed accounts"><i data-lucide="search"></i></div>
         ${dashFilterButton('managed')}
+        ${colPickerButton('managed')}
       </div>
     </div>
     <div id="dash-managed-body">${dashManagedBody()}</div>`;
 }
 function dashManagedSearch(v) { state.ui.dashMgrSearch = v; pager('dash-managed').page = 1; dashRefreshManaged(); }
 function dashRefreshManaged() { renderRegion('dash-managed-body', dashManagedBody()); }
+function dashServiceChips(services, max = 2) {
+  if (!services.length) return '<span class="t-muted">—</span>';
+  const names = services.map(x => x.type);
+  const more = names.length > max ? `<span class="more-count" title="${esc(names.slice(max).join(', '))}">+${names.length - max}</span>` : '';
+  return `<span class="chips dash-nowrap">${names.slice(0, max).map(n => `<span class="chip">${esc(n)}</span>`).join('')}${more}</span>`;
+}
 function dashManagedBody() {
   const term = state.ui.dashMgrSearch.trim().toLowerCase();
   const f = state.ui.dashMgrFilter;
@@ -503,42 +597,60 @@ function dashManagedBody() {
     if (f.status.length && !f.status.includes(r.w.status)) return false;
     if (f.platform.length && !f.platform.some(p => p === 'none' ? !r.plats.length : r.plats.includes(p))) return false;
     if (f.perf.length && !f.perf.includes(r.q.cpa)) return false;
+    if (f.seo.length && !f.seo.includes(r.seo ? r.seo.status.key : 'none')) return false;
     return true;
   });
   const statusRank = { attention: 0, new: 1, active: 2, inactive: 3 };
+  const seoRank = { critical: 0, off: 1, on: 2 };
   // Workspaces without data ("—") always sort last, whichever direction.
-  const num = v => v || ((state.sorts['dash-managed'] || {}).dir === 'asc' ? Infinity : -1);
+  const asc = (state.sorts['dash-managed'] || {}).dir === 'asc';
+  const num = v => v || (asc ? Infinity : -1);
+  const miss = v => v === null || v === undefined ? (asc ? Infinity : -Infinity) : v;
   rows = applySort(rows, 'dash-managed', {
     name: r => r.w.name.toLowerCase(), platforms: r => r.plats.length, status: r => statusRank[r.w.status],
     spend: r => num(r.t.spend), cpm: r => num(r.t.cpm), cpc: r => num(r.t.cpc), cpa: r => num(r.t.cpa),
+    seoStatus: r => miss(r.seo ? seoRank[r.seo.status.key] : null), top10: r => miss(r.seo ? r.seo.top10Pct : null),
+    avgPos: r => miss(r.seo ? r.seo.avgPos : null), services: r => num(r.services.length), budget: r => num(r.budget),
     contact: r => r.contact ? r.contact.email : '~', last: r => r.last
   });
   const total = rows.length;
   const page = paginate(rows, 'dash-managed', 10);
   const fn = 'dashRefreshManaged';
-  const th = (col, label, cls = '') => `<th class="${cls}">${sortHeader('dash-managed', col, label, fn)}</th>`;
-  const money = (r, k) => r.linked ? dashDot(fmtMoney(r.t[k], 2), r.q[k]) : '<span class="t-muted">—</span>';
+  const cols = DASH_MG_COLS.filter(c => colVisible('managed', c.key));
+  const th = c => `<th${c.tip ? ` title="${esc(c.tip)}"` : ''}>${sortHeader('dash-managed', c.key, c.label, fn)}</th>`;
+  const dash = '<span class="t-muted">—</span>';
+  const money = (r, k) => r.linked ? dashDot(fmtMoney(r.t[k], 2), r.q[k]) : dash;
+  const cell = (r, k) => {
+    switch (k) {
+      case 'platforms': return `<div class="chips dash-nowrap">${r.plats.map(p => platformBadge(p)).join('') || '<span class="t-muted">No platform linked</span>'}</div>`;
+      case 'status': return statusPill(r.w.status);
+      case 'spend': return r.linked ? fmtMoney(r.t.spend) : dash;
+      case 'cpm': case 'cpc': case 'cpa': return money(r, k);
+      case 'seoStatus': return r.seo ? `<span class="pill pill-sm ${r.seo.status.pill}">${esc(r.seo.status.label)}</span>` : dash;
+      case 'top10': return r.seo ? `<b class="${DASH_SEO_TEXT[r.seo.status.key]}">${dashPctTxt(r.seo.top10Pct)}</b><span class="t-muted"> / ${dashPctTxt(r.seo.target)}</span>` : dash;
+      case 'avgPos': return r.seo && r.seo.avgPos !== null ? dashNum1(r.seo.avgPos) : dash;
+      case 'services': return dashServiceChips(r.services);
+      case 'budget': return r.budget ? fmtMoney(r.budget) : dash;
+      case 'contact': return r.contact ? `<span class="dash-email" title="${esc(r.contact.name)} · ${esc(r.contact.email)}">${esc(r.contact.email)}</span>` : '<span class="t-muted">Unassigned</span>';
+      case 'last': return fmtDate(r.last);
+    }
+    return '';
+  };
   const body = page.map(r => `
     <tr class="clickable" onclick="openWorkspace('${r.w.id}','dashboard')">
       <td class="dash-nowrap"><button type="button" class="dash-name-link" onclick="event.stopPropagation(); openWorkspace('${r.w.id}','dashboard')">${esc(r.w.name)}</button></td>
-      <td><div class="chips dash-nowrap">${r.plats.map(p => platformBadge(p)).join('') || '<span class="t-muted">No platform linked</span>'}</div></td>
-      <td>${statusPill(r.w.status)}</td>
-      <td>${r.linked ? fmtMoney(r.t.spend) : '<span class="t-muted">—</span>'}</td>
-      <td>${money(r, 'cpm')}</td>
-      <td>${money(r, 'cpc')}</td>
-      <td>${money(r, 'cpa')}</td>
-      <td>${r.contact ? `<span class="dash-email" title="${esc(r.contact.name)} · ${esc(r.contact.email)}">${esc(r.contact.email)}</span>` : '<span class="t-muted">Unassigned</span>'}</td>
-      <td class="dash-nowrap">${fmtDate(r.last)}</td>
+      ${cols.map(c => `<td class="dash-nowrap">${cell(r, c.key)}</td>`).join('')}
       <td onclick="event.stopPropagation()">${rowMenu(`dash-mm-${r.w.id}`, [
         { label: 'Go to workspace', icon: 'arrow-right', onClick: `openWorkspace('${r.w.id}','dashboard')` },
+        ...(r.seo ? [{ label: 'View SEO performance', icon: 'search', onClick: `openWorkspace('${r.w.id}','dashboard',{tab:'seo'})` }] : []),
         { label: 'Organisation settings', icon: 'building-2', onClick: `openWorkspace('${r.w.id}','organisation')` },
         { label: 'Integrations', icon: 'blocks', onClick: `openWorkspace('${r.w.id}','integrations')` }
       ])}</td>
     </tr>`).join('');
   const emptyText = term ? `No workspaces found matching “${esc(state.ui.dashMgrSearch)}”.` : 'No workspaces found matching these filters.';
   return `<div class="table-wrap dash-table-wrap"><table class="table">
-      <thead><tr>${th('name', 'Client')}${th('platforms', 'Ad Platforms')}${th('status', 'Status')}${th('spend', 'Combined Spend')}${th('cpm', 'CPM')}${th('cpc', 'CPC')}${th('cpa', 'Cost Per Conversion')}${th('contact', 'Primary Contact')}${th('last', 'Last Activity')}<th>Action</th></tr></thead>
-      <tbody>${body || `<tr><td colspan="10" class="table-empty">${emptyText}</td></tr>`}</tbody>
+      <thead><tr><th>${sortHeader('dash-managed', 'name', 'Client', fn)}</th>${cols.map(th).join('')}<th>Action</th></tr></thead>
+      <tbody>${body || `<tr><td colspan="${cols.length + 2}" class="table-empty">${emptyText}</td></tr>`}</tbody>
     </table></div>
     ${paginationBar('dash-managed', total, fn)}`;
 }
@@ -552,24 +664,58 @@ function dashSyncClientState() {
   Object.assign(state.ui, {
     dashLevel: 'platform', dashDrill: null, dashCtSearch: '',
     dashCtFilter: { platform: [], format: [], status: [] },
-    dashEntSel: [], dashEntType: 'all', dashEntQ: ''
+    dashEntSel: [], dashEntType: 'all', dashEntQ: '',
+    dashSeoBucket: 'all', dashSeoSearch: '', dashSeoFilter: { intent: [], difficulty: [], group: [] }, dashSeoCollapsed: {}
   });
   pager('dash-ct').page = 1;
+  pager('dash-seo', 25).page = 1;
+}
+
+// ---------- Tabs: Ad Performance | SEO Performance ----------
+// state.params.tab ('ads' | 'seo') deep-links a tab; state.ui.dashTab remembers the last one used, so switching
+// workspace (which drops params on the dashboard) keeps the tab. A remembered SEO tab falls back to Ads when the
+// new workspace has no SEO Cloud; an explicit ?tab=seo shows the "not connected" state instead.
+function dashTab() {
+  if (isAgency()) return 'ads';
+  const explicit = state.params.tab;
+  const t = explicit || state.ui.dashTab || 'ads';
+  if (t !== 'seo') return 'ads';
+  return explicit || seoConnected(state.ctx) ? 'seo' : 'ads';
+}
+function dashSetTab(t) {
+  state.params = { ...state.params, tab: t };
+  state.ui.dashTab = t;
+  closeAllPopovers();
+  rerender();
+}
+function dashTabBar(tab, ws) {
+  const on = seoConnected(ws.id);
+  const btn = (key, icon, label, attrs = '') => `<button type="button" role="tab" aria-selected="${tab === key}" class="page-tab ${tab === key ? 'active' : ''}" onclick="dashSetTab('${key}')" ${attrs}><i data-lucide="${icon}"></i>${label}</button>`;
+  return `<div class="page-tabs dash-tabs" role="tablist" aria-label="Dashboard">
+    ${btn('ads', 'megaphone', 'Ad Performance')}
+    ${on ? btn('seo', 'search', 'SEO Performance') : btn('seo', 'lock', 'SEO Performance', 'data-off title="SEO Cloud is not connected to this workspace"')}
+    ${on ? '' : `<button type="button" class="t-link dash-tab-connect" onclick="navigate('integrations')">Connect SEO Cloud<i data-lucide="arrow-right"></i></button>`}
+  </div>`;
 }
 
 function dashRenderClient() {
   const ws = currentWs();
   if (!ws) return '';
   dashSyncClientState();
+  const tab = dashTab();
+  if (state.params.tab) state.ui.dashTab = state.params.tab;
+  const sub = tab === 'seo' ? 'Keyword rankings from SEO Cloud for this workspace.' : 'Google and Meta advertising performance for this workspace.';
   const header = `<div class="dash-welcome">
-      <div><h2 class="h-welcome">Welcome Back, ${esc(ws.name)}</h2><p class="dash-welcome-sub">Google and Meta advertising performance for this workspace.</p></div>
+      <div><h2 class="h-welcome">Welcome Back, ${esc(ws.name)}</h2><p class="dash-welcome-sub">${sub}</p></div>
       ${dateFilterHTML('client', 'dashRerender')}
-    </div>`;
-  if (!dashPlatforms(ws.id).length) return header + dashHubPanel(ws) + dashNoAccountsCard();
+    </div>
+    ${dashHubPanel(ws)}
+    ${dashTabBar(tab, ws)}`;
+  if (tab === 'seo') return header + dashRenderSeo(ws);
+  if (!dashPlatforms(ws.id).length) return header + dashNoAccountsCard();
   const m = dashMetrics(ws.id, 'client');
   const crm = activeCrm(ws.id);
   return `${header}
-    ${dashHubPanel(ws)}
     ${dashClientKpis(ws, m)}
     ${dashCrmSection(m, crm)}
     <div class="card dash-ct-card" id="dash-campaigns">${dashCampaignCard()}</div>
@@ -589,6 +735,305 @@ function dashRenderClient() {
         <div id="dash-heat-body">${dashHeatBody()}</div>
       </div>
     </div>`;
+}
+
+// =====================================================================
+// SEO PERFORMANCE TAB (client dashboard) — SEO Cloud data from seo.js, read-only, in the Figma card style.
+// =====================================================================
+const DASH_SEO_RULE = 'On track: at or above the target. Off track: below the target by less than 5 points. Critical: 5 or more points below the target.';
+function dashSeoDays() { return Math.min(dateRangeDays('client'), SEO_HISTORY_DAYS - 1); }
+function dashSeoStats() { return seoStats(state.ctx, dateRangeDays('client')); }
+function dashSeoDayLabel(ago) { const d = toDate(seoDayIso(ago)); return `${MONTHS[d.getMonth()].toUpperCase()}-${String(d.getDate()).padStart(2, '0')}`; }
+
+function dashRenderSeo(ws) {
+  if (!seoConnected(ws.id)) return dashSeoNotConnected();
+  const s = dashSeoStats();
+  return `${dashSeoStrip(s)}
+    ${dashSectionHead('Position Filter', `Share of tracked keywords in each position band today, with the change since ${fmtDate(seoDayIso(s.days))}. Select a band to filter the keyword table.`)}
+    <div class="dash-seo-buckets" id="dash-seo-buckets">${dashSeoBuckets(s)}</div>
+    <div class="dash-seo-trend">
+      <div class="dash-seo-side">${dashSeoAvgCard(s)}${dashSeoOverviewCard(s)}</div>
+      <div class="card dash-seo-chart-card">
+        <div class="card-header">
+          <div><h2 class="h-section">Average Position Trend</h2><div class="card-sub">Daily average position of keywords in the top 100. Lower is better, so position 1 is at the top.</div></div>
+        </div>
+        <div class="dash-chart" id="dash-seo-chart"><svg role="img" aria-label="Average position trend"></svg></div>
+      </div>
+    </div>
+    <div class="card dash-seo-kw-card" id="dash-seo-kw">${dashSeoKwCard()}</div>`;
+}
+
+function dashSeoNotConnected() {
+  return `<div class="card dash-empty-card">
+    <div class="dash-empty-icon"><i data-lucide="search"></i></div>
+    <h2 class="h-section">SEO Cloud is not connected</h2>
+    <p class="t-secondary">Connect SEO Cloud to see keyword rankings, the average position trend and progress against the contracted top-10 target for this workspace.</p>
+    <button type="button" class="btn btn-primary" onclick="navigate('integrations')"><i data-lucide="plug"></i>Connect SEO Cloud</button>
+  </div>`;
+}
+
+// 1. Contract strip
+function dashSeoStrip(s) {
+  const p = s.project;
+  const agency = state.persona !== 'client';
+  return `<div class="card dash-seo-strip">
+    ${productLogo('seo-cloud', 36)}
+    <div class="grow">
+      <div class="dash-seo-strip-title"><span class="h-card">SEO Cloud</span><span class="t-muted t-caption">${esc(p.domain)}</span></div>
+      <div class="dash-seo-facts"><span><b>${fmtNum(p.contractedKeywords)}</b> keywords contracted</span><span><b>${fmtNum(p.tracked)}</b> tracked</span><span>Target <b>${p.targetTop10Pct}%</b> in top 10</span><span>Last checked ${fmtDateTime(p.lastChecked)}</span></div>
+    </div>
+    <span class="pill ${s.status.pill}" title="${esc(DASH_SEO_RULE)}">${esc(s.status.label)}</span>
+    <button type="button" class="btn btn-outline btn-sm" onclick="dashSeoOpenCloud('open')">Open in SEO Cloud<i data-lucide="external-link"></i></button>
+    ${agency ? `<button type="button" class="btn btn-primary btn-sm" onclick="dashSeoOpenCloud('manage')">Manage in SEO Cloud<i data-lucide="external-link"></i></button>` : ''}
+  </div>`;
+}
+function dashSeoOpenCloud(mode) {
+  showToast(mode === 'manage' ? 'Opening the keyword manager in SEO Cloud…' : 'Opening this project in SEO Cloud…', 'external-link');
+}
+
+// 2. Position Filter cards (clickable filters for the keyword table)
+function dashSeoBuckets(s) {
+  const sel = state.ui.dashSeoBucket;
+  const since = fmtDate(seoDayIso(s.days));
+  return s.buckets.map(b => {
+    const top10 = b.key === 'top10';
+    let delta = '';
+    if (b.key !== 'all') {
+      // Fewer keywords outside the top 100 is an improvement; more in any top-N band is an improvement.
+      const good = b.key === 'over100' ? b.delta < 0 : b.delta > 0;
+      delta = b.delta
+        ? `<span class="dash-delta ${good ? 'up' : 'down'}" title="${b.delta > 0 ? '+' : ''}${b.delta} keyword${Math.abs(b.delta) === 1 ? '' : 's'} since ${since}">${b.delta > 0 ? '▲' : '▼'} ${Math.abs(b.delta)}</span>`
+        : `<span class="dash-delta flat" title="No change since ${since}">–</span>`;
+    }
+    const value = b.key === 'all' ? fmtNum(b.count) : top10 ? dashPctTxt(s.top10Pct) : `${b.pct}%`;
+    const extra = b.key === 'all' ? '<div class="dash-seo-bk-sub">keywords tracked</div>'
+      : top10 ? `<div class="dash-seo-goal"><div class="dash-seo-goal-bar" title="${dashPctTxt(s.top10Pct)} in top 10 · target ${s.target}%"><span class="dash-seo-fill-${s.status.key}" style="width:${Math.min(100, s.top10Pct)}%"></span><i style="left:${s.target}%"></i></div><div class="dash-seo-bk-sub">Target ${s.target}%</div></div>` : '';
+    return `<button type="button" class="dash-seo-bucket ${sel === b.key ? 'selected' : ''} ${top10 ? 'is-goal' : ''}" aria-pressed="${sel === b.key}" onclick="dashSeoSetBucket('${b.key}')">
+      <span class="dash-seo-bk-head"><span class="dash-seo-bk-label">${esc(b.label)}</span><span class="dash-seo-bk-count">(${b.count})</span>${delta}</span>
+      <span class="dash-seo-bk-val ${top10 ? DASH_SEO_TEXT[s.status.key] : ''}">${value}</span>
+      ${extra}
+    </button>`;
+  }).join('');
+}
+function dashSeoSetBucket(key) {
+  state.ui.dashSeoBucket = state.ui.dashSeoBucket === key && key !== 'all' ? 'all' : key;
+  pager('dash-seo', 25).page = 1;
+  renderRegion('dash-seo-buckets', dashSeoBuckets(dashSeoStats()));
+  dashSeoRefreshTable();
+}
+
+// 3. Average Position + Project Overview, and the trend chart
+function dashSeoAvgCard(s) {
+  const now = s.avgPos, prev = s.avgPosPrev;
+  const ch = now !== null && prev !== null ? Math.round((prev - now) * 10) / 10 : null;   // positive = moved up (better)
+  const since = fmtDate(seoDayIso(s.days));
+  const sub = ch === null ? 'No earlier data'
+    : ch > 0 ? `<span class="dash-delta up">▲ ${dashNum1(ch)}</span> better than ${since}`
+    : ch < 0 ? `<span class="dash-delta down">▼ ${dashNum1(-ch)}</span> worse than ${since}`
+    : `No change since ${since}`;
+  return `<div class="card dash-seo-mini">
+    <div class="kpi-title">Average Position ${infoTip('Mean position of the keywords ranking in the top 100 today. Keywords outside the top 100 are left out. Lower is better.')}</div>
+    <div class="dash-seo-mini-val">${now === null ? '—' : dashNum1(now)}</div>
+    <div class="kpi-sub">${sub}</div>
+  </div>`;
+}
+function dashSeoOverviewCard(s) {
+  const g = s.status.gap;
+  const pos = `${dashPctTxt(s.top10Pct)} in top 10`;
+  const reason = g > 0 ? `${pos} · ${dashNum1(g)} pts below ${s.target}% target` : g < 0 ? `${pos} · ${dashNum1(-g)} pts above ${s.target}% target` : `${pos} · at the ${s.target}% target`;
+  return `<div class="card dash-seo-mini">
+    <div class="kpi-title">Project Overview ${infoTip(DASH_SEO_RULE)}</div>
+    <div class="dash-seo-mini-val ${DASH_SEO_TEXT[s.status.key]}">${esc(s.status.label)}</div>
+    <div class="kpi-sub">${esc(reason)}</div>
+  </div>`;
+}
+function dashSeoRenderChart() {
+  const wrap = document.getElementById('dash-seo-chart');
+  if (!wrap || !seoConnected(state.ctx)) return;
+  const s = dashSeoStats();
+  const p = s.project;
+  const vals = s.series.map(x => x.avg).filter(v => v !== null);
+  if (!vals.length) { wrap.innerHTML = emptyState('chart-line', 'No ranked keywords yet', 'The trend appears once keywords rank in the top 100.'); return; }
+  const min = Math.min(...vals) - 0.5, max = Math.max(...vals) + 0.5;
+  const step = [1, 2, 5, 10, 20, 25, 50].find(st => (max - min) / st <= 6) || 50;
+  const lo = Math.max(0, Math.floor(min / step) * step), hi = Math.max(lo + step, Math.ceil(max / step) * step);
+  const ticks = [];
+  for (let v = lo; v <= hi + 1e-9; v += step) ticks.push(v);
+  const n = p.keywords.length || 1;
+  dashLineChart(wrap, {
+    id: 'dash-seo', invert: true, lo, hi, ticks, fmtAxis: v => String(v),
+    series: s.series.map(x => ({ d: toDate(x.date), v: x.avg === null ? hi : x.avg })),
+    tip: i => {
+      const ago = s.days - i;
+      const inTop10 = p.keywords.filter(k => { const v = seoPosAt(k, ago); return v !== null && v <= 10; }).length;
+      const x = s.series[i];
+      return `<div class="dash-tip-date">${fmtDate(x.date)}</div>
+        <div class="dash-tip-row on"><span>Avg. position</span><b>${x.avg === null ? '—' : dashNum1(x.avg)}</b></div>
+        <div class="dash-tip-row"><span>In top 10</span><b>${inTop10} (${dashPctTxt(inTop10 / n * 100)})</b></div>`;
+    }
+  });
+}
+
+// 4. Keyword table (read-only)
+const DASH_SEO_COLS = [
+  { key: 'urls', group: 'details', label: 'Ranking URL' },
+  { key: 'volume', group: 'details', label: 'Volume' },
+  { key: 'intent', group: 'details', label: 'Search Intent' },
+  { key: 'difficulty', group: 'details', label: 'Difficulty' },
+  { key: 'history', group: 'rank', label: 'History' },
+  { key: 'baseline', group: 'rank', label: 'Baseline' },
+  { key: 'days', group: 'rank', label: 'Previous 6 days' }
+];
+const DASH_SEO_DIFF_DOT = { Easy: 'good', Moderate: 'mid', Hard: 'bad' };
+registerColumnPicker('seo-keywords', {
+  columns: () => DASH_SEO_COLS,
+  groups: [['details', 'Keyword details'], ['rank', 'Rankings']],
+  note: 'Keyword and the latest day are always shown',
+  onChange: 'dashSeoRefreshTable',
+  storageKey: 'galaxis-demo:seo-keyword-columns-hidden'
+});
+
+function dashSeoKwCard() {
+  const mode = state.ui.dashSeoView;
+  return `<div class="card-header">
+      <div><h2 class="h-section">Keywords</h2><div class="card-sub">Rankings from SEO Cloud (read-only). Daily positions are green when better than the baseline and red when worse.</div></div>
+      <div class="dash-seo-view"><span>View mode</span><div class="seg" role="tablist">${[['group', 'Group'], ['list', 'List']].map(([k, l]) => `<button type="button" role="tab" class="${mode === k ? 'active' : ''}" onclick="dashSeoSetView('${k}')">${l}</button>`).join('')}</div></div>
+    </div>
+    <div class="dash-ct-toolbar">
+      <div class="search grow"><input class="input" placeholder="Search keywords or groups" value="${esc(state.ui.dashSeoSearch)}" oninput="dashSeoSearchInput(this.value)" aria-label="Search keywords"><i data-lucide="search"></i></div>
+      ${dashFilterButton('seo')}
+      ${colPickerButton('seo-keywords')}
+    </div>
+    <div id="dash-seo-body">${dashSeoBody()}</div>`;
+}
+function dashSeoRefreshTable() { renderRegion('dash-seo-body', dashSeoBody()); }
+function dashSeoSearchInput(v) { state.ui.dashSeoSearch = v; pager('dash-seo', 25).page = 1; dashSeoRefreshTable(); }
+function dashSeoSetView(m) { state.ui.dashSeoView = m; pager('dash-seo', 25).page = 1; renderRegion('dash-seo-kw', dashSeoKwCard()); }
+function dashSeoToggleGroup(name) { const c = state.ui.dashSeoCollapsed; c[name] = !c[name]; dashSeoRefreshTable(); }
+function dashSeoExpandAll(open) {
+  state.ui.dashSeoCollapsed = open ? {} : Object.fromEntries((seoProject(state.ctx)?.groups || []).map(g => [g.name, true]));
+  pager('dash-seo', 25).page = 1;
+  dashSeoRefreshTable();
+}
+
+function dashSeoRows() {
+  const p = seoProject(state.ctx);
+  const u = state.ui, f = u.dashSeoFilter;
+  const b = SEO_BUCKETS.find(x => x.key === u.dashSeoBucket) || SEO_BUCKETS[0];
+  const term = u.dashSeoSearch.trim().toLowerCase();
+  return p.keywords.filter(k => seoInBucket(seoPosAt(k, 0), b)
+    && (!term || `${k.term} ${k.group}`.toLowerCase().includes(term))
+    && (!f.intent.length || k.intent.some(i => f.intent.includes(i)))
+    && (!f.difficulty.length || f.difficulty.includes(k.difficulty))
+    && (!f.group.length || f.group.includes(k.group)));
+}
+
+// History sparkline over the selected range; inverted y-axis (position 1 at the top). Unranked days sit at the bottom.
+function dashSeoSpark(k, days) {
+  const vals = [];
+  for (let ago = days; ago >= 0; ago--) { const v = seoPosAt(k, ago); vals.push(v === null ? 101 : v); }
+  const W = 96, H = 28, pad = 3;
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  if (hi - lo < 4) { const mid = (hi + lo) / 2; lo = mid - 2; hi = mid + 2; }
+  const x = i => pad + i * (W - 2 * pad) / Math.max(1, vals.length - 1);
+  const y = v => pad + (v - lo) / (hi - lo) * (H - 2 * pad);
+  const pts = vals.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  const fmt = v => v > 100 ? 'not ranked' : `#${v}`;
+  const last = vals[vals.length - 1];
+  return `<svg class="dash-seo-spark" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Position history: ${fmt(vals[0])} to ${fmt(last)}"><title>${fmt(vals[0])} → ${fmt(last)} over ${days} days</title>
+    <polyline points="${pts}" fill="none" stroke="#398FF7" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${x(vals.length - 1).toFixed(1)}" cy="${y(last).toFixed(1)}" r="2.2" fill="#398FF7"/></svg>`;
+}
+// Day cell tint: better (green) or worse (red) than the baseline, or than the previous day when there is no baseline.
+function dashSeoDayClass(k, ago) {
+  const v = seoPosAt(k, ago);
+  const ref = k.baseline !== null ? k.baseline : seoPosAt(k, ago + 1);
+  if (v === null && ref === null) return '';
+  if (v === null) return 'dash-seo-worse';
+  if (ref === null || v < ref) return 'dash-seo-better';
+  return v > ref ? 'dash-seo-worse' : '';
+}
+
+function dashSeoBody() {
+  const p = seoProject(state.ctx);
+  const u = state.ui;
+  const days = dashSeoDays();
+  const fn = 'dashSeoRefreshTable';
+  // Positions sort with unranked keywords last, whichever the direction.
+  const asc = (state.sorts['dash-seo'] || {}).dir === 'asc';
+  const pos = v => v === null || v === undefined ? (asc ? Infinity : -Infinity) : v;
+  const rows = applySort(dashSeoRows(), 'dash-seo', {
+    term: k => k.term, volume: k => k.volume, difficulty: k => SEO_DIFFICULTY.indexOf(k.difficulty),
+    baseline: k => pos(k.baseline), latest: k => pos(seoPosAt(k, 0))
+  });
+  const dayAgos = (colVisible('seo-keywords', 'days') ? [6, 5, 4, 3, 2, 1] : []).concat([0]);
+  const cols = DASH_SEO_COLS.filter(c => c.key !== 'days' && colVisible('seo-keywords', c.key));
+  const ncols = 1 + cols.length + dayAgos.length;
+  const grouped = u.dashSeoView === 'group';
+
+  // Paging units: keywords, plus one unit per collapsed group (its header). Expanded group headers are drawn
+  // above the first keyword of the group on each page.
+  const groups = grouped ? p.groups.map(g => ({ g, rows: rows.filter(k => k.group === g.name) })).filter(x => x.rows.length) : [];
+  const units = grouped ? groups.flatMap(x => u.dashSeoCollapsed[x.g.name] ? [{ hdr: x }] : x.rows.map(k => ({ k, grp: x }))) : rows.map(k => ({ k }));
+  const total = units.length;
+  const page = paginate(units, 'dash-seo', 25);
+
+  const sortable = { term: 'Keyword', volume: 'Volume', difficulty: 'Difficulty', baseline: 'Baseline' };
+  const thCls = { volume: 'num', baseline: 'num', urls: 'num' };
+  const head = `<th>${sortHeader('dash-seo', 'term', 'Keyword', fn)}</th>`
+    + cols.map(c => `<th class="${thCls[c.key] || ''}">${sortable[c.key] ? sortHeader('dash-seo', c.key, c.label, fn) : esc(c.label)}</th>`).join('')
+    // The latest day is pinned as the table's last column (markActionColumns pins a header whose class says "action").
+    + dayAgos.map(ago => `<th class="dash-seo-day ${ago === 0 ? 'dash-seo-latest dash-pin-action' : ''}" title="${fmtDate(seoDayIso(ago))}">${ago === 0 ? sortHeader('dash-seo', 'latest', dashSeoDayLabel(0), fn) : dashSeoDayLabel(ago)}</th>`).join('');
+
+  const dash = '<span class="t-muted">–</span>';
+  const cell = (k, key) => {
+    switch (key) {
+      case 'urls': return `<span class="dash-seo-url ${k.rankingUrls ? '' : 't-muted'}" title="${k.rankingUrls} ranking URL${k.rankingUrls === 1 ? '' : 's'}"><i data-lucide="link"></i>${k.rankingUrls}</span>`;
+      case 'volume': return fmtNum(k.volume);
+      case 'intent': return `<span class="dash-seo-intents">${k.intent.map(i => `<span class="dash-seo-intent" title="${esc(SEO_INTENTS[i])}">${i}</span>`).join('')}</span>`;
+      case 'difficulty': return `<span class="metric-dot ${DASH_SEO_DIFF_DOT[k.difficulty]}">${esc(k.difficulty)}</span>`;
+      case 'history': return dashSeoSpark(k, days);
+      case 'baseline': return k.baseline === null ? `<span class="t-muted" title="Not in the top 100 when the keyword was added">–</span>` : k.baseline;
+    }
+    return '';
+  };
+  const kwRow = k => `<tr>
+      <td class="dash-seo-kwcell"><span class="dash-seo-cc" title="${k.country === 'SG' ? 'Singapore' : esc(k.country)}">${esc(k.country)}</span><span class="dash-seo-term">${esc(k.term)}</span></td>
+      ${cols.map(c => `<td class="${thCls[c.key] || ''} dash-nowrap">${cell(k, c.key)}</td>`).join('')}
+      ${dayAgos.map(ago => { const v = seoPosAt(k, ago); return `<td class="dash-seo-day ${dashSeoDayClass(k, ago)}">${v === null ? dash : v}</td>`; }).join('')}
+    </tr>`;
+  const grpRow = (x, cont) => {
+    const open = !u.dashSeoCollapsed[x.g.name];
+    return `<tr class="dash-seo-grow"><td colspan="${ncols}"><div class="dash-seo-ghead">
+      <button type="button" class="dash-seo-gtoggle" aria-expanded="${open}" onclick="dashSeoToggleGroup('${q(x.g.name)}')"><i data-lucide="chevron-${open ? 'down' : 'right'}"></i><b>${esc(x.g.name)}</b><span class="t-muted">(${x.rows.length})</span></button>
+      <span class="dash-seo-gdate">${cont ? 'continued · ' : ''}Updated on ${fmtDate(x.g.updatedAt)}</span>
+    </div></td></tr>`;
+  };
+  let lastGrp = null;
+  const body = page.map(un => {
+    if (un.hdr) { lastGrp = un.hdr; return grpRow(un.hdr, false); }
+    let out = '';
+    if (grouped && un.grp !== lastGrp) { out = grpRow(un.grp, un.grp.rows[0] !== un.k); lastGrp = un.grp; }
+    return out + kwRow(un.k);
+  }).join('');
+
+  const u2 = state.ui;
+  const bucket = SEO_BUCKETS.find(b => b.key === u2.dashSeoBucket);
+  const meta = `<div class="dash-seo-meta">
+      <span>Total Keywords: <span class="chip chip-dark">${rows.length}</span>${rows.length !== p.keywords.length ? `<span class="t-muted"> of ${p.keywords.length}</span>` : ''}</span>
+      ${bucket && bucket.key !== 'all' ? `<span class="dash-drill">Position: <b>${esc(bucket.label)}</b><button type="button" class="chip-remove" onclick="dashSeoSetBucket('all')" aria-label="Clear position filter"><i data-lucide="x"></i></button></span>` : ''}
+      ${grouped && groups.length ? `<span class="dash-seo-meta-right"><button type="button" class="t-link" onclick="dashSeoExpandAll(true)">Expand all</button><span class="t-muted">·</span><button type="button" class="t-link" onclick="dashSeoExpandAll(false)">Collapse all</button></span>` : ''}
+    </div>`;
+  const empty = `<tr><td colspan="${ncols}" class="table-empty">No keywords match these filters.</td></tr>`;
+  // 25 per page by default for keywords; the shared bar offers 10 / 20 / 50, so add 25 to its options.
+  const pg = pager('dash-seo', 25);
+  const bar = paginationBar('dash-seo', total, fn).replace('<option value="50"', `<option value="25" ${pg.perPage === 25 ? 'selected' : ''}>25</option><option value="50"`);
+  return `${meta}
+    <div class="table-wrap dash-table-wrap dash-seo-wrap"><table class="table dash-seo-table">
+      <thead><tr>${head}</tr></thead>
+      <tbody>${body || empty}</tbody>
+    </table></div>
+    ${bar}`;
 }
 
 // ---------- Products & Connections panel (V2 client-home hero, in the Figma card style) ----------
@@ -1100,55 +1545,70 @@ function dashSmoothPath(pts, floor) {
   }
   return d;
 }
-function dashRenderDaily() {
-  const wrap = document.getElementById('dash-daily');
+// Smooth line chart with area fill, axis labels, hover guide and tooltip. Used by Daily Performance and the
+// SEO Average Position trend. o: { id, series: [{ d: Date, v }], lo, hi, ticks: [values], fmtAxis(v),
+// invert (lo at the top, e.g. ranking positions), tip(i) -> tooltip html, height }
+function dashLineChart(wrap, o) {
   if (!wrap) return;
   const svg = wrap.querySelector('svg');
-  const metric = state.ui.dashChartMetric;
-  const series = dashDailySeries();
+  const series = o.series;
   const n = series.length;
-  const W = Math.max(320, wrap.clientWidth || 600), H = 280;
-  const fmtV = v => metric === 'spend' ? fmtMoney(v) : fmtNum(Math.round(v));
-  const max = dashNiceMax(Math.max(1, ...series.map(s => s[metric])));
-  const p = { l: 18 + fmtV(max).length * 7, r: 16, t: 12, b: 34 };
+  const W = Math.max(320, wrap.clientWidth || 600), H = o.height || 280;
+  const p = { l: 18 + Math.max(...o.ticks.map(v => o.fmtAxis(v).length)) * 7, r: 16, t: 12, b: 34 };
   const iw = W - p.l - p.r, ih = H - p.t - p.b;
+  const span = (o.hi - o.lo) || 1;
   const x = i => p.l + (n === 1 ? iw / 2 : i * iw / (n - 1));
-  const y = v => p.t + ih - v / max * ih;
+  const y = v => o.invert ? p.t + (v - o.lo) / span * ih : p.t + ih - (v - o.lo) / span * ih;
   const ticks = n <= 6 ? series.map((_, i) => i) : Array.from({ length: 6 }, (_, j) => Math.round(j * (n - 1) / 5));
-  const lbl = d => `${String(d.getDate()).padStart(2, '0')} ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()]}`;
-  let o = `<defs><linearGradient id="dash-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#398FF7" stop-opacity=".14"/><stop offset="1" stop-color="#398FF7" stop-opacity="0"/></linearGradient></defs>`;
-  for (let k = 0; k <= 5; k++) {
-    const v = max * k / 5;
-    o += `<text x="${p.l - 14}" y="${y(v) + 4}" text-anchor="end" class="dash-axis">${fmtV(v)}</text>`;
-    if (k) o += `<line x1="${p.l}" x2="${W - p.r}" y1="${y(v)}" y2="${y(v)}" class="dash-grid"/>`;
-  }
-  o += `<line x1="${p.l}" y1="${p.t}" x2="${p.l}" y2="${p.t + ih}" class="dash-axis-line"/><line x1="${p.l}" y1="${p.t + ih}" x2="${W - p.r}" y2="${p.t + ih}" class="dash-axis-line"/>`;
-  ticks.forEach(i => { o += `<text x="${x(i)}" y="${H - 8}" text-anchor="middle" class="dash-axis">${lbl(series[i].d)}</text>`; });
-  const pts = series.map((s, i) => [x(i), y(s[metric])]);
+  const lbl = d => `${String(d.getDate()).padStart(2, '0')} ${MONTHS[d.getMonth()]}`;
+  const bottom = o.invert ? o.hi : o.lo;
+  let out = `<defs><linearGradient id="${o.id}-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#398FF7" stop-opacity=".14"/><stop offset="1" stop-color="#398FF7" stop-opacity="0"/></linearGradient></defs>`;
+  o.ticks.forEach(v => {
+    out += `<text x="${p.l - 14}" y="${y(v) + 4}" text-anchor="end" class="dash-axis">${o.fmtAxis(v)}</text>`;
+    if (v !== bottom) out += `<line x1="${p.l}" x2="${W - p.r}" y1="${y(v)}" y2="${y(v)}" class="dash-grid"/>`;
+  });
+  out += `<line x1="${p.l}" y1="${p.t}" x2="${p.l}" y2="${p.t + ih}" class="dash-axis-line"/><line x1="${p.l}" y1="${p.t + ih}" x2="${W - p.r}" y2="${p.t + ih}" class="dash-axis-line"/>`;
+  ticks.forEach(i => { out += `<text x="${x(i)}" y="${H - 8}" text-anchor="middle" class="dash-axis">${lbl(series[i].d)}</text>`; });
+  const pts = series.map((s, i) => [x(i), y(s.v)]);
   const line = dashSmoothPath(pts, p.t + ih);
-  o += `<path d="${line} L ${x(n - 1)} ${p.t + ih} L ${x(0)} ${p.t + ih} Z" fill="url(#dash-area)"/>`;
-  o += `<path d="${line}" fill="none" stroke="#398FF7" stroke-width="1.75" stroke-linejoin="round"/>`;
-  ticks.forEach(i => { o += `<circle cx="${pts[i][0]}" cy="${pts[i][1]}" r="3.5" fill="#66ACFD" stroke="#398FF7" stroke-width="1"/>`; });
-  o += `<line id="dash-guide" x1="0" x2="0" y1="${p.t}" y2="${p.t + ih}" stroke="#AEAEAE" stroke-dasharray="3 3" visibility="hidden"/>`;
-  o += `<circle id="dash-hover-dot" r="5" fill="#fff" stroke="#398FF7" stroke-width="2" visibility="hidden"/>`;
-  o += `<rect id="dash-hover-rect" x="${p.l}" y="${p.t}" width="${iw}" height="${ih}" fill="transparent"/>`;
+  out += `<path d="${line} L ${x(n - 1)} ${p.t + ih} L ${x(0)} ${p.t + ih} Z" fill="url(#${o.id}-area)"/>`;
+  out += `<path d="${line}" fill="none" stroke="#398FF7" stroke-width="1.75" stroke-linejoin="round"/>`;
+  ticks.forEach(i => { out += `<circle cx="${pts[i][0]}" cy="${pts[i][1]}" r="3.5" fill="#66ACFD" stroke="#398FF7" stroke-width="1"/>`; });
+  out += `<line class="dash-guide" x1="0" x2="0" y1="${p.t}" y2="${p.t + ih}" stroke="#AEAEAE" stroke-dasharray="3 3" visibility="hidden"/>`;
+  out += `<circle class="dash-hover-dot" r="5" fill="#fff" stroke="#398FF7" stroke-width="2" visibility="hidden"/>`;
+  out += `<rect class="dash-hover-rect" x="${p.l}" y="${p.t}" width="${iw}" height="${ih}" fill="transparent"/>`;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   svg.setAttribute('height', H);
-  svg.innerHTML = o;
-  const rect = svg.querySelector('#dash-hover-rect');
-  const guide = svg.querySelector('#dash-guide');
-  const dot = svg.querySelector('#dash-hover-dot');
+  svg.innerHTML = out;
+  const rect = svg.querySelector('.dash-hover-rect');
+  const guide = svg.querySelector('.dash-guide');
+  const dot = svg.querySelector('.dash-hover-dot');
   rect.addEventListener('mousemove', ev => {
     const bb = svg.getBoundingClientRect();
     const px = (ev.clientX - bb.left) * (W / bb.width);
     const i = Math.max(0, Math.min(n - 1, Math.round((px - p.l) / (iw || 1) * (n - 1))));
-    const s = series[i];
     guide.setAttribute('x1', pts[i][0]); guide.setAttribute('x2', pts[i][0]); guide.setAttribute('visibility', 'visible');
     dot.setAttribute('cx', pts[i][0]); dot.setAttribute('cy', pts[i][1]); dot.setAttribute('visibility', 'visible');
-    const row = (k, l, v) => `<div class="dash-tip-row ${k === metric ? 'on' : ''}"><span>${l}</span><b>${v}</b></div>`;
-    dashTip(ev, `<div class="dash-tip-date">${fmtDate(s.d)}</div>${row('spend', 'Spend (SGD)', fmtMoney(s.spend, 2))}${row('conversions', 'Conversions', fmtNum(s.conversions))}${row('clicks', 'Clicks', fmtNum(s.clicks))}`);
+    dashTip(ev, o.tip(i));
   });
   rect.addEventListener('mouseleave', () => { guide.setAttribute('visibility', 'hidden'); dot.setAttribute('visibility', 'hidden'); dashTipHide(); });
+}
+function dashRenderDaily() {
+  const wrap = document.getElementById('dash-daily');
+  if (!wrap) return;
+  const metric = state.ui.dashChartMetric;
+  const series = dashDailySeries();
+  const fmtV = v => metric === 'spend' ? fmtMoney(v) : fmtNum(Math.round(v));
+  const max = dashNiceMax(Math.max(1, ...series.map(s => s[metric])));
+  dashLineChart(wrap, {
+    id: 'dash-daily', series: series.map(s => ({ d: s.d, v: s[metric] })), lo: 0, hi: max,
+    ticks: [0, 1, 2, 3, 4, 5].map(k => max * k / 5), fmtAxis: fmtV,
+    tip: i => {
+      const s = series[i];
+      const row = (k, l, v) => `<div class="dash-tip-row ${k === metric ? 'on' : ''}"><span>${l}</span><b>${v}</b></div>`;
+      return `<div class="dash-tip-date">${fmtDate(s.d)}</div>${row('spend', 'Spend (SGD)', fmtMoney(s.spend, 2))}${row('conversions', 'Conversions', fmtNum(s.conversions))}${row('clicks', 'Clicks', fmtNum(s.clicks))}`;
+    }
+  });
 }
 
 function dashTip(ev, html) {
@@ -1168,7 +1628,7 @@ function dashTipHide() { const t = document.getElementById('chart-tooltip'); if 
 let dashResizeTimer;
 window.addEventListener('resize', () => {
   clearTimeout(dashResizeTimer);
-  dashResizeTimer = setTimeout(() => { if (document.getElementById('dash-daily')) dashRenderDaily(); }, 120);
+  dashResizeTimer = setTimeout(() => { dashRenderDaily(); dashSeoRenderChart(); }, 120);
 });
 
 // ---------- Best Time of Day heatmap (V1, restyled) ----------
@@ -1254,22 +1714,40 @@ function dashBindHeatmap() {
 // Screen registration, dev toggles
 // =====================================================================
 Object.assign(state.ui, {
-  dashMgrSearch: '', dashMgrFilter: { platform: [], status: [], perf: [] },
+  dashMgrSearch: '', dashMgrFilter: { platform: [], status: [], perf: [], seo: [] },
   dashAttFilter: { type: [], priority: [] },
   dashModel: 'mta', dashChartMetric: 'spend', dashHeatMetric: 'spend',
   dashFpSnap: {}, dashFpCollapsed: {},
-  dashCtWs: undefined, dashCtFilter: { platform: [], format: [], status: [] }, dashEntSel: [], dashEntType: 'all', dashEntQ: '', dashCtSearch: '', dashLevel: 'platform', dashDrill: null
+  dashCtWs: undefined, dashCtFilter: { platform: [], format: [], status: [] }, dashEntSel: [], dashEntType: 'all', dashEntQ: '', dashCtSearch: '', dashLevel: 'platform', dashDrill: null,
+  dashTab: 'ads', dashSeoView: 'group', dashSeoBucket: 'all', dashSeoSearch: '', dashSeoFilter: { intent: [], difficulty: [], group: [] }, dashSeoCollapsed: {}, dashSeoRemoved: {}
 });
 
 registerScreen('dashboard', {
   contexts: ['agency', 'client'],
   title: () => 'Dashboard',
   desc: () => '',
+  key: () => isAgency() ? 'agency-dashboard' : `client-dashboard-${dashTab()}`,
   render: () => isAgency() ? dashRenderAgency() : dashRenderClient(),
   afterRender: () => {
     dashTipHide();
-    if (!isAgency()) { dashRenderDaily(); dashBindHeatmap(); }
+    if (!isAgency()) { dashRenderDaily(); dashBindHeatmap(); dashSeoRenderChart(); }
   }
+});
+
+// Dev screens. Registering these keys makes app.js skip its generic agency-dashboard / client-dashboard entries.
+const DASH_DEV_KEYS = ['agency-dashboard', 'client-dashboard-ads', 'client-dashboard-seo'];
+registerDevScreen('Agency', 'agency-dashboard', 'Dashboard', () => { state.ctx = null; state.persona = 'agency'; navigate('dashboard'); });
+registerDevScreen('Client workspace', 'client-dashboard-ads', 'Dashboard › Ad Performance', () => { state.ctx = devClientCtx(); navigate('dashboard', { tab: 'ads' }); });
+registerDevScreen('Client workspace', 'client-dashboard-seo', 'Dashboard › SEO Performance', () => { state.ctx = devClientCtx(); navigate('dashboard', { tab: 'seo' }); });
+// app.js lists core pages before module-registered screens; move the dashboard entries back to the top of each group.
+document.addEventListener('DOMContentLoaded', () => {
+  const mine = DASH_DEV_KEYS.map(k => devScreens.find(d => d.key === k)).filter(Boolean);
+  mine.forEach(d => devScreens.splice(devScreens.indexOf(d), 1));
+  ['Client workspace', 'Agency'].forEach(g => {
+    const at = devScreens.findIndex(d => d.group === g);
+    devScreens.splice(at < 0 ? devScreens.length : at, 0, ...mine.filter(d => d.group === g));
+  });
+  if (document.getElementById('devbar')) renderDevBar();
 });
 
 function dashSetAdOnly() {
@@ -1284,16 +1762,61 @@ function dashSetCrmConnected() {
   render();
 }
 
+// SEO scenarios: set the generator's top-10 share relative to the target (seoProject() regenerates on change).
+const DASH_SEO_SCENARIO = { on: 3, off: -2, critical: -8 };
+function dashSeoScenario(kind) {
+  const cfg = seoProjects[state.ctx];
+  if (!cfg) return;
+  cfg.scenarioTop10Pct = cfg.targetTop10Pct + DASH_SEO_SCENARIO[kind];
+  rerender();
+}
+// "SEO Cloud not connected": removes the product entry (kept so it can be restored), or adds it back.
+// A workspace without an SEO Cloud project gets a placeholder project so the tab can be demoed.
+function dashSeoToggleConnected() {
+  const id = state.ctx;
+  const wp = wsProducts(id);
+  state.ui.dashSeoRemoved = state.ui.dashSeoRemoved || {};
+  if (seoConnected(id)) {
+    state.ui.dashSeoRemoved[id] = wp['seo-cloud'];
+    delete wp['seo-cloud'];
+  } else {
+    wp['seo-cloud'] = state.ui.dashSeoRemoved[id] || { status: 'connected', active: true, lastSynced: new Date().toISOString() };
+    Object.assign(wp['seo-cloud'], { status: 'connected', active: true });
+    if (!seoProjects[id]) seoProjects[id] = { contractedKeywords: 40, targetTop10Pct: 50, scenarioTop10Pct: 47, startedAt: seoDayIso(30), placeholder: true };
+  }
+  state.params = { ...state.params, tab: 'seo' };
+  render();
+}
+
+function dashSimulateCrm() {
+  if (typeof crmSimulateConversion === 'function') crmSimulateConversion();
+  else showToast('CRM module not loaded', 'triangle-alert');
+}
+
 registerDevToggles('agency-dashboard', () => [
   { label: 'Alerts on', active: !state.flags.dashAlertsOff, run: () => { state.flags.dashAlertsOff = false; rerender(); } },
-  { label: 'Alerts off', active: !!state.flags.dashAlertsOff, run: () => { state.flags.dashAlertsOff = true; rerender(); } }
+  { label: 'Alerts off', active: !!state.flags.dashAlertsOff, run: () => { state.flags.dashAlertsOff = true; rerender(); } },
+  'sep',
+  { label: 'Simulate CRM conversion', active: false, run: dashSimulateCrm }
 ]);
-registerDevToggles('client-dashboard', () => {
+registerDevToggles('client-dashboard-ads', () => {
   const crm = !!activeCrm(state.ctx);
   return [
     { label: 'Ad-only (no CRM)', active: !crm, run: dashSetAdOnly },
     { label: 'CRM connected', active: crm, run: dashSetCrmConnected },
     { label: 'No ad accounts linked', active: !!state.flags.dashNoAccounts, run: () => { state.flags.dashNoAccounts = !state.flags.dashNoAccounts; rerender(); } }
+  ];
+});
+registerDevToggles('client-dashboard-seo', () => {
+  const on = seoConnected(state.ctx);
+  const key = on ? dashSeoStats().status.key : null;
+  return [
+    ...(on ? [
+      { label: 'On track', active: key === 'on', run: () => dashSeoScenario('on') },
+      { label: 'Off track', active: key === 'off', run: () => dashSeoScenario('off') },
+      { label: 'Critical', active: key === 'critical', run: () => dashSeoScenario('critical') },
+      'sep'] : []),
+    { label: 'SEO Cloud not connected', active: !on, run: dashSeoToggleConnected }
   ];
 });
 
@@ -1305,7 +1828,7 @@ Object.assign(screenSpecs, {
     title: '1. Agency Dashboard (My Workspace)',
     status: 'In Review',
     author: 'Hannah',
-    updatedAt: '21/10/2026',
+    updatedAt: '22/10/2026',
     notes: `
 ### Screen Purpose & Objectives
 Central command dashboard for agency administrators managing many client ad accounts and workspaces. Designed for portfolio-level performance monitoring and account triage. Layout follows the Figma "Desktop -> Dashboard" frame.
@@ -1318,6 +1841,8 @@ Central command dashboard for agency administrators managing many client ad acco
 - **Unified Portfolio KPIs (KPIs TBC)**: All figures are computed from per-workspace data, with no hard-coded totals.
   - **Total Accounts Managed**: donut by status (Active / New / Inactive / Attention Required).
   - **Portfolio Spend**: total, with a Google / Meta split.
+  - **SEO Portfolio** (added 22/10/2026): clients on SEO Cloud; a stacked bar of On track / Off track / Critical with a legend and counts; the average top-10 % against the average target; total keywords tracked against the contracted total. Built with \`seoPortfolio()\` over the visible workspaces with SEO Cloud connected.
+    - **Status rule** (\`seoStatus\`): On track when the top-10 % is at or above target; Off track when it is below target by less than 5 points; Critical when it is 5 or more points below. Example with a 55% target: 55% on track, 52% off track, 50% critical.
   - Overall CPM, CPC and Cost per Conversion cards were removed from the agency dashboard on 21/10/2026. These metrics remain per workspace in the Managed Accounts table.
 - **Attention Required list**: Merges V1 triage with V2 pipeline alerts. Each row has a type, a priority (High / Medium / Low) and a one-click CTA. Filtered by issue type and priority (Figma "Attention Account Filter").
   - **Performance Review**: workspace status Attention Required → View Account (High for the first, Medium after that).
@@ -1325,11 +1850,18 @@ Central command dashboard for agency administrators managing many client ad acco
   - **Token Expired**: an agency master token (Google MCC / Meta Business Manager) that is not valid → Re-authorise (High).
   - **Unlinked Ad Accounts**: one agency-level row for discovered but unlinked ad accounts → Review accounts (agency Integrations › Ad Platforms) (Medium).
   - **No Account Linked**: a workspace with zero linked ad accounts → Link Ad Account (Low).
-- **Managed Accounts table** (the V1 Client Workspace Directory, with Figma columns): Client, Ad Platforms, Status, Combined Spend, CPM, CPC, Cost Per Conversion, Primary Contact, Last Activity, Action.
+  - **SEO Critical** (High) and **SEO Off Track** (Medium): an SEO Cloud project below target, e.g. "50% of keywords in top 10 vs 55% target (5 pts below)" → View SEO (opens that workspace's dashboard on the SEO Performance tab).
+  - **CRM Set-up** (Medium): an Agency CRM auto set-up with client invites awaiting approval, "N client invites awaiting approval" → Review set-up (the CRM module's set-up checklist; falls back to Team & Access › Client Organisation). Shown only when the CRM module is loaded.
+  - The banner adds "N SEO projects below target" when any project is Off track or Critical.
+- **Managed Accounts table** (the V1 Client Workspace Directory, with Figma columns): Client, Ad Platforms, Status, Combined Spend, CPM, CPC, Cost Per Conversion, SEO Status, Top 10 %, Avg Position, Live Services, Monthly Budget, Primary Contact, Last Activity, Action.
+  - **SEO columns**: SEO Status pill ("—" when the workspace is not on SEO Cloud); Top 10 % as "current / target", coloured by status; Avg Position (mean position of keywords ranking in the top 100).
+  - **CRM columns**: Live Services as chips from the Agency CRM account (max 2, then "+N"); Monthly Budget = the sum of every live service's monthly budget (SGD).
+  - **Column picker**: show or hide columns, grouped as Ads, SEO, CRM and Account. Client and Action are always shown. Remembered per viewer (prototype: localStorage).
+  - The ⋮ menu adds "View SEO performance" for workspaces on SEO Cloud.
   - Coloured dots on CPM / CPC / Cost per Conversion compare each workspace with the portfolio average. Green (Excellent) is at least 10% better; orange (Average) is within -10% to +15%; red (Bad) is more than 15% worse. This replaces V1's heat cells.
   - Search by client or contact.
-  - Figma "Managed Account Filter": Ad Platforms, Status, and Performance band (on Cost per Conversion).
-  - Every column is sortable. Pagination uses "Showing Per Page".
+  - Figma "Managed Account Filter": Ad Platforms, Status, Performance band (on Cost per Conversion) and SEO Status (On track / Off track / Critical / Not on SEO Cloud).
+  - Every column is sortable. Rows without SEO or CRM data sort last in both directions. Pagination uses "Showing Per Page".
   - Clicking a row or a client name opens that workspace's dashboard.
   - The ⋮ menu has Go to workspace, Organisation settings and Integrations.
   - Workspaces with no linked accounts show "—" for metrics. Primary Contact shows "Unassigned" when a workspace has none.
@@ -1341,24 +1873,69 @@ Central command dashboard for agency administrators managing many client ad acco
 - Should "missing platform links" also count workspaces linked to only one of Google / Meta?
 - Performance-review triggers (CTR drop, budget pacing) are placeholders. Thresholds are TBC.
 - "Last Activity" is mock data. Its source (last login, last sync or last edit) is TBC.
+- Is the keyword contract (X keywords, Y% top-10 target) owned by SEO Cloud or by the Agency CRM?
+- Should the average position count keywords outside the top 100 as position 100, instead of leaving them out?
 
 ### Dev toolbar states
 - **Alerts on / Alerts off**: Off hides the banner and empties the Attention list (the healthy state).
+- **Simulate CRM conversion**: runs the Agency CRM auto set-up (owned by the CRM module). Shows "CRM module not loaded" when that module is missing.
 `
   },
-  'client-dashboard': {
-    title: '1. Workspace Dashboard & Analytics',
+  'client-dashboard-seo': {
+    title: '1b. Workspace Dashboard › SEO Performance',
+    status: 'Draft',
+    author: 'Hannah',
+    updatedAt: '22/10/2026',
+    notes: `
+### Screen Purpose & Objectives
+Read-only SEO Cloud results inside the client workspace, next to ad performance, so clients do not need SEO Cloud's own dashboard. Rebuilt from the SEO Cloud dashboard in the Galaxis Figma style. Staff actions (Recheck Data, Recheck Metrics, Keyword Manager, Add) stay in SEO Cloud.
+
+### Key Functional Specifications
+- **Availability**: the tab is enabled when SEO Cloud is connected and active for the workspace and an SEO project exists. Otherwise the tab is greyed out with "Connect SEO Cloud" (Integrations); opening it directly shows a "SEO Cloud is not connected" empty state.
+- **Contract strip**: "{contracted} keywords contracted · {tracked} tracked · Target {target}% in top 10 · Last checked {date, time}", the status pill, and "Open in SEO Cloud ↗". The agency persona also sees "Manage in SEO Cloud ↗".
+- **Status rule** (\`seoStatus\`): **On track** when the top-10 % is at or above target; **Off track** when it is below target by less than 5 points; **Critical** when it is 5 or more points below. Example with a 55% target: 55% on track, 52% off track, 50% critical. Pills: green / orange / red.
+- **Position Filter cards**: All, Top 1, Top 3, Top 5, Top 10, Top 30, Top >100. Each shows the count in brackets, the share of tracked keywords as the big value (All shows the count) and the ▲/▼ change in keywords since the start of the date range. Green = improvement; for Top >100 an increase is bad, so it is red. The Top 10 card shows a progress bar with a target marker ("Target 55%"), coloured by status. Cards filter the keyword table (selected card has a primary border; click again or ✕ to return to All).
+- **Average Position**: mean position today of the keywords ranking in the top 100 (keywords outside the top 100 are left out), with the change since the start of the range. Lower is better, so a lower number is shown as ▲ better (green).
+- **Project Overview**: the status in its colour, with the reason, e.g. "50% in top 10 · 5 pts below 55% target".
+- **Average Position Trend**: daily average position over the date range, with an inverted y-axis (position 1 at the top), date labels, a hover tooltip (average position and top-10 share that day), and redraw on resize.
+- **Keyword table** (read-only):
+  - Header: Keywords, View mode Group | List; toolbar with search (keyword or group), filter (Search Intent, Difficulty, Keyword Group) and the column picker; "Total Keywords: N" (of the total when filtered) above the table.
+  - **Group mode**: collapsible group header rows, "Best / Top Brand (21)" and "Updated on {date}", with Expand all / Collapse all.
+  - **Columns**: Keyword (country chip "SG" + term), Ranking URL (link icon + count), Volume, Search Intent (round C / L / I / N chips; tooltip names the intent: Commercial, Local, Informational, Navigational), Difficulty (Easy / Moderate / Hard dot), History (sparkline over the date range, inverted y-axis), Baseline (position when added; "–" if it was not in the top 100), then one column per day for the last 7 days ("OCT-16"), with the position or "–".
+  - **Day cell colour**: green when better than the baseline, red when worse. With no baseline, the cell is compared with the previous day.
+  - Sortable: Keyword, Volume, Difficulty, Baseline and the latest day. Unranked keywords sort last in both directions. In Group mode, rows are sorted within each group.
+  - 25 keywords per page by default (Showing Per Page also offers 10 / 20 / 50).
+  - The Keyword column and the latest day are pinned. There is no Action column.
+  - Column picker groups: Keyword details (Ranking URL, Volume, Search Intent, Difficulty) and Rankings (History, Baseline, Previous 6 days). Keyword and the latest day are always shown.
+  - Empty state when nothing matches.
+- **Date filter** (shared with Ad Performance): sets the trend range, the sparkline range and the comparison point for every ▲/▼ change. History is kept for 120 days.
+
+### Open questions
+- Is the keyword contract (X keywords, Y% target) owned by SEO Cloud or by the Agency CRM?
+- Should the average position include keywords outside the top 100 as position 100? Today they are left out, which can make the average improve when keywords drop out.
+- Should GEO / AI-visibility metrics from SEO Cloud appear on this tab later?
+- Should clients see keyword groups that are marked internal-only in SEO Cloud? The prototype shows every group.
+
+### Dev toolbar states
+- **Viewing as Agency Admin / Client User** (shared). Client users do not see "Manage in SEO Cloud".
+- **On track / Off track / Critical**: sets this workspace's mock top-10 share to target +3, -2 or -8 points; the keyword data regenerates.
+- **SEO Cloud not connected**: removes SEO Cloud from the workspace (or adds it back) to show the not-connected state.
+`
+  },
+  'client-dashboard-ads': {
+    title: '1. Workspace Dashboard › Ad Performance',
     status: 'In Review',
     author: 'Hannah',
     updatedAt: '21/10/2026',
     notes: `
 ### Screen Purpose & Objectives
-Client-facing workspace dashboard giving a simplified, unified view of Meta and Google Ads performance. It aims to remove the client's need to log in to the native ad platforms, and it doubles as an inspection view for agency administrators. Layout follows the Figma "Dashboard - Platform / Campaign / Ad Group / Ads" frames.
+Client-facing workspace dashboard giving a simplified, unified view of Meta and Google Ads performance. Since 22/10/2026 the dashboard has two tabs below the welcome header and Products & Connections panel: **Ad Performance** (this spec) and **SEO Performance** (\`client-dashboard-seo\`). It aims to remove the client's need to log in to the native ad platforms, and it doubles as an inspection view for agency administrators. Layout follows the Figma "Dashboard - Platform / Campaign / Ad Group / Ads" frames.
 
 ### Key Functional Specifications (All metrics TBC)
 - **Top-Level KPI Cards**: Total Ad Spend (with budget used and a progress bar), Impressions (unique users), Clicks (CTR and average CPC), Platform Conversions (% from Google Ads) and Cost per Conversion (per-platform split). Each card has an ⓘ definition.
   - Exact KPIs are placeholders pending feedback from performance marketing and account management.
   - The budget shown is the workspace monthly budget pro-rated to the selected range.
+- **Tabs**: Ad Performance | SEO Performance (page tabs with icons). The active tab is in the route (\`tab: 'ads' | 'seo'\`) and is remembered when switching workspace; a remembered SEO tab falls back to Ad Performance in a workspace without SEO Cloud. Without SEO Cloud the SEO tab is greyed out, with a "Connect SEO Cloud" link to Integrations.
 - **Global Event-Based Date Filter**: Filters all dashboard data by the exact date the action (e.g. click or conversion) happened within the selected timeframe, independent of events higher up the funnel.
   - **Prototype note:** the date filter scales mock data to the selected range, and the Daily Performance chart plots one point per day of the range. It does **not** yet filter by event date.
 - **CRM mode (from V2)**: shown when the workspace has a connected, active CRM.

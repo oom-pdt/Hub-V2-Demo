@@ -324,7 +324,19 @@ function sortHeader(table, col, label, fn) {
   const s = state.sorts[table] || {};
   const on = s.col === col;
   const ind = on ? (s.dir === 'asc' ? '↑' : '↓') : '↑↓';
-  return `<button type="button" class="th-sort ${on ? 'sorted' : ''}" onclick="toggleSort('${table}','${col}','${fn}')">${esc(label)}<span class="sort-ind">${ind}</span></button>`;
+  return `<button type="button" class="th-sort ${on ? 'sorted' : ''}" onclick="toggleSort('${table}','${col}','${fn}')">${thLabel(label)}<span class="sort-ind">${ind}</span></button>`;
+}
+// Header label split into two balanced lines. Shown on one line normally; in tables with .table-wrap-heads each
+// line becomes a block that never wraps, so a header takes at most two rows (e.g. "Contract Days / Left").
+function thLabel(label) {
+  const words = String(label).split(' ');
+  if (words.length < 2) return `<span class="th-label">${esc(label)}</span>`;
+  let best = 1, bestLen = Infinity;
+  for (let i = 1; i < words.length; i++) {
+    const len = Math.max(words.slice(0, i).join(' ').length, words.slice(i).join(' ').length);
+    if (len < bestLen) { best = i; bestLen = len; }
+  }
+  return `<span class="th-label"><span class="th-line">${esc(words.slice(0, best).join(' '))}</span> <span class="th-line">${esc(words.slice(best).join(' '))}</span></span>`;
 }
 function toggleSort(table, col, fn) {
   const s = state.sorts[table] || {};

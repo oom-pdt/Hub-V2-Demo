@@ -309,9 +309,10 @@ svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
 .page-btn.active { background: var(--tint); color: var(--primary); font-weight: 700; }
 .page-btn:disabled { color: var(--border); cursor: default; }
 
-/* Compact headers: column names wrap onto two lines to save width (table.table-wrap-heads). */
+/* Compact headers: multi-word column names sit on two balanced lines (thLabel in core.js), never more (table.table-wrap-heads). */
 .table.table-wrap-heads thead tr:last-child th { white-space: normal; vertical-align: bottom; line-height: 15px; }
-.table.table-wrap-heads thead tr:last-child th .th-sort { max-width: 104px; text-align: left; white-space: normal; align-items: flex-end; }
+.table.table-wrap-heads thead tr:last-child th .th-sort { text-align: left; align-items: flex-end; }
+.table.table-wrap-heads thead tr:last-child th .th-line { display: block; white-space: nowrap; }
 .table.table-wrap-heads thead tr:last-child th .th-sort .sort-ind { white-space: nowrap; }
 
 /* ---------- Collapsible column groups (colGroupHeaderRow in core.js) ---------- */
@@ -1944,7 +1945,19 @@ function sortHeader(table, col, label, fn) {
   const s = state.sorts[table] || {};
   const on = s.col === col;
   const ind = on ? (s.dir === 'asc' ? '↑' : '↓') : '↑↓';
-  return `<button type="button" class="th-sort ${on ? 'sorted' : ''}" onclick="toggleSort('${table}','${col}','${fn}')">${esc(label)}<span class="sort-ind">${ind}</span></button>`;
+  return `<button type="button" class="th-sort ${on ? 'sorted' : ''}" onclick="toggleSort('${table}','${col}','${fn}')">${thLabel(label)}<span class="sort-ind">${ind}</span></button>`;
+}
+// Header label split into two balanced lines. Shown on one line normally; in tables with .table-wrap-heads each
+// line becomes a block that never wraps, so a header takes at most two rows (e.g. "Contract Days / Left").
+function thLabel(label) {
+  const words = String(label).split(' ');
+  if (words.length < 2) return `<span class="th-label">${esc(label)}</span>`;
+  let best = 1, bestLen = Infinity;
+  for (let i = 1; i < words.length; i++) {
+    const len = Math.max(words.slice(0, i).join(' ').length, words.slice(i).join(' ').length);
+    if (len < bestLen) { best = i; bestLen = len; }
+  }
+  return `<span class="th-label"><span class="th-line">${esc(words.slice(0, best).join(' '))}</span> <span class="th-line">${esc(words.slice(best).join(' '))}</span></span>`;
 }
 function toggleSort(table, col, fn) {
   const s = state.sorts[table] || {};

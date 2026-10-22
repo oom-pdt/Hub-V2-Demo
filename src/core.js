@@ -491,14 +491,15 @@ function applyDateFilter(scope, onApply) {
 //   note: 'Name and Action are always shown',
 //   onChange: 'dashRefreshCampaignTable',      // global fn re-rendering the table
 //   storageKey: 'galaxis-demo:…',              // optional; hidden columns are a per-viewer convenience
-//   defaultHidden: ['cpm', …]                  // optional; columns hidden until the viewer changes them (Reset to default restores)
+//   defaultHidden: ['cpm', …],                 // optional; columns hidden until the viewer changes them (Reset to default restores)
+//   defaultCollapsed: ['ads', …]               // optional; groups collapsed to their summary column until the viewer expands them
 // })
 const columnPickers = {};
 function registerColumnPicker(id, def) {
   def.storageKey = def.storageKey || `galaxis-demo:${id}-columns-hidden`;
   try { def.hidden = JSON.parse(localStorage.getItem(def.storageKey)) || def.defaultHidden || []; } catch (e) { def.hidden = def.defaultHidden || []; }
   def.collapsedKey = def.collapsedKey || `galaxis-demo:${id}-groups-collapsed`;
-  try { def.collapsed = JSON.parse(localStorage.getItem(def.collapsedKey)) || []; } catch (e) { def.collapsed = []; }   // default: all expanded
+  try { def.collapsed = JSON.parse(localStorage.getItem(def.collapsedKey)) || [...(def.defaultCollapsed || [])]; } catch (e) { def.collapsed = [...(def.defaultCollapsed || [])]; }   // default: defaultCollapsed, else all expanded
   columnPickers[id] = def;
 }
 function colVisible(id, key) { return !columnPickers[id].hidden.includes(key); }
@@ -527,7 +528,7 @@ function colPickerInner(id) {
   return `<div class="colpick-head"><div class="h-card">Columns</div><div class="card-sub">${shown} of ${cols.length} shown${d.note ? ` · ${esc(d.note)}` : ''}</div></div>
     ${groups}
     <div class="filter-actions">
-      ${d.defaultHidden ? `<button type="button" class="btn btn-ghost btn-sm" onclick="colResetDefault('${id}')" ${colIsDefault(id) ? 'disabled' : ''}>Reset to default</button>` : ''}
+      ${d.defaultHidden || d.defaultCollapsed ? `<button type="button" class="btn btn-ghost btn-sm" onclick="colResetDefault('${id}')" ${colIsDefault(id) ? 'disabled' : ''}>Reset to default</button>` : ''}
       <button type="button" class="btn btn-outline btn-sm" onclick="colShowAll('${id}')" ${shown === cols.length ? 'disabled' : ''}>Show all columns</button></div>`;
 }
 function colSet(id, key, on) {
@@ -545,11 +546,17 @@ function colSetGroup(id, group, on) {
   colChanged(id);
 }
 function colShowAll(id) { columnPickers[id].hidden = []; colChanged(id); }
-function colResetDefault(id) { columnPickers[id].hidden = [...(columnPickers[id].defaultHidden || [])]; colChanged(id); }
+function colResetDefault(id) {
+  const d = columnPickers[id];
+  d.hidden = [...(d.defaultHidden || [])];
+  d.collapsed = [...(d.defaultCollapsed || [])];
+  try { localStorage.setItem(d.collapsedKey, JSON.stringify(d.collapsed)); } catch (e) { /* keep in memory */ }
+  colChanged(id);
+}
 function colIsDefault(id) {
   const d = columnPickers[id];
-  const a = [...d.hidden].sort().join(), b = [...(d.defaultHidden || [])].sort().join();
-  return a === b;
+  const same = (x, y) => [...x].sort().join() === [...y].sort().join();
+  return same(d.hidden, d.defaultHidden || []) && same(d.collapsed, d.defaultCollapsed || []);
 }
 function colChanged(id) {
   const d = columnPickers[id];

@@ -520,7 +520,9 @@ const DASH_SERVICE_META = {
   ads: { label: 'Ads Performance', bg: '#FBD3F2', fg: '#C2419C', icon: 'chart-column' },
   seo: { label: 'SEO Cloud', pid: 'seo-cloud' },
   aurix: { label: 'Aurix', pid: 'aurix' },
-  crm: { label: 'CRM - lite', pid: 'crm-lite' }
+  crm: { label: 'CRM - lite', pid: 'crm-lite' },
+  content: { label: 'Content Marketing', bg: '#FFF4E3', fg: '#C47E16', icon: 'pen-line' },
+  social: { label: 'Social Media', bg: '#E6F6F6', fg: '#1A6A6D', icon: 'share-2' }
 };
 function dashServiceIcon(key, size = 24) {
   const m = DASH_SERVICE_META[key];
@@ -593,9 +595,10 @@ function dashManagedRows() {
       (types.includes('Aurix') || wsProducts(w.id).aurix) && 'aurix',
       wsProducts(w.id)['crm-lite']?.status === 'connected' && 'crm'
     ].filter(Boolean);
-    const otherSvcs = types.filter(t => !CRM_AD_SERVICES.includes(t) && !['SEO', 'Aurix'].includes(t));
+    if (types.includes('Content Marketing')) svcKeys.push('content');
+    if (types.includes('Social Media')) svcKeys.push('social');
     return {
-      w, t, linked, plats: wsPlatforms(w.id), issues, health: dashHealthOf(issues), services: svcKeys, otherSvcs,
+      w, t, linked, plats: wsPlatforms(w.id), issues, health: dashHealthOf(issues), services: svcKeys,
       contact: wsPrimaryContact(w.id), last: dashLastActivity(w),
       adSvcs: services.filter(x => CRM_AD_SERVICES.includes(x.type)), seoSvcs: services.filter(x => x.type === 'SEO'),
       pacing: dashPacing(w.id, t.spend, days), industry: w.industry, am: memberById(crmAccounts[w.id]?.accountManager || '')?.name || null,
@@ -606,10 +609,10 @@ function dashManagedRows() {
 }
 
 // Managed Accounts columns, in table order. Client and Action are always shown; the rest are in the column picker.
-// Default view (new design): Services, Account Health, Issues Count, each service's key KPI (Ads: Cost Per Conversion,
-// SEO: Top 10 %), Primary Contact and Last Activity. The other Ads / SEO columns are one click away.
+// Default view (new design): every column, with the Ads and SEO groups collapsed to their key KPI (Ads: Cost Per
+// Conversion, SEO: Top 10 %). Expanding a group shows the rest of its columns.
 const DASH_MG_COLS = [
-  { key: 'services', group: 'overview', label: 'Services', tip: 'OOm services this client uses: Ads Performance, SEO Cloud, Aurix, CRM - lite (+N other Agency CRM services).' },
+  { key: 'services', group: 'overview', label: 'Services', tip: 'Every service this client uses: Ads Performance, SEO Cloud, Aurix, CRM - lite, Content Marketing, Social Media. Hover to name them.' },
   { key: 'health', group: 'overview', label: 'Account Health', tip: 'From the open issues: Attention Required when any issue is High priority, Off Track when there are other open issues, otherwise On Track.' },
   { key: 'issues', group: 'overview', label: 'Issues Count', tip: 'Open issues for this client (ads, SEO, Aurix, contracts, integrations). Select to see them.' },
   { key: 'platforms', group: 'ads', label: 'Ad Platforms' },
@@ -635,8 +638,11 @@ registerColumnPicker('managed', {
   collapsible: true,
   note: 'Client and Action are always shown',
   onChange: 'dashRefreshManaged',
-  defaultHidden: ['platforms', 'spend', 'pacing', 'conversions', 'pRoas', 'cpm', 'cpc', 'adsDays', 'seoStatus', 'avgPos', 'seoDays'],
-  storageKey: 'galaxis-demo:managed-columns-hidden-v3'
+  // Every column is shown; Ads and SEO start collapsed to their key KPI (Cost Per Conversion, Top 10 %).
+  defaultHidden: [],
+  defaultCollapsed: ['ads', 'seo'],
+  storageKey: 'galaxis-demo:managed-columns-hidden-v4',
+  collapsedKey: 'galaxis-demo:managed-groups-collapsed-v4'
 });
 
 function dashManagedCard() {
@@ -651,10 +657,10 @@ function dashManagedCard() {
     <div id="dash-managed-body">${dashManagedBody()}</div>`;
 }
 // Services cell: overlapping product marks, +N for other Agency CRM services.
+// Services cell: every service the client uses, as product marks (never "+N"); hover names each one.
 function dashServiceIconsCell(r) {
-  if (!r.services.length && !r.otherSvcs.length) return '<span class="t-muted">—</span>';
-  const more = r.otherSvcs.length ? `<span class="more-count" title="${esc(r.otherSvcs.join(', '))}">+${r.otherSvcs.length}</span>` : '';
-  return `<span class="dash-svc-icons" title="${esc(r.services.map(k => DASH_SERVICE_META[k].label).concat(r.otherSvcs).join(', '))}">${r.services.map(k => dashServiceIcon(k, 24)).join('')}</span>${more}`;
+  if (!r.services.length) return '<span class="t-muted">—</span>';
+  return `<span class="dash-svc-icons" title="${esc(r.services.map(k => DASH_SERVICE_META[k].label).join(', '))}">${r.services.map(k => dashServiceIcon(k, 24)).join('')}</span>`;
 }
 // Issues drawer for one client.
 function dashOpenIssues(wsId) {
@@ -711,7 +717,7 @@ function dashManagedBody() {
   const miss = v => v === null || v === undefined ? (asc ? Infinity : -Infinity) : v;
   rows = applySort(rows, 'dash-managed', {
     name: r => r.w.name.toLowerCase(), platforms: r => r.plats.length,
-    services: r => r.services.length + r.otherSvcs.length, health: r => DASH_HEALTH[r.health][2], issues: r => r.issues.length,
+    services: r => r.services.length, health: r => DASH_HEALTH[r.health][2], issues: r => r.issues.length,
     contact: r => r.contact ? r.contact.email : '~', last: r => r.last,
     conversions: r => num(r.t.conversions), pRoas: r => num(r.t.pRoas),
     spend: r => num(r.t.spend), cpm: r => num(r.t.cpm), cpc: r => num(r.t.cpc), cpa: r => num(r.t.cpa),

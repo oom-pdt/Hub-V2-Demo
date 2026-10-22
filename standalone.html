@@ -474,6 +474,15 @@ svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
 .dash-hub-action { flex-shrink: 0; white-space: nowrap; }
 .dash-hub-action svg.lucide { width: 12px; height: 12px; }
 
+/* ---------- Campaigns column picker ---------- */
+.dash-cols-panel { width: 380px; max-height: min(70vh, 560px); overflow-y: auto; }
+.dash-cols-head { margin-bottom: 16px; }
+.dash-cols-head .card-sub { margin-top: 4px; }
+.dash-cols-group-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.dash-cols-group-head .filter-group-title { margin-bottom: 0; }
+.dash-cols-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+.dash-cols-options .check { font-size: 12px; }
+
 /* ---------- Agency KPI grid ---------- */
 .dash-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; margin-bottom: 24px; }
 .dash-donut-card { display: flex; flex-direction: column; padding: 20px; }
@@ -2120,9 +2129,11 @@ function dashTree(wsId) {
           const impressions = spend / cpm * 1000;
           const clicks = impressions * ctr;
           const conversions = clicks * cvr;
-          const freq = p === 'google' ? 1.2 + rnd() * 1.3 : 1.6 + rnd() * 1.8;
-          const engRate = (p === 'google' ? 0.4 + rnd() * 1.2 : 1 + rnd() * 3.5) / 100;
-          const purchases = conversions * (0.1 + rnd() * 0.2);
+          // Sheet metrics use their own random stream so the original metrics keep their values.
+          const xr = dashRng(`${id}:sheet-metrics`);
+          const freq = p === 'google' ? 1.2 + xr() * 1.3 : 1.6 + xr() * 1.8;
+          const engRate = (p === 'google' ? 0.4 + xr() * 1.2 : 1 + xr() * 3.5) / 100;
+          const purchases = conversions * (0.1 + xr() * 0.2);
           t.ads.push({
             id, level: 'ad', platform: p, name: `Ad Creative Q${Math.ceil(adNo / 2)} - Variant ${adNo}`, format: fmt, status,
             parents: [cName, gName], campaignName: cName, adGroupName: gName,
@@ -2131,9 +2142,9 @@ function dashTree(wsId) {
               spend, impressions, clicks, conversions,
               reach: impressions / freq,
               engagements: impressions * engRate,
-              pLeads: conversions * (0.45 + rnd() * 0.3),
+              pLeads: conversions * (0.45 + xr() * 0.3),
               purchases,
-              convValue: purchases * (60 + rnd() * 180)
+              convValue: purchases * (60 + xr() * 180)
             }
           });
         }
@@ -2868,6 +2879,7 @@ function dashCampaignCard() {
       </div>
       <div class="search grow"><input class="input" placeholder="Search by name" value="${esc(state.ui.dashCtSearch)}" oninput="dashCtSearchInput(this.value)" aria-label="Search campaigns and ads"><i data-lucide="search"></i></div>
       ${dashFilterButton('campaigns')}
+      ${dashColPickerButton()}
     </div>
     <div id="dash-ct-body">${dashCampaignBody()}</div>`;
 }
@@ -2895,32 +2907,94 @@ function dashClearDrill() { state.ui.dashDrill = null; state.ui.dashLevel = 'pla
 // plus V1's Cost Per Conversion and the CRM-attributed columns. tip = the sheet's definition.
 // quality: 'low' = lower is better, 'high' = higher is better (coloured dot against the workspace total).
 const DASH_CT_COLS = [
-  { key: 'spend', label: 'Spend', tip: 'Amount spent on your campaign.', fmt: v => fmtMoney(v) },
-  { key: 'impressions', label: 'Impressions', tip: 'Total number of times the ad was shown on screen.', fmt: v => fmtNum(v) },
-  { key: 'reach', label: 'Reach', tip: 'Estimated number of unique individuals who saw the ad.', fmt: v => fmtNum(v) },
-  { key: 'cpm', label: 'CPM', tip: 'The average cost to show the ad 1,000 times.', fmt: v => fmtMoney(v, 2), quality: 'low' },
-  { key: 'freq', label: 'Frequency', tip: 'Average number of times each unique person saw the ad.', fmt: v => v.toFixed(2) },
-  { key: 'clicks', label: 'Clicks', tip: 'Number of clicks on links within the ad that direct users to specified destinations (like your website).', fmt: v => fmtNum(v) },
-  { key: 'ctr', label: 'CTR', tip: 'Percentage of impressions that resulted in a click.', fmt: v => fmtPct(v), quality: 'high' },
-  { key: 'cpc', label: 'CPC', tip: 'Average cost paid for each link click.', fmt: v => fmtMoney(v, 2), quality: 'low' },
-  { key: 'conversions', label: 'Conversions', tip: 'An action that a customer takes after interacting with your ad, such as making a purchase, signing up for a newsletter, or calling your business.', fmt: v => fmtNum(v) },
-  { key: 'cvr', label: 'Conversion Rate', tip: 'Percentage of clicks that successfully resulted in a lead submission.', fmt: v => fmtPct(v), quality: 'high', needs: 'clicks' },
-  { key: 'cpa', label: 'Cost Per Conversion', tip: 'Total spend divided by platform-reported conversions.', fmt: v => fmtMoney(v, 2), quality: 'low', needs: 'conversions' },
-  { key: 'cpLead', label: 'Cost Per Lead', tip: 'Average cost required to generate one successful lead.', fmt: v => fmtMoney(v, 2), quality: 'low', needs: 'pLeads' },
-  { key: 'cpp', label: 'Cost Per Purchase', tip: 'Average cost required to acquire one successful sale.', fmt: v => fmtMoney(v, 2), quality: 'low', needs: 'purchases' },
-  { key: 'pRoas', label: 'ROAS', tip: 'Revenue generated for every dollar spent on the campaign (platform-reported purchase value ÷ spend).', fmt: v => `${v.toFixed(2)}x`, quality: 'high', needs: 'spend' },
-  { key: 'convValue', label: 'Conversion Value', tip: 'Total monetary value of the purchases driven by the advertising efforts.', fmt: v => fmtMoney(v) },
-  { key: 'engRate', label: 'Engagement Rate', tip: 'Percentage of people who interacted with the ad after seeing it.', fmt: v => fmtPct(v), quality: 'high', needs: 'impressions' },
-  { key: 'engagements', label: 'Engagement', tip: 'Total actions taken on the ad (likes, comments, shares, video views, ad expansions).', fmt: v => fmtNum(v) },
-  { key: 'cpe', label: 'Cost Per Engagement', tip: 'Average cost for each interaction with the ad.', fmt: v => fmtMoney(v, 2), quality: 'low', needs: 'engagements' }
+  { key: 'spend', group: 'delivery', label: 'Spend', tip: 'Amount spent on your campaign.', fmt: v => fmtMoney(v) },
+  { key: 'impressions', group: 'delivery', label: 'Impressions', tip: 'Total number of times the ad was shown on screen.', fmt: v => fmtNum(v) },
+  { key: 'reach', group: 'delivery', label: 'Reach', tip: 'Estimated number of unique individuals who saw the ad.', fmt: v => fmtNum(v) },
+  { key: 'cpm', group: 'delivery', label: 'CPM', tip: 'The average cost to show the ad 1,000 times.', fmt: v => fmtMoney(v, 2), quality: 'low' },
+  { key: 'freq', group: 'delivery', label: 'Frequency', tip: 'Average number of times each unique person saw the ad.', fmt: v => v.toFixed(2) },
+  { key: 'clicks', group: 'clicks', label: 'Clicks', tip: 'Number of clicks on links within the ad that direct users to specified destinations (like your website).', fmt: v => fmtNum(v) },
+  { key: 'ctr', group: 'clicks', label: 'CTR', tip: 'Percentage of impressions that resulted in a click.', fmt: v => fmtPct(v), quality: 'high' },
+  { key: 'cpc', group: 'clicks', label: 'CPC', tip: 'Average cost paid for each link click.', fmt: v => fmtMoney(v, 2), quality: 'low' },
+  { key: 'conversions', group: 'conversions', label: 'Conversions', tip: 'An action that a customer takes after interacting with your ad, such as making a purchase, signing up for a newsletter, or calling your business.', fmt: v => fmtNum(v) },
+  { key: 'cvr', group: 'conversions', label: 'Conversion Rate', tip: 'Percentage of clicks that successfully resulted in a lead submission.', fmt: v => fmtPct(v), quality: 'high', needs: 'clicks' },
+  { key: 'cpa', group: 'conversions', label: 'Cost Per Conversion', tip: 'Total spend divided by platform-reported conversions.', fmt: v => fmtMoney(v, 2), quality: 'low', needs: 'conversions' },
+  { key: 'cpLead', group: 'conversions', label: 'Cost Per Lead', tip: 'Average cost required to generate one successful lead.', fmt: v => fmtMoney(v, 2), quality: 'low', needs: 'pLeads' },
+  { key: 'cpp', group: 'conversions', label: 'Cost Per Purchase', tip: 'Average cost required to acquire one successful sale.', fmt: v => fmtMoney(v, 2), quality: 'low', needs: 'purchases' },
+  { key: 'pRoas', group: 'conversions', label: 'ROAS', tip: 'Revenue generated for every dollar spent on the campaign (platform-reported purchase value ÷ spend).', fmt: v => `${v.toFixed(2)}x`, quality: 'high', needs: 'spend' },
+  { key: 'convValue', group: 'conversions', label: 'Conversion Value', tip: 'Total monetary value of the purchases driven by the advertising efforts.', fmt: v => fmtMoney(v) },
+  { key: 'engRate', group: 'engagement', label: 'Engagement Rate', tip: 'Percentage of people who interacted with the ad after seeing it.', fmt: v => fmtPct(v), quality: 'high', needs: 'impressions' },
+  { key: 'engagements', group: 'engagement', label: 'Engagement', tip: 'Total actions taken on the ad (likes, comments, shares, video views, ad expansions).', fmt: v => fmtNum(v) },
+  { key: 'cpe', group: 'engagement', label: 'Cost Per Engagement', tip: 'Average cost for each interaction with the ad.', fmt: v => fmtMoney(v, 2), quality: 'low', needs: 'engagements' }
 ];
 // CRM-attributed columns (CRM mode only). Prefixed "CRM" so they are not confused with platform-reported ROAS.
 const DASH_CT_CRM_COLS = [
-  { key: 'leads', label: 'CRM Leads', tip: 'Leads in your CRM attributed to this row under the selected attribution model.', fmt: v => fmtNum(v) },
-  { key: 'cpl', label: 'CRM CPL', tip: 'Spend ÷ CRM-attributed leads.', fmt: v => fmtMoney(v, 2), needs: 'leads' },
-  { key: 'revenue', label: 'CRM Revenue', tip: 'Closed revenue in your CRM credited to this row by the attribution model.', fmt: v => fmtMoney(v) },
-  { key: 'roas', label: 'CRM ROAS', tip: 'CRM-attributed revenue ÷ spend.', fmt: v => `${v.toFixed(2)}x`, needs: 'spend' }
+  { key: 'leads', group: 'crm', label: 'CRM Leads', tip: 'Leads in your CRM attributed to this row under the selected attribution model.', fmt: v => fmtNum(v) },
+  { key: 'cpl', group: 'crm', label: 'CRM CPL', tip: 'Spend ÷ CRM-attributed leads.', fmt: v => fmtMoney(v, 2), needs: 'leads' },
+  { key: 'revenue', group: 'crm', label: 'CRM Revenue', tip: 'Closed revenue in your CRM credited to this row by the attribution model.', fmt: v => fmtMoney(v) },
+  { key: 'roas', group: 'crm', label: 'CRM ROAS', tip: 'CRM-attributed revenue ÷ spend.', fmt: v => `${v.toFixed(2)}x`, needs: 'spend' }
 ];
+
+// ---------- Column picker (show / hide columns) ----------
+// Name, Status and Action are always shown. Hidden columns are a per-viewer convenience kept in localStorage.
+const DASH_COL_GROUPS = [['details', 'Details'], ['delivery', 'Delivery'], ['clicks', 'Clicks'], ['conversions', 'Conversions'], ['engagement', 'Engagement'], ['crm', 'CRM']];
+const DASH_COL_STORE = 'galaxis-demo:campaign-columns-hidden';
+state.ui.dashHiddenCols = (() => { try { return JSON.parse(localStorage.getItem(DASH_COL_STORE)) || []; } catch (e) { return []; } })();
+
+// Columns the picker can toggle, for the current CRM mode.
+function dashPickableCols() {
+  const crm = !!activeCrm(state.ctx);
+  return [{ key: 'format', group: 'details', label: 'Ad Format' }].concat(DASH_CT_COLS, crm ? DASH_CT_CRM_COLS : []);
+}
+function dashColVisible(key) { return !state.ui.dashHiddenCols.includes(key); }
+function dashSaveCols() { try { localStorage.setItem(DASH_COL_STORE, JSON.stringify(state.ui.dashHiddenCols)); } catch (e) { /* storage unavailable: keep in memory */ } }
+function dashSetCol(key, on) {
+  const h = new Set(state.ui.dashHiddenCols);
+  if (on) h.delete(key); else h.add(key);
+  state.ui.dashHiddenCols = [...h];
+  dashColsChanged();
+}
+function dashSetColGroup(group, on) {
+  const keys = dashPickableCols().filter(c => c.group === group).map(c => c.key);
+  const h = new Set(state.ui.dashHiddenCols);
+  keys.forEach(k => on ? h.delete(k) : h.add(k));
+  state.ui.dashHiddenCols = [...h];
+  dashColsChanged();
+}
+function dashShowAllCols() { state.ui.dashHiddenCols = []; dashColsChanged(); }
+function dashColsChanged() {
+  dashSaveCols();
+  dashRefreshCampaignTable();
+  renderRegion('dash-cols-inner', dashColPickerInner());
+  const n = dashHiddenCount();
+  const badge = document.getElementById('dash-cols-count');
+  if (badge) { badge.textContent = n; badge.hidden = !n; }
+}
+function dashHiddenCount() { return dashPickableCols().filter(c => !dashColVisible(c.key)).length; }
+
+function dashColPickerButton() {
+  const n = dashHiddenCount();
+  return `<div class="menu-anchor">
+    <button type="button" class="icon-btn" aria-label="Show or hide columns" title="Columns" onclick="toggleMenu('dash-cols-panel', event)"><i data-lucide="columns-3"></i><span class="count" id="dash-cols-count" ${n ? '' : 'hidden'}>${n}</span></button>
+    <div class="filter-panel dash-cols-panel" id="dash-cols-panel" onclick="event.stopPropagation()"><div id="dash-cols-inner">${dashColPickerInner()}</div></div>
+  </div>`;
+}
+function dashColPickerInner() {
+  const cols = dashPickableCols();
+  const shown = cols.filter(c => dashColVisible(c.key)).length;
+  const groups = DASH_COL_GROUPS.map(([g, label]) => {
+    const items = cols.filter(c => c.group === g);
+    if (!items.length) return '';
+    const on = items.filter(c => dashColVisible(c.key)).length;
+    return `<div class="filter-group">
+      <div class="dash-cols-group-head"><span class="filter-group-title">${esc(label)}</span>
+        <button type="button" class="t-link" onclick="dashSetColGroup('${g}', ${on !== items.length})">${on === items.length ? 'Hide all' : 'Show all'}</button></div>
+      <div class="dash-cols-options">${items.map(c => `<label class="check"><input type="checkbox" ${dashColVisible(c.key) ? 'checked' : ''} onchange="dashSetCol('${c.key}', this.checked)">${esc(c.label)}</label>`).join('')}</div>
+    </div>`;
+  }).join('');
+  return `<div class="dash-cols-head"><div><div class="h-card">Columns</div><div class="card-sub">${shown} of ${cols.length} shown · Name, Status and Action are always shown</div></div></div>
+    ${groups}
+    <div class="filter-actions"><button type="button" class="btn btn-outline btn-sm" onclick="dashShowAllCols()" ${shown === cols.length ? 'disabled' : ''}>Show all columns</button></div>`;
+}
 
 function dashCampaignBody() {
   const u = state.ui;
@@ -2950,7 +3024,8 @@ function dashCampaignBody() {
   const page = paginate(rows, 'dash-ct', 10);
   const ref = m.total;
   const next = DASH_LEVELS[DASH_LEVELS.indexOf(level) + 1];
-  const cols = [['name', DASH_NAME_COL[level]], ['format', 'Ad Format'], ['status', 'Status']].concat(metricCols.map(c => [c.key, c.label]));
+  const cols = [['name', DASH_NAME_COL[level]], ['format', 'Ad Format'], ['status', 'Status']].concat(metricCols.map(c => [c.key, c.label]))
+    .filter(([c]) => c === 'name' || c === 'status' || dashColVisible(c));
   const colDef = Object.fromEntries(metricCols.map(c => [c.key, c]));
   const fn = 'dashRefreshCampaignTable';
   const head = cols.map(([c, l]) => `<th${colDef[c] ? ` title="${esc(colDef[c].tip)}"` : ''}>${sortHeader('dash-ct', c, l, fn)}</th>`).join('') + (next ? '<th>Action</th>' : '');
@@ -3390,6 +3465,7 @@ Client-facing workspace dashboard giving a simplified, unified view of Meta and 
   - **Level tabs**: Platform / Campaigns / Ad Groups / Ads.
   - **Drill-down**: clicking a row, or "View …" in the ⋮ menu, opens the next level with a "Filtered for X ✕" badge. Clearing the badge returns to Platform.
   - **Columns**: Name (parent shown above), Ad Format (+N overflow), Status, then the platform metrics from the *Google & Meta Ads Metrics* sheet (Metrics (Dev Notes), green rows), in sheet order: Spend (Cost), Impressions, Reach, CPM, Frequency, Clicks, CTR, CPC, Conversions, Conversion Rate, Cost Per Conversion (kept from V1), Cost Per Lead, Cost Per Purchase, ROAS, Conversion Value, Engagement Rate, Engagement, Cost Per Engagement. In CRM mode, CRM Leads, CRM CPL, CRM Revenue and CRM ROAS follow ("CRM" prefix to separate CRM-attributed ROAS from platform-reported ROAS). Header tooltips show the sheet's definitions. Every column is sortable, including Status (Active → Attention Required → Paused) and Ad Format (first format).
+  - **Column picker** (columns icon next to the filter): show or hide columns, grouped as Details (Ad Format), Delivery, Clicks, Conversions, Engagement and CRM (CRM mode only), with Show all / Hide all per group and Show all columns. The badge counts hidden columns. Name, Status and Action are always shown. The choice is remembered per viewer in the browser (prototype: localStorage; product: save per user).
   - **API fields** (from the sheet, for development):
     - Cost — Meta \`spend\`; Google \`metrics.cost_micros\`
     - Impressions — Meta \`impressions\`; Google \`metrics.impressions\`

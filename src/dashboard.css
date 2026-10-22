@@ -44,6 +44,15 @@
 .dash-hub-action { flex-shrink: 0; white-space: nowrap; }
 .dash-hub-action svg.lucide { width: 12px; height: 12px; }
 
+/* ---------- Campaigns column picker ---------- */
+.dash-cols-panel { width: 380px; max-height: min(70vh, 560px); overflow-y: auto; }
+.dash-cols-head { margin-bottom: 16px; }
+.dash-cols-head .card-sub { margin-top: 4px; }
+.dash-cols-group-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.dash-cols-group-head .filter-group-title { margin-bottom: 0; }
+.dash-cols-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+.dash-cols-options .check { font-size: 12px; }
+
 /* ---------- Agency KPI grid ---------- */
 .dash-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; margin-bottom: 24px; }
 .dash-donut-card { display: flex; flex-direction: column; padding: 20px; }

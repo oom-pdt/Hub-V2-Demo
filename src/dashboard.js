@@ -982,8 +982,7 @@ function dashSeoBody() {
   const thCls = { volume: 'num', baseline: 'num', urls: 'num' };
   const head = `<th>${sortHeader('dash-seo', 'term', 'Keyword', fn)}</th>`
     + cols.map(c => `<th class="${thCls[c.key] || ''}">${sortable[c.key] ? sortHeader('dash-seo', c.key, c.label, fn) : esc(c.label)}</th>`).join('')
-    // The latest day is pinned as the table's last column (markActionColumns pins a header whose class says "action").
-    + dayAgos.map(ago => `<th class="dash-seo-day ${ago === 0 ? 'dash-seo-latest dash-pin-action' : ''}" title="${fmtDate(seoDayIso(ago))}">${ago === 0 ? sortHeader('dash-seo', 'latest', dashSeoDayLabel(0), fn) : dashSeoDayLabel(ago)}</th>`).join('');
+    + dayAgos.map(ago => `<th class="dash-seo-day ${ago === 0 ? 'dash-seo-latest' : ''}" title="${fmtDate(seoDayIso(ago))}">${ago === 0 ? sortHeader('dash-seo', 'latest', dashSeoDayLabel(0), fn) : dashSeoDayLabel(ago)}</th>`).join('');
 
   const dash = '<span class="t-muted">–</span>';
   const cell = (k, key) => {
@@ -1905,7 +1904,7 @@ Read-only SEO Cloud results inside the client workspace, next to ad performance,
   - **Day cell colour**: green when better than the baseline, red when worse. With no baseline, the cell is compared with the previous day.
   - Sortable: Keyword, Volume, Difficulty, Baseline and the latest day. Unranked keywords sort last in both directions. In Group mode, rows are sorted within each group.
   - 25 keywords per page by default (Showing Per Page also offers 10 / 20 / 50).
-  - The Keyword column and the latest day are pinned. There is no Action column.
+  - Only the Keyword column is pinned; the day columns scroll. There is no Action column.
   - Column picker groups: Keyword details (Ranking URL, Volume, Search Intent, Difficulty) and Rankings (History, Baseline, Previous 6 days). Keyword and the latest day are always shown.
   - Empty state when nothing matches.
 - **Date filter** (shared with Ad Performance): sets the trend range, the sparkline range and the comparison point for every ▲/▼ change. History is kept for 120 days.

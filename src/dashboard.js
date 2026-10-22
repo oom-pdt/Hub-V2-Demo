@@ -656,7 +656,7 @@ function dashManagedBody() {
   const money = (r, k) => r.linked ? dashDot(fmtMoney(r.t[k], 2), r.q[k]) : dash;
   const cell = (r, k) => {
     switch (k) {
-      case 'platforms': return `<div class="chips dash-nowrap">${r.plats.map(p => platformBadge(p)).join('') || '<span class="t-muted">No platform linked</span>'}</div>`;
+      case 'platforms': return `<div class="dash-plat-stack">${r.plats.map(p => platformBadge(p)).join('') || '<span class="t-muted">No platform linked</span>'}</div>`;
       case 'spend': return r.linked ? fmtMoney(r.t.spend) : dash;
       case 'cpm': case 'cpc': case 'cpa': return money(r, k);
       case 'seoStatus': return r.seo ? `<span class="pill pill-sm ${r.seo.status.pill}">${esc(r.seo.status.label)}</span>` : dash;

@@ -625,7 +625,7 @@ const DASH_MG_COLS = [
   { key: 'cpc', group: 'ads', label: 'CPC' },
   { key: 'adsDays', group: 'ads', label: 'Contract Days Left', tip: 'Days left on the Agency CRM contract for the live ad services (Google Ads, Facebook Ads, SEM). Shown per platform when they run on different contracts. Amber at 60 days or fewer, red at 30 or fewer.' },
   { key: 'seoStatus', group: 'seo', label: 'SEO Status', tip: 'SEO Cloud project status: On track at or above the top-10 target, Off track less than 5 points below, Critical 5 or more points below.' },
-  { key: 'top10', group: 'seo', label: 'Top 10 %', tip: 'Key SEO KPI: share of tracked keywords ranking in the top 10 today, against the contracted target.' },
+  { key: 'top10', group: 'seo', label: 'Keywords in Top 10', tip: 'Key SEO KPI: share of tracked keywords ranking in the top 10 today, against the contracted target.' },
   { key: 'avgPos', group: 'seo', label: 'Avg Position', tip: 'Mean position of keywords ranking in the top 100 (lower is better).' },
   { key: 'seoDays', group: 'seo', label: 'Contract Days Left', tip: 'Days left on the Agency CRM contract for the SEO service. Amber at 60 days or fewer, red at 30 or fewer.' },
   { key: 'contact', group: 'contact', label: 'Primary Contact' },

@@ -3324,11 +3324,12 @@ function dashSeoRenderChart() {
   const p = s.project;
   const vals = s.series.map(x => x.avg).filter(v => v !== null);
   if (!vals.length) { wrap.innerHTML = emptyState('chart-line', 'No ranked keywords yet', 'The trend appears once keywords rank in the top 100.'); return; }
-  const min = Math.min(...vals) - 0.5, max = Math.max(...vals) + 0.5;
-  const step = [1, 2, 5, 10, 20, 25, 50].find(st => (max - min) / st <= 6) || 50;
-  const lo = Math.max(0, Math.floor(min / step) * step), hi = Math.max(lo + step, Math.ceil(max / step) * step);
-  const ticks = [];
-  for (let v = lo; v <= hi + 1e-9; v += step) ticks.push(v);
+  // The axis always starts at position 1 (top) and runs down past the worst average in the range.
+  const max = Math.max(...vals) + 0.5;
+  const step = [1, 2, 5, 10, 20, 25, 50].find(st => (max - 1) / st <= 6) || 50;
+  const lo = 1, hi = Math.max(step, Math.ceil(max / step) * step);
+  const ticks = [1];
+  for (let v = step; v <= hi + 1e-9; v += step) if (v > 1) ticks.push(v);
   const n = p.keywords.length || 1;
   dashLineChart(wrap, {
     id: 'dash-seo', invert: true, lo, hi, ticks, fmtAxis: v => String(v),

@@ -166,7 +166,7 @@ function uid(prefix) { return `${prefix}-${Math.random().toString(36).slice(2, 8
 function isEmail(s) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s || '').trim()); }
 
 // ---------- Small render helpers ----------
-const STATUS_PILL = { active: ['Active', 'pill-green'], new: ['New', 'pill-blue'], attention: ['Attention Required', 'pill-red'], inactive: ['Inactive', 'pill-orange'], paused: ['Paused', 'pill-grey'] };
+const STATUS_PILL = { active: ['Active', 'pill-green'], new: ['New', 'pill-blue'], attention: ['Attention Required', 'pill-red'], inactive: ['Inactive', 'pill-orange'], cancelled: ['Cancelled', 'pill-red'], paused: ['Paused', 'pill-grey'] };
 function statusPill(status, label) {
   const [text, cls] = STATUS_PILL[status] || [status, 'pill-grey'];
   return `<span class="pill ${cls}">${esc(label || text)}</span>`;

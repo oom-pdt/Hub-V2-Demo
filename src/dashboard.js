@@ -61,7 +61,7 @@ function dashTree(wsId) {
   const key = `${wsId}|${plats.join(',')}`;
   if (dashCache.tree[key]) return dashCache.tree[key];
   const t = { platforms: [], campaigns: [], adGroups: [], ads: [] };
-  const bias = ws.status === 'attention';
+  const bias = !!ws.perfFlag;   // accounts with a performance issue generate weaker numbers
   let adNo = 0;
   plats.forEach(p => {
     const rnd = dashRng(`${wsId}:${p}`);
@@ -231,20 +231,14 @@ const DASH_FILTERS = {
   managed: {
     store: () => state.ui.dashMgrFilter,
     groups: () => [
+      { key: 'health', title: 'Account Health', options: [['attention', 'Attention Required'], ['off', 'Off Track'], ['on', 'On Track']] },
       { key: 'platform', title: 'Ad Platforms', options: [['google', 'Google'], ['meta', 'Meta'], ['none', 'No platform linked']] },
       { key: 'perf', title: 'Performance (Cost per Conversion)', options: [['good', 'Excellent'], ['mid', 'Average'], ['bad', 'Bad']] },
       { key: 'seo', title: 'SEO Status', options: [['on', 'On track'], ['off', 'Off track'], ['critical', 'Critical'], ['none', 'Not on SEO Cloud']] }
     ],
     refresh: () => { pager('dash-managed').page = 1; dashRefreshManaged(); }
   },
-  attention: {
-    store: () => state.ui.dashAttFilter,
-    groups: () => [
-      { key: 'type', title: 'Issue Status', options: ['Performance Review', 'SEO Critical', 'SEO Off Track', 'Renewal at Risk', 'Contract Ending', 'Budget Pacing', 'No Account Linked', 'Integration Error', 'Token Expired', 'Unlinked Ad Accounts', 'CRM Set-up'].map(t => [t, t]) },
-      { key: 'priority', title: 'Priority Status', options: [['High', 'High'], ['Medium', 'Medium'], ['Low', 'Low']] }
-    ],
-    refresh: () => renderRegion('dash-att-list', dashAttentionList())
-  },
+
   campaigns: {
     store: () => state.ui.dashCtFilter,
     groups: () => [
@@ -342,7 +336,7 @@ function dashAttentionItems() {
   if (state.flags.dashAlertsOff) return [];
   const items = [];
   const list = dashAgencyWorkspaces();
-  list.filter(w => w.status === 'attention').forEach((w, i) => items.push({
+  list.filter(w => w.perfFlag).forEach((w, i) => items.push({
     client: w.name, type: 'Performance Review', priority: i === 0 ? 'High' : 'Medium',
     desc: DASH_PERF_ISSUES[i % DASH_PERF_ISSUES.length], cta: 'View Account', action: `openWorkspace('${w.id}','dashboard')`
   }));
@@ -407,28 +401,136 @@ function dashAttentionItems() {
     client: w.name, type: 'No Account Linked', priority: 'Low',
     desc: 'Missing Google or Meta platform integration.', cta: 'Link Ad Account', action: `openWorkspace('${w.id}','integrations')`
   }));
+  // Aurix is a live CRM service but the workspace isn't connected to Aurix in Galaxis.
+  list.filter(w => crmLiveServices(w.id).some(x => x.type === 'Aurix') && !(wsProducts(w.id).aurix?.status === 'connected')).forEach(w => items.push({
+    client: w.name, type: 'Aurix Not Linked', priority: 'Low',
+    desc: 'Aurix is a live service in the Agency CRM, but this workspace is not linked to Aurix yet.', cta: 'Link Aurix', action: `openWorkspace('${w.id}','integrations')`
+  }));
+  items.forEach(i => {
+    i.wsId = workspaces.find(w => w.name === i.client)?.id || null;   // null = agency-level ("My Workspace")
+    i.product = DASH_ISSUE_PRODUCT[i.type] || (i.type === 'Integration Error' && /^Aurix/.test(i.desc) ? 'Aurix' : i.type === 'Contract Ending' ? dashContractProduct(i.desc) : 'Integrations');
+  });
   return items.sort((a, b) => DASH_PRIORITY_RANK[a.priority] - DASH_PRIORITY_RANK[b.priority]);
 }
+// Which OOm product an issue belongs to (banner: "… across Ads Performance and Aurix").
+const DASH_ISSUE_PRODUCT = {
+  'Performance Review': 'Ads Performance', 'Budget Pacing': 'Ads Performance', 'No Account Linked': 'Ads Performance',
+  'Unlinked Ad Accounts': 'Ads Performance', 'Token Expired': 'Ads Performance',
+  'SEO Critical': 'SEO Cloud', 'SEO Off Track': 'SEO Cloud', 'Renewal at Risk': 'SEO Cloud',
+  'Aurix Not Linked': 'Aurix', 'CRM Set-up': 'Agency CRM'
+};
+function dashContractProduct(desc) { return /^SEO/.test(desc) ? 'SEO Cloud' : /^Aurix/.test(desc) ? 'Aurix' : /^(Google Ads|Facebook Ads|SEM)/.test(desc) ? 'Ads Performance' : 'Contracts'; }
 
 function dashRenderAgency() {
-  const port = dashPortfolio();
+  const items = dashAttentionItems();
   return `
     <div class="dash-welcome">
-      <div><h2 class="h-welcome">Welcome Back, ${esc(dashFirstName())}</h2><p class="dash-welcome-sub">Keep track of project progress and manage your account all in one place.</p></div>
+      <div><h2 class="h-welcome">Welcome Back, ${esc(dashFirstName())}</h2><p class="dash-welcome-sub">Here’s what’s happening across your services today.</p></div>
       ${dateFilterHTML('agency', 'dashRerender')}
     </div>
+    ${dashAgencyBanner(items)}
+    ${dashAgencyKpis(items)}
     <div class="dash-top">
       ${dashDonutCard()}
-      ${dashSpendCard(port)}
-      ${dashSeoPortfolioCard()}
+      ${dashProductsCard()}
     </div>
-    <div class="card dash-att-card" id="dash-attention">${dashAttentionCard()}</div>
     <div class="card" id="dash-managed">${dashManagedCard()}</div>`;
+}
+
+// Banner: the same issues as the Attention Required KPI and Account Health, so the numbers always agree.
+function dashAgencyBanner(items) {
+  if (!items.length) return '';
+  // Name the three areas with the most issues; summarise the rest.
+  const counts = {};
+  items.forEach(i => { counts[i.product] = (counts[i.product] || 0) + 1; });
+  const prods = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+  const named = prods.slice(0, 3), rest = prods.length - named.length;
+  const list = rest ? `${named.join(', ')} and ${rest} other area${rest === 1 ? '' : 's'}`
+    : named.length > 1 ? `${named.slice(0, -1).join(', ')} and ${named[named.length - 1]}` : named[0];
+  return `<div class="banner banner-warning dash-banner">
+    <i data-lucide="triangle-alert"></i>
+    <div><div class="banner-title">Attention Required</div><div class="banner-text">${items.length} account issue${items.length === 1 ? '' : 's'} need${items.length === 1 ? 's' : ''} your attention across ${esc(list)}.</div></div>
+    <button type="button" class="banner-action" onclick="dashReviewAccounts()">Review Accounts</button>
+  </div>`;
+}
+// "Review Accounts": filter Managed Accounts to accounts that need attention, worst first.
+function dashReviewAccounts() {
+  state.ui.dashMgrFilter.health = ['attention', 'off'];
+  state.sorts['dash-managed'] = { col: 'health', dir: 'asc' };
+  pager('dash-managed').page = 1;
+  renderRegion('dash-managed', dashManagedCard());
+  document.getElementById('dash-managed')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Months covered by a CRM contract (for contract value = monthly budget × months).
+function dashContractMonths(x) { return x.start && x.end ? Math.max(1, Math.round((new Date(x.end) - new Date(x.start)) / (86400000 * 30.44))) : 12; }
+function dashAgencyKpis(items) {
+  const list = dashAgencyWorkspaces();
+  const svcs = list.flatMap(w => crmLiveServices(w.id).map(x => ({ ...x, wsId: w.id })));
+  const value = svcs.reduce((t, x) => t + x.monthlyBudget * dashContractMonths(x), 0);
+  const clients = new Set(items.filter(i => i.wsId).map(i => i.wsId)).size;
+  const renewals = new Set(svcs.filter(x => x.daysLeft !== null && x.daysLeft <= 30).map(x => `${x.wsId}|${x.contractNo}`)).size;
+  const followUps = list.reduce((t, w) => t + (crmAccounts[w.id]?.followUpsDue || 0), 0);
+  const card = (title, tip, value, sub, onclick) => `<div class="kpi-card dash-agency-kpi ${onclick ? 'clickable' : ''}" ${onclick ? `role="button" tabindex="0" onclick="${onclick}"` : ''}>
+      <div class="kpi-title t-bold">${esc(title)} ${infoTip(tip)}</div><div class="kpi-value dash-agency-kpi-value">${value}</div><div class="kpi-sub">${sub}</div></div>`;
+  return `<div class="grid-4 dash-kpis dash-agency-kpis">
+    ${card('Managed Contract Value', 'Total value of the live contracts across your managed accounts (monthly budget × contract months), from the Agency CRM.', fmtMoney(value, 2), 'Total value across managed contracts')}
+    ${card('Attention Required', 'Open issues across ads, SEO, Aurix, contracts and integrations. The same issues drive the banner and Account Health.', fmtNum(items.length), `Issues across <b>${clients}</b> client${clients === 1 ? '' : 's'}`, 'dashReviewAccounts()')}
+    ${card('Upcoming Renewals', 'Live Agency CRM contracts that end within 30 days.', fmtNum(renewals), 'Contracts renewing within 30 days')}
+    ${card('Client Follow-ups Due', 'Open follow-up tasks on your clients in the Agency CRM. [PLACEHOLDER] mock counts.', fmtNum(followUps), 'Follow-ups pending')}
+  </div>`;
+}
+
+// Your Products: one row per OOm product with a short health line.
+function dashProductsCard() {
+  const rows = dashManagedRows();
+  const ahead = rows.filter(r => r.pacing && r.pacing.key === 'ahead').length;
+  const under = rows.filter(r => r.q.cpa === 'bad').length;
+  const aurixGap = rows.filter(r => r.services.includes('aurix') && !(wsProducts(r.w.id).aurix?.status === 'connected')).length;
+  const seoCrit = rows.filter(r => r.seo && r.seo.status.key === 'critical').length;
+  const seoOff = rows.filter(r => r.seo && r.seo.status.key === 'off').length;
+  const ok = '<span class="t-success">No critical issues detected</span>';
+  const n = (v, txt) => `<b class="t-error">${v}</b> ${txt}`;
+  const list = [
+    { key: 'ads', name: 'Ads Performance', icon: dashServiceIcon('ads', 36), line: ahead || under ? [ahead && n(ahead, `Account${ahead === 1 ? '' : 's'} nearing spend limits`), under && n(under, 'Underperforming')].filter(Boolean).join(' • ') : ok, open: 'dashFocusGroup(\'ads\')', ext: false },
+    { key: 'aurix', name: 'Aurix', icon: dashServiceIcon('aurix', 36), line: aurixGap ? n(aurixGap, `Account${aurixGap === 1 ? '' : 's'} currently not linked`) : ok, open: "showToast('Opening Aurix…', 'external-link')", ext: true },
+    { key: 'seo', name: 'SEO Cloud', icon: dashServiceIcon('seo', 36), line: seoCrit || seoOff ? [seoCrit && n(seoCrit, 'Critical'), seoOff && `<b class="t-warning">${seoOff}</b> Off track`].filter(Boolean).join(' • ') : ok, open: "showToast('Opening SEO Cloud…', 'external-link')", ext: true }
+  ];
+  return `<div class="card dash-products">
+    <div class="row-between dash-products-head"><h2 class="h-section">Your Products</h2><span class="t-caption t-muted">${list.length} Connected Products</span></div>
+    <div class="dash-products-list">${list.map(p => `
+      <div class="dash-product-row">
+        ${p.icon}
+        <div class="grow"><div class="t-bold">${esc(p.name)}</div><div class="t-caption">${p.line}</div></div>
+        <button type="button" class="kebab dash-product-open" onclick="${p.open}" title="Open ${esc(p.name)}" aria-label="Open ${esc(p.name)}"><i data-lucide="${p.ext ? 'square-arrow-out-up-right' : 'panels-top-left'}"></i></button>
+      </div>`).join('')}</div>
+  </div>`;
+}
+// Ads Performance "open": expand and show the Ads columns in Managed Accounts.
+function dashFocusGroup(group) {
+  const d = columnPickers.managed;
+  d.collapsed = d.collapsed.filter(g => g !== group);
+  d.hidden = d.hidden.filter(k => DASH_MG_COLS.find(c => c.key === k)?.group !== group);
+  colChanged('managed');
+  document.getElementById('dash-managed')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Small round product marks used in Services and Your Products.
+const DASH_SERVICE_META = {
+  ads: { label: 'Ads Performance', bg: '#FBD3F2', fg: '#C2419C', icon: 'chart-column' },
+  seo: { label: 'SEO Cloud', pid: 'seo-cloud' },
+  aurix: { label: 'Aurix', pid: 'aurix' },
+  crm: { label: 'CRM - lite', pid: 'crm-lite' }
+};
+function dashServiceIcon(key, size = 24) {
+  const m = DASH_SERVICE_META[key];
+  if (m.pid) return `<span class="dash-svc-icon" title="${esc(m.label)}">${productLogo(m.pid, size)}</span>`;
+  return `<span class="dash-svc-icon product-logo" title="${esc(m.label)}" style="width:${size}px;height:${size}px;background:${m.bg};color:${m.fg}"><i data-lucide="${m.icon}" style="width:${Math.round(size / 2)}px;height:${Math.round(size / 2)}px"></i></span>`;
 }
 
 function dashDonutCard() {
   const list = dashAgencyWorkspaces();
-  const segs = [['attention', 'Attention Required', '#F78483'], ['inactive', 'Inactive', '#F9C576'], ['new', 'New', '#66ACFD'], ['active', 'Active', '#8CDA93']]
+  const segs = [['cancelled', 'Cancelled', '#F78483'], ['inactive', 'Inactive', '#F9C576'], ['new', 'New', '#66ACFD'], ['active', 'Active', '#8CDA93']]
     .map(([k, label, color]) => ({ k, label, color, n: list.filter(w => w.status === k).length }));
   const total = list.length;
   const size = 200, r = 76, sw = 26, C = 2 * Math.PI * r;
@@ -443,9 +545,9 @@ function dashDonutCard() {
     start += len;
     return out;
   }).join('');
-  const legendOrder = ['active', 'new', 'inactive', 'attention'].map(k => segs.find(s => s.k === k));
+  const legendOrder = ['active', 'new', 'inactive', 'cancelled'].map(k => segs.find(s => s.k === k));
   return `<div class="card dash-donut-card">
-    <div class="kpi-title">Total Accounts Managed ${infoTip('Client workspaces you manage, grouped by account status. Not affected by the date filter.')}</div>
+    <div class="kpi-title">Total Accounts Managed ${infoTip('Client workspaces you manage, grouped by account lifecycle status (Active, New, Inactive, Cancelled). Not affected by the date filter.')}</div>
     <div class="dash-donut-wrap">
       <div class="dash-donut">
         <svg viewBox="0 0 ${size} ${size}" role="img" aria-label="${total} total accounts">${total ? arcs : `<circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="#F2F2F2" stroke-width="${sw}"/>`}</svg>
@@ -456,81 +558,45 @@ function dashDonutCard() {
   </div>`;
 }
 
-function dashSpendCard(port) {
-  const share = p => port.total.spend ? port[p].spend / port.total.spend * 100 : 0;
-  const row = p => `<div class="dash-plat-row dash-spend-row">
-      <span class="dash-plat-name">${platformLogo(p)}${PLATFORM_NAME[p]}</span>
-      <span class="dash-bar"><span class="dash-bar-fill dash-bar-${p}" style="width:${share(p).toFixed(1)}%"></span></span>
-      <span class="dash-plat-val">${fmtMoney(port[p].spend)}<span class="dash-pct">(${Math.round(share(p))}%)</span></span>
-    </div>`;
-  return `<div class="card dash-metric">
-    <div class="kpi-title">Portfolio Spend ${infoTip('Combined Google and Meta ad spend across all managed workspaces for the selected date range.')}</div>
-    <div class="kpi-value">${fmtMoney(port.total.spend)}</div>
-    ${row('google')}${row('meta')}
-  </div>`;
-}
-
-// SEO Portfolio: SEO Cloud health across the managed workspaces (status rule in seoStatus()).
-const DASH_SEO_SEGS = [['on', 'On track', 'onTrack', 'var(--success-pill)'], ['off', 'Off track', 'offTrack', 'var(--warning-pill)'], ['critical', 'Critical', 'critical', 'var(--error-pill)']];
-function dashSeoPortfolioCard() {
-  const s = seoPortfolio(dashAgencyWorkspaces());
-  const tip = 'Client workspaces with SEO Cloud connected. Status compares the share of keywords in the top 10 with the contracted target: On track at or above target, Off track less than 5 points below, Critical 5 or more points below.';
-  if (!s.clients) {
-    return `<div class="card dash-metric dash-seo-port">
-      <div class="kpi-title">SEO Portfolio ${infoTip(tip)}</div>
-      <div class="kpi-value t-muted">0</div><div class="kpi-sub">No clients on SEO Cloud yet.</div>
-    </div>`;
-  }
-  const bar = DASH_SEO_SEGS.filter(([, , k]) => s[k]).map(([key, label, k, color]) =>
-    `<span style="width:${(s[k] / s.clients * 100).toFixed(2)}%;background:${color}" title="${esc(label)}: ${s[k]}"></span>`).join('');
-  const gap = Math.round((s.avgTop10Pct - s.avgTarget) * 10) / 10;
-  const avgStatus = seoStatus(s.avgTop10Pct, s.avgTarget);
-  return `<div class="card dash-metric dash-seo-port">
-    <div class="kpi-title">SEO Portfolio ${infoTip(tip)}</div>
-    <div class="kpi-value">${s.clients} <span class="dash-kpi-unit">client${s.clients === 1 ? '' : 's'} on SEO Cloud</span></div>
-    <div class="dash-stack" role="img" aria-label="${s.onTrack} on track, ${s.offTrack} off track, ${s.critical} critical">${bar}</div>
-    <div class="dash-stack-legend">${DASH_SEO_SEGS.map(([key, label, k, color]) =>
-      `<span><span class="dash-legend-sw" style="background:${color}"></span>${esc(label)} <b>${s[k]}</b></span>`).join('')}</div>
-    <div class="dash-seo-port-rows">
-      <div class="dash-plat-row"><span>Avg. top 10</span><span class="dash-plat-val"><b class="${DASH_SEO_TEXT[avgStatus.key]}">${dashPctTxt(s.avgTop10Pct)}</b> vs ${dashPctTxt(s.avgTarget)} target <span class="t-muted">(${gap >= 0 ? '+' : ''}${dashNum1(gap)} pts)</span></span></div>
-      <div class="dash-plat-row"><span>Keywords tracked</span><span class="dash-plat-val"><b>${fmtNum(s.keywords)}</b> of ${fmtNum(s.contracted)} contracted</span></div>
-    </div>
-  </div>`;
-}
-
-function dashAttentionCard() {
-  const n = dashAttentionItems().length;
-  return `<div class="card-header">
-      <div><h2 class="h-section">Attention Required ${n ? `<span class="t-error">(${n})</span>` : '<span class="t-muted">(0)</span>'}</h2><div class="card-sub">Resolve these issues to maintain account health and performance.</div></div>
-      ${dashFilterButton('attention')}
-    </div>
-    <div id="dash-att-list">${dashAttentionList()}</div>`;
-}
-function dashAttentionList() {
-  const all = dashAttentionItems();
-  if (!all.length) return emptyState('circle-check', 'All accounts are healthy', 'No issues need your attention right now.');
-  const f = state.ui.dashAttFilter;
-  const items = all.filter(i => (!f.type.length || f.type.includes(i.type)) && (!f.priority.length || f.priority.includes(i.priority)));
-  if (!items.length) return emptyState('search-x', 'No issues match these filters', 'Clear the filter to see every issue.');
+// Issue rows (used in the per-client issues drawer).
+function dashIssueListHTML(items) {
+  if (!items.length) return emptyState('circle-check', 'No open issues', 'This account has nothing that needs attention right now.');
   return `<div class="dash-att-list">${items.map(i => `
     <div class="dash-att-item">
       <div class="grow">
         <div class="dash-att-top"><span class="t-bold">${esc(i.client)}</span><span class="chip">${esc(i.type)}</span><span class="pill pill-sm dash-prio ${DASH_PRIORITY_PILL[i.priority]}">${i.priority}</span></div>
         <div class="dash-att-desc">${esc(i.desc)}</div>
       </div>
-      <button type="button" class="t-link dash-att-cta" onclick="${i.action}">${esc(i.cta)}<i data-lucide="chevron-right"></i></button>
+      <button type="button" class="t-link dash-att-cta" onclick="closeDrawer(); ${i.action}">${esc(i.cta)}<i data-lucide="chevron-right"></i></button>
     </div>`).join('')}</div>`;
 }
 
+// Account Health from the open issues: any High-priority issue → Attention Required, any other issue → Off Track.
+const DASH_HEALTH = { attention: ['Attention Required', 'pill-red', 0], off: ['Off Track', 'pill-orange', 1], on: ['On Track', 'pill-green', 2] };
+function dashHealthOf(issues) { return issues.some(i => i.priority === 'High') ? 'attention' : issues.length ? 'off' : 'on'; }
+// Last activity in the workspace (mock: a recent day per workspace).
+function dashLastActivity(w) { const d = new Date(); d.setDate(d.getDate() - ((w.seed * 3) % 9)); return toDateInput(d); }
 function dashManagedRows() {
   const port = dashPortfolio().total;
   const days = dateRangeDays('agency');
+  const allIssues = dashAttentionItems();
   return dashAgencyWorkspaces().map(w => {
     const t = dashMetrics(w.id, 'agency').total;
     const linked = t.spend > 0;
     const services = crmLiveServices(w.id);
+    const issues = allIssues.filter(i => i.wsId === w.id);
+    const types = services.map(x => x.type);
+    // Services the client uses: Ads Performance, SEO Cloud, Aurix, CRM - lite (+N other CRM services).
+    const svcKeys = [
+      types.some(t => CRM_AD_SERVICES.includes(t)) && 'ads',
+      (types.includes('SEO') || seoConnected(w.id)) && 'seo',
+      (types.includes('Aurix') || wsProducts(w.id).aurix) && 'aurix',
+      wsProducts(w.id)['crm-lite']?.status === 'connected' && 'crm'
+    ].filter(Boolean);
+    const otherSvcs = types.filter(t => !CRM_AD_SERVICES.includes(t) && !['SEO', 'Aurix'].includes(t));
     return {
-      w, t, linked, plats: wsPlatforms(w.id),
+      w, t, linked, plats: wsPlatforms(w.id), issues, health: dashHealthOf(issues), services: svcKeys, otherSvcs,
+      contact: wsPrimaryContact(w.id), last: dashLastActivity(w),
       adSvcs: services.filter(x => CRM_AD_SERVICES.includes(x.type)), seoSvcs: services.filter(x => x.type === 'SEO'),
       pacing: dashPacing(w.id, t.spend, days), industry: w.industry, am: memberById(crmAccounts[w.id]?.accountManager || '')?.name || null,
       seo: seoConnected(w.id) ? seoStats(w.id, days) : null,
@@ -540,43 +606,66 @@ function dashManagedRows() {
 }
 
 // Managed Accounts columns, in table order. Client and Action are always shown; the rest are in the column picker.
+// Default view (new design): Services, Account Health, Issues Count, each service's key KPI (Ads: Cost Per Conversion,
+// SEO: Top 10 %), Primary Contact and Last Activity. The other Ads / SEO columns are one click away.
 const DASH_MG_COLS = [
+  { key: 'services', group: 'overview', label: 'Services', tip: 'OOm services this client uses: Ads Performance, SEO Cloud, Aurix, CRM - lite (+N other Agency CRM services).' },
+  { key: 'health', group: 'overview', label: 'Account Health', tip: 'From the open issues: Attention Required when any issue is High priority, Off Track when there are other open issues, otherwise On Track.' },
+  { key: 'issues', group: 'overview', label: 'Issues Count', tip: 'Open issues for this client (ads, SEO, Aurix, contracts, integrations). Select to see them.' },
   { key: 'platforms', group: 'ads', label: 'Ad Platforms' },
   { key: 'spend', group: 'ads', label: 'Combined Spend' },
   { key: 'pacing', group: 'ads', label: 'Budget Pacing', tip: 'Ad spend against the media budget in the Agency CRM for the selected dates. Ahead of pace above 115%, Under spend below 80%, otherwise On track (same rule as the CRM).' },
   { key: 'conversions', group: 'ads', label: 'Conversions', tip: 'Platform-reported conversions for the selected dates.' },
-  { key: 'cpa', group: 'ads', label: 'Cost Per Conversion' },
+  { key: 'cpa', group: 'ads', label: 'Cost Per Conversion', tip: 'Key ads KPI: spend ÷ platform-reported conversions, coloured against the portfolio average.' },
   { key: 'pRoas', group: 'ads', label: 'ROAS', tip: 'Platform-reported purchase value ÷ spend. Mainly meaningful for clients that track purchase value (e-commerce).' },
   { key: 'cpm', group: 'ads', label: 'CPM' },
   { key: 'cpc', group: 'ads', label: 'CPC' },
   { key: 'adsDays', group: 'ads', label: 'Contract Days Left', tip: 'Days left on the Agency CRM contract for the live ad services (Google Ads, Facebook Ads, SEM). Shown per platform when they run on different contracts. Amber at 60 days or fewer, red at 30 or fewer.' },
   { key: 'seoStatus', group: 'seo', label: 'SEO Status', tip: 'SEO Cloud project status: On track at or above the top-10 target, Off track less than 5 points below, Critical 5 or more points below.' },
-  { key: 'top10', group: 'seo', label: 'Top 10 %', tip: 'Share of tracked keywords ranking in the top 10 today, against the contracted target.' },
+  { key: 'top10', group: 'seo', label: 'Top 10 %', tip: 'Key SEO KPI: share of tracked keywords ranking in the top 10 today, against the contracted target.' },
   { key: 'avgPos', group: 'seo', label: 'Avg Position', tip: 'Mean position of keywords ranking in the top 100 (lower is better).' },
-  { key: 'seoDays', group: 'seo', label: 'Contract Days Left', tip: 'Days left on the Agency CRM contract for the SEO service. Amber at 60 days or fewer, red at 30 or fewer.' }
+  { key: 'seoDays', group: 'seo', label: 'Contract Days Left', tip: 'Days left on the Agency CRM contract for the SEO service. Amber at 60 days or fewer, red at 30 or fewer.' },
+  { key: 'contact', group: 'contact', label: 'Primary Contact' },
+  { key: 'last', group: 'contact', label: 'Last Activity' }
 ];
 registerColumnPicker('managed', {
   columns: () => DASH_MG_COLS,
-  groups: [['ads', 'Ads', { summary: 'spend', tone: 'ads' }],
-    ['seo', 'SEO', { summary: 'seoStatus', tone: 'seo' }]],
+  groups: [['overview', 'Account', { summary: 'health', tone: 'neutral' }], ['ads', 'Ads', { summary: 'cpa', tone: 'ads' }],
+    ['seo', 'SEO', { summary: 'top10', tone: 'seo' }], ['contact', 'Contact', { summary: 'contact', tone: 'neutral' }]],
   collapsible: true,
   note: 'Client and Action are always shown',
   onChange: 'dashRefreshManaged',
-  // CPM and CPC explain why cost per conversion moved; they start hidden (still in the client dashboard).
-  defaultHidden: ['cpm', 'cpc'],
-  storageKey: 'galaxis-demo:managed-columns-hidden-v2'
+  defaultHidden: ['platforms', 'spend', 'pacing', 'conversions', 'pRoas', 'cpm', 'cpc', 'adsDays', 'seoStatus', 'avgPos', 'seoDays'],
+  storageKey: 'galaxis-demo:managed-columns-hidden-v3'
 });
 
 function dashManagedCard() {
   return `<div class="card-header">
       <div><h2 class="h-section">Managed Accounts</h2><div class="card-sub">A complete overview of all client accounts currently assigned to you.</div></div>
       <div class="row">
-        <div class="search dash-search"><input class="input" placeholder="Search client" value="${esc(state.ui.dashMgrSearch)}" oninput="dashManagedSearch(this.value)" aria-label="Search managed accounts"><i data-lucide="search"></i></div>
+        <div class="search dash-search"><input class="input" placeholder="Search client or contact" value="${esc(state.ui.dashMgrSearch)}" oninput="dashManagedSearch(this.value)" aria-label="Search managed accounts"><i data-lucide="search"></i></div>
         ${dashFilterButton('managed')}
         ${colPickerButton('managed')}
       </div>
     </div>
     <div id="dash-managed-body">${dashManagedBody()}</div>`;
+}
+// Services cell: overlapping product marks, +N for other Agency CRM services.
+function dashServiceIconsCell(r) {
+  if (!r.services.length && !r.otherSvcs.length) return '<span class="t-muted">—</span>';
+  const more = r.otherSvcs.length ? `<span class="more-count" title="${esc(r.otherSvcs.join(', '))}">+${r.otherSvcs.length}</span>` : '';
+  return `<span class="dash-svc-icons" title="${esc(r.services.map(k => DASH_SERVICE_META[k].label).concat(r.otherSvcs).join(', '))}">${r.services.map(k => dashServiceIcon(k, 24)).join('')}</span>${more}`;
+}
+// Issues drawer for one client.
+function dashOpenIssues(wsId) {
+  const w = wsById(wsId);
+  const issues = dashAttentionItems().filter(i => i.wsId === wsId);
+  const h = DASH_HEALTH[dashHealthOf(issues)];
+  openDrawer(`<div class="dash-issues-drawer">
+      <h3 class="h-section">${esc(w.name)}</h3>
+      <div class="row" style="margin:8px 0 18px"><span class="pill pill-sm ${h[1]}">${h[0]}</span><span class="t-caption t-muted">${issues.length} open issue${issues.length === 1 ? '' : 's'}</span></div>
+      ${dashIssueListHTML(issues)}
+    </div>`, `<button type="button" class="btn btn-outline" onclick="closeDrawer(); openWorkspace('${wsId}','dashboard')">Open workspace</button>`);
 }
 function dashManagedSearch(v) { state.ui.dashMgrSearch = v; pager('dash-managed').page = 1; dashRefreshManaged(); }
 function dashRefreshManaged() { renderRegion('dash-managed-body', dashManagedBody()); }
@@ -608,7 +697,8 @@ function dashManagedBody() {
   const term = state.ui.dashMgrSearch.trim().toLowerCase();
   const f = state.ui.dashMgrFilter;
   let rows = dashManagedRows().filter(r => {
-    if (term && !r.w.name.toLowerCase().includes(term)) return false;
+    if (term && !`${r.w.name} ${r.contact ? r.contact.email : ''}`.toLowerCase().includes(term)) return false;
+    if (f.health.length && !f.health.includes(r.health)) return false;
     if (f.platform.length && !f.platform.some(p => p === 'none' ? !r.plats.length : r.plats.includes(p))) return false;
     if (f.perf.length && !f.perf.includes(r.q.cpa)) return false;
     if (f.seo.length && !f.seo.includes(r.seo ? r.seo.status.key : 'none')) return false;
@@ -621,6 +711,8 @@ function dashManagedBody() {
   const miss = v => v === null || v === undefined ? (asc ? Infinity : -Infinity) : v;
   rows = applySort(rows, 'dash-managed', {
     name: r => r.w.name.toLowerCase(), platforms: r => r.plats.length,
+    services: r => r.services.length + r.otherSvcs.length, health: r => DASH_HEALTH[r.health][2], issues: r => r.issues.length,
+    contact: r => r.contact ? r.contact.email : '~', last: r => r.last,
     conversions: r => num(r.t.conversions), pRoas: r => num(r.t.pRoas),
     spend: r => num(r.t.spend), cpm: r => num(r.t.cpm), cpc: r => num(r.t.cpc), cpa: r => num(r.t.cpa),
     seoStatus: r => miss(r.seo ? seoRank[r.seo.status.key] : null), top10: r => miss(r.seo ? r.seo.top10Pct : null),
@@ -646,6 +738,11 @@ function dashManagedBody() {
       case 'seoStatus': return r.seo ? `<span class="pill pill-sm ${r.seo.status.pill}">${esc(r.seo.status.label)}</span>` : dash;
       case 'top10': return r.seo ? `<b class="${DASH_SEO_TEXT[r.seo.status.key]}">${dashPctTxt(r.seo.top10Pct)}</b><span class="t-muted"> / ${dashPctTxt(r.seo.target)}</span>` : dash;
       case 'avgPos': return r.seo && r.seo.avgPos !== null ? dashNum1(r.seo.avgPos) : dash;
+      case 'services': return dashServiceIconsCell(r);
+      case 'health': return `<span class="pill pill-sm ${DASH_HEALTH[r.health][1]} dash-health">${DASH_HEALTH[r.health][0]}</span>`;
+      case 'issues': return r.issues.length ? `<button type="button" class="t-link dash-issues-link" onclick="event.stopPropagation(); dashOpenIssues('${r.w.id}')">${r.issues.length} Item${r.issues.length === 1 ? '' : 's'}</button>` : '<span class="t-muted">0</span>';
+      case 'contact': return r.contact ? `<span class="dash-email" title="${esc(r.contact.name)} · ${esc(r.contact.email)}">${esc(r.contact.email)}</span>` : '<span class="t-muted">Unassigned</span>';
+      case 'last': return fmtDate(r.last);
       case 'adsDays': return dashDaysLeftCell(r.adSvcs);
       case 'seoDays': return dashDaysLeftCell(r.seoSvcs);
       case 'pacing': return r.pacing ? `<span title="${esc(fmtMoney(r.t.spend))} spent vs ${esc(fmtMoney(r.pacing.monthly * days / 30))} media budget for these dates">${dashDot(esc(r.pacing.label), r.pacing.quality)} <span class="t-muted">${Math.round(r.pacing.pct)}%</span></span>` : dash;
@@ -1751,8 +1848,7 @@ function dashBindHeatmap() {
 // Screen registration, dev toggles
 // =====================================================================
 Object.assign(state.ui, {
-  dashMgrSearch: '', dashMgrFilter: { platform: [], perf: [], seo: [] },
-  dashAttFilter: { type: [], priority: [] },
+  dashMgrSearch: '', dashMgrFilter: { health: [], platform: [], perf: [], seo: [] },
   dashModel: 'mta', dashChartMetric: 'spend', dashHeatMetric: 'spend',
   dashFpSnap: {}, dashFpCollapsed: {},
   dashCtWs: undefined, dashCtFilter: { platform: [], format: [], status: [] }, dashEntSel: [], dashEntType: 'all', dashEntQ: '', dashCtSearch: '', dashLevel: 'platform', dashDrill: null,
@@ -1868,45 +1964,41 @@ Object.assign(screenSpecs, {
     updatedAt: '22/10/2026',
     notes: `
 ### Screen Purpose & Objectives
-Central command dashboard for agency administrators managing many client ad accounts and workspaces. Designed for portfolio-level performance monitoring and account triage. Layout follows the Figma "Desktop -> Dashboard" frame.
+Central command dashboard for agency administrators managing many client workspaces across Ads, SEO Cloud and Aurix. A performance indicator for every account at a glance, with one click through to the specifics. Layout follows the new agency dashboard design (22/10/2026).
 
 ### Key Functional Specifications
 - **Workspace Switcher**: The workspace dropdown in the top bar switches between the agency view ("My Workspace") and individual client workspaces. There is no separate My/Agency toggle.
 - **Date Filter (Past / Current / Date Range)**: Applies to every spend and cost metric on this page. Total Accounts Managed is not date-dependent.
   - **Prototype note:** the date filter scales mock 30-day data to the selected range. It does **not** yet filter by event date. Real behaviour must use the event date (click / conversion date), as in the client dashboard spec.
-- **No summary banner**: the Figma amber "Attention Required" banner was removed on 22/10/2026. Its fixed counts (missing platform links, impacting performance, SEO below target) disagreed with the Attention Required list, which counts every issue; the list (with its count in the title) is the single source of truth.
-- **Unified Portfolio KPIs (KPIs TBC)**: All figures are computed from per-workspace data, with no hard-coded totals.
-  - **Total Accounts Managed**: donut by status (Active / New / Inactive / Attention Required).
-  - **Portfolio Spend**: total, with a Google / Meta split.
-  - **SEO Portfolio** (added 22/10/2026): clients on SEO Cloud; a stacked bar of On track / Off track / Critical with a legend and counts; the average top-10 % against the average target; total keywords tracked against the contracted total. Built with \`seoPortfolio()\` over the visible workspaces with SEO Cloud connected.
-    - **Status rule** (\`seoStatus\`): On track when the top-10 % is at or above target; Off track when it is below target by less than 5 points; Critical when it is 5 or more points below. Example with a 55% target: 55% on track, 52% off track, 50% critical.
-  - Overall CPM, CPC and Cost per Conversion cards were removed from the agency dashboard on 21/10/2026. These metrics remain per workspace in the Managed Accounts table.
-- **Attention Required list**: Merges V1 triage with V2 pipeline alerts. Each row has a type, a priority (High / Medium / Low) and a one-click CTA. Filtered by issue type and priority (Figma "Attention Account Filter").
-  - **Performance Review**: workspace status Attention Required → View Account (High for the first, Medium after that).
-  - **Integration Error**: a workspace product in error (High) or pending setup (Medium) → Fix Integration (workspace Integrations).
-  - **Token Expired**: an agency master token (Google MCC / Meta Business Manager) that is not valid → Re-authorise (High).
-  - **Unlinked Ad Accounts**: one agency-level row for discovered but unlinked ad accounts → Review accounts (agency Integrations › Ad Platforms) (Medium).
-  - **No Account Linked**: a workspace with zero linked ad accounts → Link Ad Account (Low).
-  - **SEO Critical** (High) and **SEO Off Track** (Medium): an SEO Cloud project below target, e.g. "50% of keywords in top 10 vs 55% target (5 pts below)" → View SEO (opens that workspace's dashboard on the SEO Performance tab).
-  - **CRM Set-up** (Medium): an Agency CRM auto set-up with client invites awaiting approval, "N client invites awaiting approval" → Review set-up (the CRM module's set-up checklist; falls back to Team & Access › Client Organisation). Shown only when the CRM module is loaded.
-  - The banner adds "N SEO projects below target" when any project is Off track or Critical.
-- **Managed Accounts table** (the V1 Client Workspace Directory, with Figma columns): Client (with industry and account manager underneath), then Ads: Ad Platforms, Combined Spend, Budget Pacing, Conversions, Cost Per Conversion, ROAS, CPM, CPC, Contract Days Left; SEO: SEO Status, Top 10 %, Avg Position, Contract Days Left; then Action. Account columns (Status, Primary Contact, Last Activity) and the separate CRM columns (Live Services, Monthly Budget) were removed on 22/10/2026 to keep the table focused on performance; contract days now sit inside the Ads and SEO groups.
-  - **SEO columns**: SEO Status pill ("—" when the workspace is not on SEO Cloud); Top 10 % as "current / target", coloured by status; Avg Position (mean position of keywords ranking in the top 100).
-  - **From the Agency CRM**:
-    - **Client sub-line**: industry and account manager.
-    - **Budget Pacing** (Ads): ad spend for the selected dates against the CRM media budget for the same days (monthly media budget × days ÷ 30). Same rule as the CRM: Ahead of pace above 115% (red), Under spend below 80% (orange), otherwise On track (green). The tooltip shows spend and budget.
-    - **Contract Days Left** (Ads and SEO): each service runs on its own CRM contract, so a client can have concurrent contracts. Ads shows one figure when the ad services share a contract, otherwise one per platform (e.g. "Google 18d · Meta 72d"). Amber at 60 days or fewer, red at 30 or fewer; the tooltip lists contract numbers and end dates.
-  - **Column groups**: columns sit under coloured, collapsible group bands, in the order Ads · SEO. Collapsing a group leaves its summary column (Combined Spend, SEO Status), still sortable; the band shows how many columns are hidden. "Collapse all / Expand all" sits above the Client column. All groups start expanded; each viewer's choice is remembered (prototype: localStorage).
-  - **Default columns**: everything except CPM and CPC, which explain why cost per conversion moved rather than whether the client is doing well (they stay in the client dashboard). ROAS is platform-reported purchase value ÷ spend, mainly meaningful for e-commerce clients.
-  - **Column picker**: show or hide columns within those groups, **Reset to default**, or Show all. A group with every column hidden disappears. Client and Action are always shown. Remembered per viewer (prototype: localStorage).
-  - The ⋮ menu adds "View SEO performance" for workspaces on SEO Cloud.
-  - Coloured dots on CPM / CPC / Cost per Conversion compare each workspace with the portfolio average. Green (Excellent) is at least 10% better; orange (Average) is within -10% to +15%; red (Bad) is more than 15% worse. This replaces V1's heat cells.
-  - Search by client name.
-  - Figma "Managed Account Filter": Ad Platforms, Performance band (on Cost per Conversion) and SEO Status (On track / Off track / Critical / Not on SEO Cloud).
-  - Every column is sortable. Rows without SEO or CRM data sort last in both directions. Pagination uses "Showing Per Page".
-  - Clicking a row or a client name opens that workspace's dashboard.
-  - The ⋮ menu has Go to workspace, Organisation settings and Integrations.
-  - Workspaces with no linked accounts show "—" for metrics.
+- **Layout (new agency dashboard design, 22/10/2026)**: banner → four KPI cards → Total Accounts Managed + Your Products → Managed Accounts. The dashboard is a performance indicator: each account shows its health and issue count, and users click through for the specifics.
+- **Attention Required banner**: "N account issues need your attention across …", naming the three areas with the most issues (Ads Performance, SEO Cloud, Aurix, Integrations, Contracts, Agency CRM) and summarising the rest ("and 2 other areas"). It counts the same issues as the Attention Required KPI and the Issues Count column, so the numbers always agree. **Review Accounts** filters Managed Accounts to Attention Required and Off Track, worst first. Hidden when there are no issues.
+- **KPI cards** (all from the Agency CRM and the issue list; "KPIs TBC" still applies):
+  - **Managed Contract Value**: sum of live CRM contracts (monthly budget × contract months) across managed accounts.
+  - **Attention Required**: open issues, "Issues across N clients". Selecting it does the same as Review Accounts.
+  - **Upcoming Renewals**: live CRM contracts ending within 30 days (each contract counted once).
+  - **Client Follow-ups Due**: open CRM follow-up tasks. [PLACEHOLDER] mock counts until the CRM exposes tasks.
+- **Total Accounts Managed**: donut by account lifecycle status (Active / New / Inactive / Cancelled). Performance problems are no longer a lifecycle status; they show as Account Health.
+- **Your Products** ("N Connected Products"): one row per OOm product with a health line.
+  - **Ads Performance**: accounts nearing spend limits (budget pacing ahead of pace) • underperforming (cost per conversion more than 15% worse than the portfolio). Open shows the Ads columns in Managed Accounts.
+  - **Aurix**: accounts with a live Aurix service in the CRM that are not linked to Aurix in Galaxis. Open hands off to Aurix.
+  - **SEO Cloud**: Critical • Off track projects, or "No critical issues detected". Open hands off to SEO Cloud.
+- **Issues** (shared by the banner, KPI, Account Health and Issues Count). Each has a type, priority (High / Medium / Low), product and CTA:
+  - **Performance Review** (Ads, High for the first then Medium): accounts flagged for a performance issue.
+  - **Budget Pacing** (Ads, Medium): ad spend ahead of pace. **No Account Linked** (Ads, Low). **Unlinked Ad Accounts** and **Token Expired** (Ads, agency-level).
+  - **SEO Critical** (High), **SEO Off Track** (Medium), **Renewal at Risk** (High: SEO contract ends within 60 days while SEO is below target).
+  - **Contract Ending** (Medium): any service contract ending within 30 days.
+  - **Aurix Not Linked** (Aurix, Low). **Integration Error** (High, or Medium when pending). **CRM Set-up** (Medium: client invites awaiting approval).
+- **Managed Accounts table**:
+  - **Default columns** (the new design, plus each service's key KPI): Client (industry · account manager underneath), **Services** (overlapping product marks: Ads Performance, SEO Cloud, Aurix, CRM - lite, +N other CRM services), **Account Health**, **Issues Count**, **Ads: Cost Per Conversion** (the key ads KPI), **SEO: Top 10 %** (current / target, the key SEO KPI), **Primary Contact**, **Last Activity**, Action.
+  - **Account Health**: Attention Required (red) when any open issue is High priority, Off Track (orange) when there are other open issues, On Track (green) with none.
+  - **Issues Count**: "N Items"; selecting it opens a drawer listing that client's issues with their CTAs.
+  - **More columns, hidden by default** (column picker, or Ads Performance › Open): Ads: Ad Platforms, Combined Spend, Budget Pacing, Conversions, ROAS, CPM, CPC, Contract Days Left. SEO: SEO Status, Avg Position, Contract Days Left. Definitions:
+    - **Budget Pacing**: ad spend for the selected dates against the CRM media budget for the same days (monthly media budget × days ÷ 30). Ahead of pace above 115% (red), Under spend below 80% (orange), otherwise On track (green).
+    - **Contract Days Left**: each service runs on its own CRM contract; Ads shows one figure when the ad services share a contract, otherwise one per platform. Amber at 60 days or fewer, red at 30 or fewer.
+    - **ROAS**: platform-reported purchase value ÷ spend, mainly meaningful for e-commerce clients.
+  - **Column groups**: Account · Ads · SEO · Contact bands, collapsible; collapsed groups keep their key column (Account Health, Cost Per Conversion, Top 10 %, Primary Contact). All start expanded; each viewer's choice is remembered (prototype: localStorage). **Reset to default** restores the default columns.
+  - Coloured dots on Cost per Conversion (and CPM / CPC) compare each workspace with the portfolio average: green at least 10% better, orange within -10% to +15%, red more than 15% worse.
+  - Search by client or contact. Filter: Account Health, Ad Platforms, Performance band, SEO Status. Every column is sortable; rows without data sort last. The ⋮ menu: Go to workspace, View SEO performance (SEO Cloud clients), Organisation settings, Integrations.
 - **Filter dropdowns**: Changes apply immediately. Each group has an "All" option. **Clear Filter** removes every filter. **Revert To Original** restores the selection from when the panel was opened. **Apply** closes the panel.
 - **Cross-Client Campaigns**: Removed on purpose. Per V1 notes, pulling campaign KPIs across every client is too heavy for v1, and the Managed Accounts table is enough for cross-client comparison.
 
@@ -1914,11 +2006,13 @@ Central command dashboard for agency administrators managing many client ad acco
 - **KPIs TBC**: the final portfolio KPI set still needs performance-marketing and account-management sign-off.
 - Should "No Account Linked" also flag workspaces linked to only one of Google / Meta?
 - Performance-review triggers (CTR drop, budget pacing) are placeholders. Thresholds are TBC.
+- Should Account Health weigh issue types differently (e.g. Contract Ending alone keeps an account On Track)?
+- Client Follow-ups Due needs a CRM task feed; until then it is placeholder data.
 - Is the keyword contract (X keywords, Y% top-10 target) owned by SEO Cloud or by the Agency CRM?
 - Should the average position count keywords outside the top 100 as position 100, instead of leaving them out?
 
 ### Dev toolbar states
-- **Alerts on / Alerts off**: Off hides the banner and empties the Attention list (the healthy state).
+- **Alerts on / Alerts off**: Off clears every issue: no banner, Attention Required 0, every account On Track (the healthy state).
 - **Simulate CRM conversion**: runs the Agency CRM auto set-up (owned by the CRM module). Shows "CRM module not loaded" when that module is missing.
 `
   },

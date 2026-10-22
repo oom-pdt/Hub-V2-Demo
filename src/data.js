@@ -13,19 +13,20 @@ const AGENCY_ORG = {
   seats: 20
 };
 
-// status: active | new | inactive | attention — matches the Managed Accounts status pill.
+// status: active | new | inactive | cancelled (account lifecycle, the Total Accounts Managed donut).
+// perfFlag: the account has a performance issue to review (feeds the Attention list and Account Health).
 const workspaces = [
   { id: 'ws-visual',    name: 'Visual Studio',          industry: 'Digital Media', site: 'visualstudio.example.com', status: 'new',       budget: 60000, seed: 1,  createdAt: '2026-01-02', archived: false },
   { id: 'ws-technova',  name: 'TechNova Solutions',     industry: 'Technology',    site: 'technova.example.com',     status: 'new',       budget: 40000, seed: 2,  createdAt: '2026-02-11', archived: false },
-  { id: 'ws-innowave',  name: 'InnoWave Technologies',  industry: 'Technology',    site: 'innowave.example.com',     status: 'attention', budget: 35000, seed: 3,  createdAt: '2025-11-20', archived: false },
+  { id: 'ws-innowave',  name: 'InnoWave Technologies',  industry: 'Technology',    site: 'innowave.example.com',     status: 'active', perfFlag: true, budget: 35000, seed: 3,  createdAt: '2025-11-20', archived: false },
   { id: 'ws-kinspired', name: 'K-Inspired Logistics',   industry: 'Logistics',     site: 'kinspired.example.com',    status: 'active',    budget: 25000, seed: 4,  createdAt: '2025-08-14', archived: false },
   { id: 'ws-nexgen',    name: 'NexGen Dynamics',        industry: 'Manufacturing', site: 'nexgen.example.com',       status: 'active',    budget: 30000, seed: 5,  createdAt: '2025-06-03', archived: false },
   { id: 'ws-bright',    name: 'BrightFuture Enterprises', industry: 'Education',   site: 'brightfuture.example.com', status: 'active',    budget: 22000, seed: 6,  createdAt: '2025-05-19', archived: false },
   { id: 'ws-synergy',   name: 'SynergyWorks Inc.',      industry: 'Professional Services', site: 'synergyworks.example.com', status: 'active', budget: 18000, seed: 7, createdAt: '2025-04-07', archived: false },
   { id: 'ws-visionary', name: 'Visionary Ventures',     industry: 'Finance',       site: 'visionary.example.com',    status: 'active',    budget: 26000, seed: 8,  createdAt: '2025-03-22', archived: false },
-  { id: 'ws-pinnacle',  name: 'Pinnacle Partners',      industry: 'Property',      site: 'pinnacle.example.com',     status: 'active',    budget: 15000, seed: 9,  createdAt: '2025-02-10', archived: false },
-  { id: 'ws-eclipse',   name: 'Eclipse Innovations',    industry: 'Retail',        site: 'eclipse.example.com',      status: 'inactive',  budget: 12000, seed: 10, createdAt: '2024-12-01', archived: false },
-  { id: 'ws-lumaforge', name: 'LumaForge Technologies', industry: 'Technology',    site: 'lumaforge.example.com',    status: 'attention', budget: 20000, seed: 11, createdAt: '2025-09-09', archived: false },
+  { id: 'ws-pinnacle',  name: 'Pinnacle Partners',      industry: 'Property',      site: 'pinnacle.example.com',     status: 'inactive',    budget: 15000, seed: 9,  createdAt: '2025-02-10', archived: false },
+  { id: 'ws-eclipse',   name: 'Eclipse Innovations',    industry: 'Retail',        site: 'eclipse.example.com',      status: 'cancelled', budget: 12000, seed: 10, createdAt: '2024-12-01', archived: false },
+  { id: 'ws-lumaforge', name: 'LumaForge Technologies', industry: 'Technology',    site: 'lumaforge.example.com',    status: 'active', perfFlag: true, budget: 20000, seed: 11, createdAt: '2025-09-09', archived: false },
   { id: 'ws-grizzly',   name: 'Grizzly Bear Corp',      industry: 'F&B',           site: 'grizzly.example.com',      status: 'new',       budget: 10000, seed: 12, createdAt: '2026-09-28', archived: false },
   { id: 'ws-beantech',  name: 'Bean Tech Pte Ltd',      industry: 'Technology',    site: 'beantech.example.com',     status: 'new',       budget: 8000,  seed: 13, createdAt: '2026-10-02', archived: false }
 ];
@@ -262,7 +263,7 @@ function seededRandom(seed) {
 // Each service belongs to a contract with its own dates (a client can have concurrent contracts, e.g. ads and SEO).
 // monthlyBudget is SGD; for ad services it is the monthly media budget used for pacing. adAccountIds are the CRM's
 // Google Ads customer ID / Meta ad account ID (join keys for auto-linking ad accounts).
-const CRM_SERVICE_TYPES = ['SEO', 'Content Marketing', 'SEM', 'Google Ads', 'Facebook Ads', 'Social Media'];
+const CRM_SERVICE_TYPES = ['SEO', 'Content Marketing', 'SEM', 'Google Ads', 'Facebook Ads', 'Social Media', 'Aurix'];
 const CRM_AD_SERVICES = ['SEM', 'Google Ads', 'Facebook Ads'];   // services whose budget is ad spend
 const agencyCrm = { status: 'connected', lastSynced: '2026-10-22T07:30:00', accountsSynced: 0 };
 const crmAccounts = {};
@@ -293,6 +294,8 @@ const CRM_DAYS_LEFT = { 'ws-visual': { ads: 72, seo: 41 }, 'ws-bright': { ads: 1
     ad.forEach((p, i) => services.push({ type: p === 'google' ? 'Google Ads' : 'Facebook Ads', monthlyBudget: Math.round(ws.budget * split[i] * (CRM_BUDGET_FACTOR[ws.id] || 1) / 100) * 100, ...adC }));
     // SEO contract: separate, usually 12 months.
     if (seoProjects[ws.id]) services.push({ type: 'SEO', monthlyBudget: 2000 + Math.round(r() * 8) * 500, ...contract(`${yymm}-${String(ws.seed + 40).padStart(3, '0')}`, 12, days.seo ?? pick([48, 95, 130, 200, 280])) });
+    // Aurix (OOm chatbot): live for some clients; a few aren't linked to Aurix in Galaxis yet.
+    if (['ws-visual', 'ws-kinspired', 'ws-innowave', 'ws-nexgen', 'ws-bright'].includes(ws.id)) services.push({ type: 'Aurix', monthlyBudget: 800, ...contract(`${yymm}-${String(ws.seed + 90).padStart(3, '0')}`, 12, pick([70, 145, 260])) });
     // Content: shorter ad-hoc contracts.
     if (ws.seed % 3 === 0) services.push({ type: 'Content Marketing', monthlyBudget: 1500 + Math.round(r() * 3) * 500, ...contract(`${yymm}-${String(ws.seed + 70).padStart(3, '0')}`, 6, pick([22, 64, 110])) });
     const assigned = members.filter(m => m.org === 'agency' && m.workspaces.includes(ws.id));
@@ -304,7 +307,8 @@ const CRM_DAYS_LEFT = { 'ws-visual': { ads: 72, seo: 41 }, 'ws-bright': { ads: 1
     const contacts = members.filter(m => m.org === ws.id).slice(0, 3).map(m => ({ name: m.name, email: m.email, role: m.isPrimary ? 'Primary contact' : 'Marketing' }));
     crmAccounts[ws.id] = {
       crmId: `CRM-${1000 + ws.seed}`, stage: 'converted', convertedAt: ws.createdAt, services, accountManager: am.id, assignees, clientContacts: contacts, source: 'crm',
-      adAccountIds: { google: linked('google')?.id || null, meta: linked('meta')?.id || null }
+      adAccountIds: { google: linked('google')?.id || null, meta: linked('meta')?.id || null },
+      followUpsDue: [0, 0, 1, 0, 2, 0, 1, 0, 0, 1, 0, 1, 0][(ws.seed - 1) % 13]   // [PLACEHOLDER] open CRM follow-up tasks
     };
   });
   agencyCrm.accountsSynced = Object.keys(crmAccounts).length;

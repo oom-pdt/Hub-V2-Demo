@@ -165,7 +165,7 @@ function statusPill(status, label) {
   const [text, cls] = STATUS_PILL[status] || [status, 'pill-grey'];
   return `<span class="pill ${cls}">${esc(label || text)}</span>`;
 }
-const STATUS_DOT = { active: ['Active', 'dot-green', 't-success'], pending: ['Pending Invite', 'dot-blue', 't-primary'], inactive: ['Inactive', 'dot-orange', 't-warning'], deactivated: ['Deactivated', 'dot-grey', 't-muted'], archived: ['Archived', 'dot-grey', 't-muted'] };
+const STATUS_DOT = { active: ['Active', 'dot-green', 't-success'], pending: ['Pending Invite', 'dot-blue', 't-primary'], awaiting: ['Awaiting approval', 'dot-orange', 't-warning'], inactive: ['Inactive', 'dot-orange', 't-warning'], deactivated: ['Deactivated', 'dot-grey', 't-muted'], archived: ['Archived', 'dot-grey', 't-muted'] };
 function statusDot(status, label) {
   const [text, dot, color] = STATUS_DOT[status] || [status, 'dot-grey', 't-muted'];
   return `<span class="dot-label ${color}"><span class="dot ${dot}"></span>${esc(label || text)}</span>`;

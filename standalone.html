@@ -434,6 +434,7 @@ svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
 .dash-hub-head .card-sub { margin-top: 4px; }
 .dash-hub-head-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .dash-hub-pill { border: 0; cursor: pointer; }
+.dash-hub-viewall { margin-left: auto; }
 .dash-hub-pill:hover { filter: brightness(.95); }
 .dash-hub-toggle { border: 1px solid var(--border); width: 30px; height: 30px; }
 .dash-hub-body { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 18px; border-top: 1px solid var(--border-light); }
@@ -2602,59 +2603,56 @@ function dashToggleHub() {
   if (el) { el.outerHTML = dashHubPanel(currentWs()); refreshIcons(); }
 }
 
+// Fixed rows, as in the V2 prototype: three per column.
+const DASH_HUB_OOM = ['crm-lite', 'aurix', 'seo-cloud'];
+const DASH_HUB_LANES = [
+  { label: 'CRM', icon: 'contact', ids: () => products.filter(p => p.category === 'CRM').map(p => p.id), empty: 'No CRM connected' },
+  { label: 'Automated Chat', icon: 'message-circle', ids: () => ['aurix', 'sleekflow', 'wati'], empty: 'No chat platform connected' },
+  { label: 'Call Tracking', icon: 'phone', ids: () => ['delacon'], empty: 'No call tracking connected' }
+];
+
 // Connection lanes: the best entry per lane wins (active > needs attention > inactive).
 function dashHubLanes(wsId) {
   const entries = wsProducts(wsId);
   const rank = e => !e ? 0 : e.status === 'connected' && e.active ? 4 : e.status === 'error' || e.status === 'pending' ? 3 : 1;
-  const pick = ids => {
-    const hits = ids.filter(id => entries[id]).sort((a, b) => rank(entries[b]) - rank(entries[a]));
-    return hits.length ? { pid: hits[0], e: entries[hits[0]], more: hits.length - 1 } : null;
-  };
-  const ids = cat => products.filter(p => p.category === cat).map(p => p.id);
-  return [
-    { key: 'crm', label: 'CRM', icon: 'contact', hit: pick(ids('CRM')), empty: 'No CRM connected' },
-    { key: 'chat', label: 'Messaging', icon: 'message-circle', hit: pick(['aurix', 'sleekflow', 'wati']), empty: 'No chat platform connected' },
-    { key: 'calls', label: 'Call tracking', icon: 'phone', hit: pick(['delacon']), empty: 'No call tracking connected' },
-    { key: 'cdp', label: 'Customer data', icon: 'database', hit: pick(['cdp']), empty: 'No CDP connected' }
-  ];
+  return DASH_HUB_LANES.map(l => {
+    const hits = l.ids().filter(id => entries[id]).sort((a, b) => rank(entries[b]) - rank(entries[a]));
+    return { ...l, hit: hits.length ? { pid: hits[0], e: entries[hits[0]], more: hits.length - 1 } : null };
+  });
 }
 
 function dashHubPanel(ws) {
   if (!ws) return '';
   const entries = wsProducts(ws.id);
   const open = state.ui.dashHubOpen;
+  const live = e => !!e && e.status === 'connected' && e.active;
+  const needsFix = e => !!e && (e.status === 'error' || e.status === 'pending');
 
-  // Column 1: OOm products in this workspace.
-  const oom = products.filter(p => p.provider === 'oom' && entries[p.id]);
-  const oomRows = oom.map(p => {
-    const e = entries[p.id];
-    const st = dashEntryStatus(e);
-    const alert = e.status === 'connected' && e.active ? dashProductAlerts(ws.id, p.id) : null;
-    const live = e.status === 'connected' && e.active;
-    const action = live
-      ? `<button type="button" class="t-link" onclick="dashOpenProduct('${p.id}')">Open<i data-lucide="${p.category === 'CRM' ? 'arrow-right' : 'external-link'}"></i></button>`
-      : `<button type="button" class="t-link" onclick="dashIntegAction('${p.id}', '${e.status === 'error' || e.status === 'pending' ? 'config' : 'about'}')">${e.status === 'error' || e.status === 'pending' ? 'Fix' : e.status === 'disabled' ? 'Enable' : 'Activate'}<i data-lucide="arrow-right"></i></button>`;
+  // Column 1: OOm products (always the same three rows).
+  const oomRows = DASH_HUB_OOM.map(pid => {
+    const p = productById(pid);
+    const e = entries[pid];
+    const alert = live(e) ? dashProductAlerts(ws.id, pid) : null;
+    const label = !e ? 'Connect' : needsFix(e) ? 'Fix' : e.status === 'disabled' ? 'Enable' : 'Activate';
+    const action = live(e)
+      ? `<button type="button" class="t-link" onclick="dashOpenProduct('${pid}')">Open<i data-lucide="${p.category === 'CRM' ? 'arrow-right' : 'external-link'}"></i></button>`
+      : `<button type="button" class="t-link" onclick="dashIntegAction('${pid}', '${needsFix(e) ? 'config' : 'about'}')">${label}<i data-lucide="arrow-right"></i></button>`;
     return `<div class="dash-hub-row">
-      ${productLogo(p.id, 28)}
+      ${productLogo(pid, 28)}
       <div class="dash-hub-main"><div class="dash-hub-name">${esc(p.name)}${alert ? `<span class="pill pill-sm ${alert.cls}">${esc(alert.text)}</span>` : ''}</div>
-        <div class="dash-hub-meta">${esc(p.category)}${live ? '' : ` · ${dashHubDot(st)}`}</div></div>
+        <div class="dash-hub-meta">${esc(p.category)}${live(e) ? '' : ` · ${dashHubDot(dashEntryStatus(e))}`}</div></div>
       ${action}
     </div>`;
-  }).join('') || `<div class="dash-hub-empty">No OOm products connected yet. <button type="button" class="t-link" onclick="navigate('integrations')">Browse products<i data-lucide="arrow-right"></i></button></div>`;
+  }).join('');
 
-  // Column 2: connections, one row per lane, plus ad platforms.
-  const plats = wsPlatforms(ws.id);
-  const adStatus = plats.length === 2 ? ['green', 'Google and Meta'] : plats.length === 1 ? ['orange', `${PLATFORM_NAME[plats[0]]} only`] : ['grey', 'Not linked'];
-  const adAction = viewerIsAgency()
-    ? `<button type="button" class="t-link" onclick="navigate('integrations'); setTimeout(() => document.getElementById('integ-ads')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)">${plats.length === 2 ? 'View' : 'Link'}<i data-lucide="arrow-right"></i></button>`
-    : '<span class="t-caption t-muted">Agency managed</span>';
-  const laneRows = dashHubLanes(ws.id).map(l => {
+  // Column 2: connections — CRM, Automated Chat, Call Tracking.
+  const lanes = dashHubLanes(ws.id);
+  const laneRows = lanes.map(l => {
     const h = l.hit;
     const p = h && productById(h.pid);
-    const bad = h && (h.e.status === 'error' || h.e.status === 'pending');
     const action = !h
       ? `<button type="button" class="t-link" onclick="navigate('integrations')">Connect<i data-lucide="arrow-right"></i></button>`
-      : `<button type="button" class="t-link" onclick="dashIntegAction('${h.pid}', '${bad ? 'config' : 'about'}')">${bad ? 'Fix now' : 'Manage'}<i data-lucide="arrow-right"></i></button>`;
+      : `<button type="button" class="t-link" onclick="dashIntegAction('${h.pid}', '${needsFix(h.e) ? 'config' : 'about'}')">${needsFix(h.e) ? 'Fix now' : 'Manage'}<i data-lucide="arrow-right"></i></button>`;
     return `<div class="dash-hub-row">
       <span class="dash-hub-icon"><i data-lucide="${l.icon}"></i></span>
       <div class="dash-hub-main"><div class="dash-hub-name">${esc(l.label)}</div>
@@ -2662,11 +2660,6 @@ function dashHubPanel(ws) {
       ${action}
     </div>`;
   }).join('');
-  const adRow = `<div class="dash-hub-row">
-      <span class="dash-hub-icon"><i data-lucide="megaphone"></i></span>
-      <div class="dash-hub-main"><div class="dash-hub-name">Ad platforms</div><div class="dash-hub-meta">${plats.map(pl => platformLogo(pl)).join('')} ${dashHubDot(adStatus)}</div></div>
-      ${adAction}
-    </div>`;
 
   // Column 3: quick links.
   const crm = activeCrm(ws.id);
@@ -2674,8 +2667,7 @@ function dashHubPanel(ws) {
     crm ? { icon: 'contact', label: 'View leads', sub: `Synced from ${crm.name}`, go: "navigate('leads')" }
         : { icon: 'contact', label: 'View leads', sub: 'Connect a CRM to sync leads', go: "navigate('integrations')", muted: true },
     { icon: 'blocks', label: 'Manage integrations', sub: 'Products, credentials and sync', go: "navigate('integrations')" },
-    { icon: 'building-2', label: 'Organisation settings', sub: 'Business, brand and billing', go: "navigate('organisation')" },
-    { icon: 'users', label: 'Team & Access', sub: 'Members, roles and permissions', go: "navigate('team')" }
+    { icon: 'building-2', label: 'Organisation settings', sub: 'Business, brand and billing', go: "navigate('organisation')" }
   ];
   const linkRows = links.map(l => `<button type="button" class="dash-hub-row dash-hub-link ${l.muted ? 'muted' : ''}" onclick="${l.go}">
       <span class="dash-hub-icon"><i data-lucide="${l.icon}"></i></span>
@@ -2683,14 +2675,16 @@ function dashHubPanel(ws) {
       <i data-lucide="chevron-right" class="dash-hub-chev"></i>
     </button>`).join('');
 
-  // Header summary: what needs attention, visible even when collapsed.
+  // Header summary and count cover only the products shown in the panel.
+  const shown = [...new Set([...DASH_HUB_OOM, ...DASH_HUB_LANES.flatMap(l => l.ids())])];
   const summary = [];
-  oom.forEach(p => { const a = entries[p.id].status === 'connected' && entries[p.id].active && dashProductAlerts(ws.id, p.id); if (a) summary.push({ text: `${p.name}: ${a.text}`, cls: a.cls, go: `dashOpenProduct('${p.id}')` }); });
-  Object.entries(entries).forEach(([pid, e]) => {
-    if (e.status === 'error') summary.push({ text: `${productById(pid).name}: Error`, cls: 'pill-red', go: `dashIntegAction('${pid}', 'config')` });
-    if (e.status === 'pending') summary.push({ text: `${productById(pid).name}: Pending setup`, cls: 'pill-orange', go: `dashIntegAction('${pid}', 'config')` });
+  DASH_HUB_OOM.forEach(pid => { const a = live(entries[pid]) && dashProductAlerts(ws.id, pid); if (a) summary.push({ text: `${productById(pid).name}: ${a.text}`, cls: a.cls, go: `dashOpenProduct('${pid}')` }); });
+  shown.forEach(pid => {
+    const e = entries[pid];
+    if (e?.status === 'error') summary.push({ text: `${productById(pid).name}: Error`, cls: 'pill-red', go: `dashIntegAction('${pid}', 'config')` });
+    if (e?.status === 'pending') summary.push({ text: `${productById(pid).name}: Pending setup`, cls: 'pill-orange', go: `dashIntegAction('${pid}', 'config')` });
   });
-  const activeCount = Object.values(entries).filter(e => e.status === 'connected' && e.active).length;
+  const activeCount = shown.filter(pid => live(entries[pid])).length;
 
   return `<section class="card dash-hub ${open ? '' : 'collapsed'}" id="dash-hub" aria-label="Products and connections">
     <div class="dash-hub-head">
@@ -2703,7 +2697,7 @@ function dashHubPanel(ws) {
     </div>
     ${open ? `<div class="dash-hub-body" id="dash-hub-body">
       <div class="dash-hub-col"><div class="dash-hub-col-title"><i data-lucide="sparkles"></i>OOm Products</div>${oomRows}</div>
-      <div class="dash-hub-col"><div class="dash-hub-col-title"><i data-lucide="link"></i>Connections</div>${adRow}${laneRows}</div>
+      <div class="dash-hub-col"><div class="dash-hub-col-title"><i data-lucide="link"></i>Connections<button type="button" class="t-link dash-hub-viewall" onclick="navigate('integrations')">View all<i data-lucide="arrow-right"></i></button></div>${laneRows}</div>
       <div class="dash-hub-col"><div class="dash-hub-col-title"><i data-lucide="compass"></i>Quick Links</div>${linkRows}</div>
     </div>` : ''}
   </section>`;
@@ -3296,7 +3290,7 @@ Client-facing workspace dashboard giving a simplified, unified view of Meta and 
 - **Global Event-Based Date Filter**: Filters all dashboard data by the exact date the action (e.g. click or conversion) happened within the selected timeframe, independent of events higher up the funnel.
   - **Prototype note:** the date filter scales mock data to the selected range, and the Daily Performance chart plots one point per day of the range. It does **not** yet filter by event date.
 - **CRM mode (from V2)**: shown when the workspace has a connected, active CRM.
-  - **Products & Connections panel** (top of the page, from the V2 client home): collapsible card with three columns. OOm Products (connected OOm products with outstanding-work badges and Open links; CRM opens Leads), Connections (ad platforms, CRM, messaging, call tracking and CDP with live status and Manage / Fix now / Connect), and Quick Links (Leads, Integrations, Organisation, Team & Access). Items needing attention also show as pills in the header, so they stay visible when collapsed. Built from the same data as Integrations.
+  - **Products & Connections panel** (top of the page, from the V2 client home): collapsible card with three columns. three fixed rows per column, as in V2. OOm Products: CRM - lite, Aurix and SEO Cloud, with outstanding-work badges and Open links (CRM opens Leads), or Connect / Activate / Fix when not live. Connections: CRM, Automated Chat and Call Tracking, with live status and Manage / Fix now / Connect, plus View all. Quick Links: View leads, Manage integrations and Organisation settings. Items needing attention also show as pills in the header, so they stay visible when collapsed. Built from the same data as Integrations.
   - A second row of 5 KPI cards, matching the ad-platform row: Attributed Leads (+ share of platform conversions), Cost per Lead (+ cost per conversion for comparison), Converted Leads (+ conversion rate), Attributed Revenue (+ average deal value) and ROAS (+ ad spend).
   - The table gains Leads, CPL, Revenue and ROAS columns.
   - The **attribution model** selector offers Multi-Touch (40/20/40), First-Touch and Last-Touch. Each model credits leads and revenue differently, so the figures change with the model.

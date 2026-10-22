@@ -12,6 +12,7 @@
 .dash-hub-head .card-sub { margin-top: 4px; }
 .dash-hub-head-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .dash-hub-pill { border: 0; cursor: pointer; }
+.dash-hub-viewall { margin-left: auto; }
 .dash-hub-pill:hover { filter: brightness(.95); }
 .dash-hub-toggle { border: 1px solid var(--border); width: 30px; height: 30px; }
 .dash-hub-body { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 18px; border-top: 1px solid var(--border-light); }

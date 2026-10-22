@@ -148,13 +148,13 @@ const products = [
     requirements: ['Mailchimp account owner', 'Authorisation required'] }
 ];
 
-// Per-workspace product state. status: connected | pending | error | disabled. active: bool (CRM: only one active).
+// Per-workspace product state. status: connected | pending | error | disabled. active: bool.
+// Only one CRM, one chat platform and one call tracker per workspace (PRODUCT_LANES in core.js).
 // Products not listed for a workspace are "available".
 const workspaceProducts = {
   'ws-visual':    { 'crm-lite': { status: 'connected', active: true,  lastSynced: '2026-10-21T11:32:00' },
                     'aurix':    { status: 'connected', active: true,  lastSynced: '2026-10-21T11:32:00' },
-                    'cdp':      { status: 'connected', active: true,  lastSynced: '2026-10-21T11:32:00' },
-                    'institute-crm': { status: 'connected', active: false, lastSynced: '2026-10-18T09:10:00' } },
+                    'cdp':      { status: 'connected', active: true,  lastSynced: '2026-10-21T11:32:00' } },
   'ws-technova':  { 'hubspot':  { status: 'connected', active: true,  lastSynced: '2026-10-21T10:05:00' },
                     'sleekflow': { status: 'error', active: true, lastSynced: '2026-10-19T08:41:00', error: 'Webhook verification failed. New messaging events are queued until the connection is fixed.' } },
   'ws-innowave':  { 'salesforce': { status: 'pending', active: false, lastSynced: null, error: 'OAuth authorisation incomplete.' } },

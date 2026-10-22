@@ -36,6 +36,20 @@ function activeCrm(wsId) {
 }
 // The client workspace's single Primary Contact (V1 rule: exactly one per workspace), or null.
 function wsPrimaryContact(wsId) { return members.find(m => m.org === wsId && m.isPrimary && m.status !== 'deactivated') || null; }
+// One connected product per lane: a workspace can have only one CRM, one chat platform and one call tracker.
+const PRODUCT_LANES = {
+  crm:   { label: 'CRM', noun: 'CRM', ids: () => products.filter(p => p.category === 'CRM').map(p => p.id) },
+  chat:  { label: 'Automated Chat', noun: 'chat platform', ids: () => ['aurix', 'sleekflow', 'wati'] },
+  calls: { label: 'Call Tracking', noun: 'call tracker', ids: () => ['delacon'] }
+};
+function productLane(pid) { return Object.keys(PRODUCT_LANES).find(k => PRODUCT_LANES[k].ids().includes(pid)) || null; }
+// The product already holding pid's lane in this workspace (any status), or null.
+function laneOccupant(wsId, pid) {
+  const lane = productLane(pid);
+  if (!lane) return null;
+  const hit = PRODUCT_LANES[lane].ids().find(id => id !== pid && wsProducts(wsId)[id]);
+  return hit ? productById(hit) : null;
+}
 function wsAdAccounts(wsId) { return adAccounts.filter(a => a.workspaceId === wsId); }
 function wsPlatforms(wsId) { return ['google', 'meta'].filter(p => wsAdAccounts(wsId).some(a => a.platform === p)); }
 

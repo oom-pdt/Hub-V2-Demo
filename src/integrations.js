@@ -6,7 +6,7 @@
 Object.assign(state.ui, {
   integSearch: '',          // client: product search
   integCat: 'all',          // client: available-products category tab
-  integCfg: null,           // client: config drawer draft { pid, swap, authed, verified, webhookTested, showKey, key, backfill, mapping }
+  integCfg: null,           // client: config drawer draft { pid, authed, verified, webhookTested, showKey, key, backfill, mapping }
   integInline: {},          // agency: inline picks per workspace { wsId: { google: accId, meta: accId } }
   integQueuePlat: 'all',    // agency: queue platform filter
   integQueueTarget: {},     // agency: typed target workspace per queued account
@@ -77,10 +77,8 @@ function integIsOom(p) { return p.provider === 'oom'; }
 function integWebhookUrl(pid) { return `https://hub.example.com/webhook/leads/${pid}?id=gal_XXXX`; }
 function integDot(color, label) { return `<span class="dot-label integ-dot-${color}"><span class="dot dot-${color}${color === 'grey' ? '' : '-strong'}"></span>${esc(label)}</span>`; }
 function integFlowLabel(p) { return p.flow === 'internal' ? 'Managed by OOm' : p.flow === 'oauth' ? 'OAuth 2.0' : 'API & Webhook'; }
-// The CRM other than `exceptPid` that is currently active in the workspace.
-function integOtherActiveCrm(exceptPid) { const c = activeCrm(state.ctx); return c && c.id !== exceptPid ? c : null; }
-// An entry is on the "Active Products" side unless it is a connected-but-inactive product (shown with Activate).
-function integInActiveSection(e) { return !!e && !(e.status === 'connected' && !e.active); }
+// Every connected product is listed under Active Products (one per lane, so there is no connected-but-inactive state).
+function integInActiveSection(e) { return !!e; }
 
 function integStatusDots(pid, wsId = state.ctx) {
   const e = integEntry(pid, wsId);
@@ -201,19 +199,15 @@ function integActiveCard(p) {
 }
 
 function integAvailCard(p) {
-  const e = integEntry(p.id); // only "connected but inactive" entries reach this grid
-  const items = [{ label: 'View details', icon: 'info', onClick: `integOpenDrawer('${p.id}','about')` }];
-  if (e) items.push({ label: 'Configure', icon: 'settings-2', onClick: `integOpenDrawer('${p.id}','config')` }, 'sep', { label: 'Disconnect', icon: 'unplug', danger: true, onClick: `integDisconnect('${p.id}')` });
-  else items.push({ label: 'Connect', icon: 'plug', onClick: `integConnect('${p.id}')` });
+  const items = [{ label: 'View details', icon: 'info', onClick: `integOpenDrawer('${p.id}','about')` }, { label: 'Connect', icon: 'plug', onClick: `integConnect('${p.id}')` }];
   return `<div class="card integ-card" data-product="${p.id}">
     <div class="integ-card-head">${productLogo(p.id, 32)}
-      <div class="grow"><div class="h-card">${esc(p.name)}</div><div class="integ-cat">${esc(p.category)}</div>${e ? `<div class="integ-dots">${integStatusDots(p.id)}</div>` : ''}</div>
+      <div class="grow"><div class="h-card">${esc(p.name)}</div><div class="integ-cat">${esc(p.category)}</div></div>
       ${rowMenu(`integ-m-${p.id}`, items)}</div>
     <div class="integ-desc">${esc(p.description)}</div>
     <div class="integ-card-foot integ-foot-split">
       <button type="button" class="t-link integ-learn" onclick="integOpenDrawer('${p.id}','about')">Learn More</button>
-      ${e ? `<button type="button" class="btn btn-outline" onclick="integActivate('${p.id}')">Activate</button>`
-          : `<button type="button" class="btn btn-primary" onclick="integConnect('${p.id}')">Connect</button>`}
+      <button type="button" class="btn btn-primary" onclick="integConnect('${p.id}')">Connect</button>
     </div>
   </div>`;
 }
@@ -225,55 +219,54 @@ function integOpen(pid) {
   else integOpenDrawer(pid, 'about');
 }
 
-// ---------- Rules: connect / activate / disable / disconnect ----------
-const INTEG_SWAP_TEXT = 'Only one product can be active at a time. Activating this product will deactivate your currently active product. You can switch between connected products at any time.';
-
-function integConnect(pid) {
-  const p = productById(pid);
-  const other = p.category === 'CRM' ? integOtherActiveCrm(pid) : null;
-  if (other) {
-    confirmDialog({ title: 'Connect This Product?', text: INTEG_SWAP_TEXT, confirmLabel: 'Confirm', onConfirm: () => setTimeout(() => integBeginConnect(pid, true), 0) });
-    return;
-  }
-  integBeginConnect(pid, false);
+// ---------- Rules: connect / enable / disable / disconnect ----------
+// One per lane: a workspace can connect only one CRM, one chat platform and one call tracker (PRODUCT_LANES).
+// Connecting a second one asks to replace the current one, which is disconnected when the new one is saved.
+function integReplaceText(pid, old) {
+  const lane = PRODUCT_LANES[productLane(pid)];
+  return `Only one ${lane.noun} can be connected at a time. Connecting ${productById(pid).name} will disconnect ${old.name}. Data already synced from ${old.name} will not be deleted.`;
 }
 
-function integBeginConnect(pid, swap) {
+function integConnect(pid) {
+  const old = laneOccupant(state.ctx, pid);
+  if (old) {
+    confirmDialog({ title: `Replace ${old.name}?`, text: integReplaceText(pid, old), confirmLabel: `Replace with ${productById(pid).name}`,
+      onConfirm: () => setTimeout(() => integBeginConnect(pid), 0) });
+    return;
+  }
+  integBeginConnect(pid);
+}
+
+function integBeginConnect(pid) {
   const p = productById(pid);
   const crm = activeCrm(state.ctx);
   if (INTEG_ROUTABLE.includes(pid) && crm && INTEG_THIRD_CRMS.includes(crm.id) && !integEntry(pid)) { integOpenRouting(pid); return; }
   if (p.flow === 'internal') {
     closeDrawer();
-    integCommit(pid, { swap: true });
-    showToast(`${p.name} connected and active`);
+    const old = integCommit(pid).replaced;
+    showToast(old ? `${p.name} connected. ${old.name} was disconnected.` : `${p.name} connected and active`);
     return;
   }
-  integOpenDrawer(pid, 'config', { swap });
+  integOpenDrawer(pid, 'config');
 }
 
-// Write a connected entry. swap: make this CRM the active one (others stay connected but inactive).
-function integCommit(pid, { swap, extra = {} } = {}) {
-  const p = productById(pid);
+// Remove a product's entry; products routed through a CRM lose their path.
+function integRemove(pid, verb) {
+  if (productById(pid).category === 'CRM') integOrphanRouted(pid, verb);
+  delete wsProducts(state.ctx)[pid];
+}
+
+// Write a connected entry. Any other product in the same lane is disconnected (one per lane).
+// Swaps only happen here, on save, so closing the config drawer changes nothing.
+function integCommit(pid, { extra = {} } = {}) {
   const entries = wsProducts(state.ctx);
-  const prev = entries[pid];
-  let active = true;
-  if (p.category === 'CRM') {
-    const other = integOtherActiveCrm(pid);
-    if (other && !swap && !(prev && prev.active)) active = false;
-    if (active && other) integDeactivate(other.id);
-  }
-  const e = Object.assign({}, prev, { status: 'connected', active, lastSynced: integNow() }, extra);
+  const replaced = laneOccupant(state.ctx, pid);
+  if (replaced) integRemove(replaced.id, 'replaced');
+  const e = Object.assign({}, entries[pid], { status: 'connected', active: true, lastSynced: integNow() }, extra);
   delete e.error;
   entries[pid] = e;
   render();
-  return e;
-}
-
-function integDeactivate(pid) {
-  const e = integEntry(pid);
-  if (!e) return;
-  e.active = false;
-  integOrphanRouted(pid, 'deactivated');
+  return { entry: e, replaced };
 }
 
 // Products routed through a CRM lose their path when that CRM stops syncing.
@@ -287,20 +280,14 @@ function integOrphanRouted(crmId, verb) {
   });
 }
 
-// Activate a connected-but-inactive product, or re-enable a disabled one.
+// Re-enable a disabled product.
 function integActivate(pid) {
   const p = productById(pid);
-  const other = p.category === 'CRM' ? integOtherActiveCrm(pid) : null;
-  const go = () => {
-    if (other) integDeactivate(other.id);
-    const e = integEntry(pid);
-    e.status = 'connected'; e.active = true; e.lastSynced = integNow(); delete e.error;
-    closeDrawer();
-    render();
-    showToast(other ? `${p.name} is now your active CRM. ${other.name} stays connected.` : `${p.name} is active`);
-  };
-  if (other) confirmDialog({ title: 'Connect This Product?', text: INTEG_SWAP_TEXT, confirmLabel: 'Confirm', onConfirm: go });
-  else go();
+  const e = integEntry(pid);
+  e.status = 'connected'; e.active = true; e.lastSynced = integNow(); delete e.error;
+  closeDrawer();
+  render();
+  showToast(`${p.name} is active`);
 }
 
 function integDisable(pid) {
@@ -329,8 +316,7 @@ function integDisconnect(pid) {
     confirmLabel: 'Disconnect',
     danger: true,
     onConfirm: () => {
-      if (p.category === 'CRM') integOrphanRouted(pid, 'disconnected');
-      delete wsProducts(state.ctx)[pid];
+      integRemove(pid, 'disconnected');
       closeDrawer();
       render();
       showToast(`${p.name} disconnected`, 'unplug');
@@ -367,8 +353,8 @@ function integOpenRouting(pid) {
 function integRouteYes(pid) {
   const crm = activeCrm(state.ctx);
   closeModal();
-  integCommit(pid, { extra: { routedVia: crm.id } });
-  showToast(`${productById(pid).name} activity will be captured through ${crm.name}.`, 'git-merge');
+  const old = integCommit(pid, { extra: { routedVia: crm.id } }).replaced;
+  showToast(`${productById(pid).name} activity will be captured through ${crm.name}.${old ? ` ${old.name} was disconnected.` : ''}`, 'git-merge');
 }
 function integRouteNo(pid) {
   closeModal();
@@ -383,13 +369,13 @@ function integOpenProduct(pid, mode = 'about', wsId) {
   integOpenDrawer(pid, mode);
 }
 
-function integOpenDrawer(pid, mode = 'about', opts = {}) {
+function integOpenDrawer(pid, mode = 'about') {
   const p = productById(pid);
   const e = integEntry(pid);
   if (mode === 'config') {
     const g = integGuides[pid] || {};
     state.ui.integCfg = {
-      pid, swap: !!opts.swap,
+      pid,
       authed: !!e && e.status === 'connected' && !e.routedVia,
       verified: false, webhookTested: false, showKey: false,
       key: e && p.flow === 'api' && !e.routedVia ? 'sk_test_PLACEHOLDER' : '',
@@ -411,15 +397,14 @@ function integAboutHTML(pid) {
     <h4>About this integration</h4><p class="integ-drawer-p">${esc(about)}</p>
     <h4>What can be synced?</h4><ul>${p.syncs.map(s => `<li>${esc(s)}</li>`).join('')}</ul>
     <h4>Requirements</h4><ul>${p.requirements.map(s => `<li>${esc(s)}</li>`).join('')}</ul>
-    <h4>Before you connect</h4><p class="integ-drawer-p">You can connect multiple products, but only one CRM provider can be active at a time.</p>`;
+    <h4>Before you connect</h4><p class="integ-drawer-p">You can connect multiple products, but only one CRM, one chat platform and one call tracker can be connected at a time. Connecting another one replaces the current one.</p>`;
 }
 
 function integDrawerFooter(pid, mode) {
   const e = integEntry(pid);
   if (mode === 'about') {
     if (!e) return `<button type="button" class="btn btn-primary" onclick="integConnect('${pid}')">Connect</button>`;
-    const act = e.status === 'connected' && !e.active ? `<button type="button" class="btn btn-primary" onclick="integActivate('${pid}')">Activate</button>` : '';
-    return `<button type="button" class="btn ${act ? 'btn-outline' : 'btn-primary'}" onclick="integOpenDrawer('${pid}','config')"><i data-lucide="settings-2"></i>Configure</button>${act}`;
+    return `<button type="button" class="btn btn-primary" onclick="integOpenDrawer('${pid}','config')"><i data-lucide="settings-2"></i>Configure</button>`;
   }
   return `${e ? `<button type="button" class="btn btn-danger-outline integ-foot-left" onclick="integDisconnect('${pid}')">Disconnect</button>` : ''}
     <button type="button" class="btn btn-outline" onclick="closeDrawer()">Cancel</button>
@@ -538,12 +523,12 @@ function integSaveConfig() {
   const p = productById(c.pid);
   if (p.flow === 'oauth' && !c.authed) { showToast(`Connect ${p.name} via OAuth before saving`, 'triangle-alert'); return; }
   if (p.flow === 'api' && !c.key.trim()) { showToast('Enter an API key before saving', 'triangle-alert'); document.getElementById('integ-key')?.focus(); return; }
-  const e = integCommit(c.pid, { swap: c.swap, extra: { backfill: c.backfill, mapping: { ...c.mapping } } });
-  delete e.routedVia;
+  const { entry, replaced } = integCommit(c.pid, { extra: { backfill: c.backfill, mapping: { ...c.mapping } } });
+  delete entry.routedVia;
   state.ui.integCfg = null;
   closeDrawer();
   render();
-  showToast(`Configuration saved for ${p.name}. ${e.active ? 'Sync started.' : 'Activate it to start syncing.'}`);
+  showToast(`Configuration saved for ${p.name}. Sync started.${replaced ? ` ${replaced.name} was disconnected.` : ''}`);
 }
 
 // ---------- Ad platforms (V1 workspace linking, Figma card style) ----------
@@ -857,7 +842,6 @@ const INTEG_SCENARIOS = {
     'crm-lite': { status: 'connected', active: true, lastSynced: INTEG_SYNC },
     aurix: { status: 'connected', active: true, lastSynced: INTEG_SYNC },
     cdp: { status: 'connected', active: true, lastSynced: INTEG_SYNC },
-    sleekflow: { status: 'connected', active: true, lastSynced: INTEG_SYNC },
     delacon: { status: 'connected', active: true, lastSynced: INTEG_SYNC }
   }),
   'Pending Setup + Error': () => ({
@@ -943,7 +927,7 @@ The workspace's integrations hub, built from the Figma "Integrations" frames wit
   - ⋮ menu: View details, Configure, Disable (or Enable), Disconnect.
   - Error and pending cards show an inline box with the reason and **Fix Now** / **Resume Setup**, which open the configuration view.
   - Products routed through a CRM show "Routed via {CRM}".
-- **Available Products**: category tabs with counts (All / CRM / CCM / CDP / Marketing). Each card has Learn More and **Connect**. A connected-but-inactive product shows "Connected · Inactive" and **Activate**. The list ends with a Coming Soon card.
+- **Available Products**: category tabs with counts (All / CRM / CCM / CDP / Marketing). Each card has Learn More and **Connect**. The list ends with a Coming Soon card.
 - **Slide-over**
   - About mode: About this integration, What can be synced?, Requirements, Before you connect.
   - Config mode:
@@ -954,12 +938,12 @@ The workspace's integrations hub, built from the Figma "Integrations" frames wit
     - Footer: Disconnect and Save Configuration.
   - OOm products need no credentials ("Managed by OOm").
 - **Rules**
-  - **One active CRM.** Connecting or activating a CRM while another is active asks "Connect This Product?". On confirm, the new CRM becomes active and the old one stays connected but inactive.
+  - **One per lane.** A workspace can connect only one CRM, one chat platform (Aurix, SleekFlow, Wati) and one call tracker (Delacon). Connecting a second one asks "Replace {current}?"; on confirm and save, the new product is connected and the current one is disconnected (its synced data is kept). There is no connected-but-inactive state. This replaces the Figma "Connect This Product?" copy, which allowed several connected products with one active.
   - **Disable** pauses sync (status Disabled, inactive). **Disconnect** removes only that product (fixes V2's reset-everything bug). Neither deletes data that has already synced.
   - **Routing choice (V2).** Connecting SleekFlow, Wati or Delacon while a third-party CRM is active asks whether the CRM already captures that activity.
     - Yes: route via the CRM.
     - No: configure a direct connection.
-  - If a CRM that other products route through is disabled, disconnected or deactivated, those products move to Pending Setup and ask for a direct connection.
+  - If a CRM that other products route through is disabled, disconnected or replaced, those products move to Pending Setup and ask for a direct connection.
 - The active CRM drives the Leads nav item and the dashboard's CRM mode.
 
 ### Ad Platforms (V1 client-profile ad linking, In Review)

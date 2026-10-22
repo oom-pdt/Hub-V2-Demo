@@ -429,38 +429,42 @@ svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
 .dash-banner .banner-text { color: var(--warning); }
 
 /* ---------- Products & Connections panel (client) ---------- */
-.dash-hub { padding: 20px 24px; margin-bottom: 24px; }
+/* One card, three sections of three rows; --hub-row fixes the row height so rows line up across sections. */
+.dash-hub { --hub-row: 56px; padding: 20px 24px 8px; margin-bottom: 24px; }
 .dash-hub-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .dash-hub-head .card-sub { margin-top: 4px; }
 .dash-hub-head-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .dash-hub-pill { border: 0; cursor: pointer; }
-.dash-hub-viewall { margin-left: auto; }
 .dash-hub-pill:hover { filter: brightness(.95); }
 .dash-hub-toggle { border: 1px solid var(--border); width: 30px; height: 30px; }
 .dash-hub-body { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 18px; border-top: 1px solid var(--border-light); }
-.dash-hub-col { padding: 16px 20px 4px; min-width: 0; }
-.dash-hub-col:first-child { padding-left: 0; }
-.dash-hub-col:last-child { padding-right: 0; }
-.dash-hub-col + .dash-hub-col { border-left: 1px solid var(--border-light); }
-.dash-hub-col-title { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; letter-spacing: .5px; color: var(--text-secondary); margin-bottom: 6px; }
-.dash-hub-col-title svg.lucide { width: 14px; height: 14px; color: var(--primary); }
-.dash-hub-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border-light); width: 100%; text-align: left; }
+.dash-hub-section { padding: 16px 24px 0; min-width: 0; }
+.dash-hub-section:first-child { padding-left: 0; }
+.dash-hub-section:last-child { padding-right: 0; }
+.dash-hub-section + .dash-hub-section { border-left: 1px solid var(--border-light); }
+.dash-hub-card-head { display: flex; align-items: center; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--border-light); height: 64px; }
+.dash-hub-card-head .grow { min-width: 0; }
+.dash-hub-head-icon { width: 36px; height: 36px; border-radius: 50%; background: var(--tint); color: var(--primary); display: grid; place-items: center; flex-shrink: 0; }
+.dash-hub-head-icon svg.lucide { width: 18px; height: 18px; }
+.dash-hub-card-sub { font-size: 12px; color: var(--text-muted); letter-spacing: .25px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dash-hub-row { display: flex; align-items: center; gap: 12px; height: var(--hub-row); border-bottom: 1px solid var(--border-light); }
 .dash-hub-row:last-child { border-bottom: 0; }
-.dash-hub-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.dash-hub-name { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; flex-wrap: wrap; }
-.dash-hub-meta { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); letter-spacing: .25px; flex-wrap: wrap; }
-.dash-hub-meta .logo { width: 14px; height: 14px; }
-.dash-hub-status { font-size: 12px; }
-.dash-hub-green { color: var(--success); } .dash-hub-orange { color: var(--warning); } .dash-hub-red { color: var(--error); } .dash-hub-grey { color: var(--text-muted); }
-.dash-hub-icon { width: 28px; height: 28px; border-radius: 50%; background: var(--tint); color: var(--primary); display: grid; place-items: center; flex-shrink: 0; }
-.dash-hub-icon svg.lucide { width: 14px; height: 14px; }
-.dash-hub-row .t-link { flex-shrink: 0; }
-.dash-hub-row .t-link svg.lucide { width: 12px; height: 12px; }
-.dash-hub-link { background: none; border: 0; border-bottom: 1px solid var(--border-light); cursor: pointer; border-radius: 0; }
-.dash-hub-link:hover .dash-hub-name { color: var(--primary); }
-.dash-hub-link.muted .dash-hub-name { color: var(--text-secondary); }
-.dash-hub-chev { color: var(--text-muted); }
-.dash-hub-empty { font-size: 12px; color: var(--text-muted); padding: 10px 0; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.dash-hub-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; overflow: hidden; }
+.dash-hub-stack { flex-direction: column; align-items: flex-start; gap: 2px; }
+.dash-hub-line { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; }
+.dash-hub-name { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dash-hub-lane { font-size: 10px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--text-muted); line-height: 12px; }
+.dash-hub-main .pill { flex-shrink: 0; }
+.dash-hub-tag { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border-radius: var(--r-pill); border: 1px solid; font-size: 11px; font-weight: 700; letter-spacing: .25px; white-space: nowrap; flex-shrink: 0; }
+.dash-hub-tag svg.lucide { width: 11px; height: 11px; stroke-width: 2.5; }
+.dash-hub-pill-green { color: #26762C; background: var(--success-bg); border-color: var(--success-pill); }
+.dash-hub-pill-red { color: #A40C0A; background: var(--error-bg); border-color: var(--error-pill); }
+.dash-hub-pill-orange { color: var(--warning-dark); background: var(--warning-bg); border-color: var(--warning-pill); }
+.dash-hub-pill-grey { color: var(--text-secondary); background: var(--grey-light); border-color: var(--border); }
+.dash-hub-icon { width: 30px; height: 30px; border-radius: 50%; background: var(--tint); color: var(--primary); display: grid; place-items: center; flex-shrink: 0; }
+.dash-hub-icon svg.lucide { width: 15px; height: 15px; }
+.dash-hub-action { flex-shrink: 0; white-space: nowrap; }
+.dash-hub-action svg.lucide { width: 12px; height: 12px; }
 
 /* ---------- Agency KPI grid ---------- */
 .dash-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; margin-bottom: 24px; }
@@ -610,8 +614,8 @@ svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
 }
 @media (max-width: 1100px) {
   .dash-hub-body { grid-template-columns: 1fr; }
-  .dash-hub-col { padding: 14px 0 4px; }
-  .dash-hub-col + .dash-hub-col { border-left: 0; border-top: 1px solid var(--border-light); }
+  .dash-hub-section { padding: 16px 0 0; }
+  .dash-hub-section + .dash-hub-section { border-left: 0; border-top: 1px solid var(--border-light); }
 }
 @media (max-width: 960px) {
   .dash-welcome, .dash-ct-toolbar { flex-direction: column; align-items: stretch; }
@@ -1245,13 +1249,13 @@ const products = [
     requirements: ['Mailchimp account owner', 'Authorisation required'] }
 ];
 
-// Per-workspace product state. status: connected | pending | error | disabled. active: bool (CRM: only one active).
+// Per-workspace product state. status: connected | pending | error | disabled. active: bool.
+// Only one CRM, one chat platform and one call tracker per workspace (PRODUCT_LANES in core.js).
 // Products not listed for a workspace are "available".
 const workspaceProducts = {
   'ws-visual':    { 'crm-lite': { status: 'connected', active: true,  lastSynced: '2026-10-21T11:32:00' },
                     'aurix':    { status: 'connected', active: true,  lastSynced: '2026-10-21T11:32:00' },
-                    'cdp':      { status: 'connected', active: true,  lastSynced: '2026-10-21T11:32:00' },
-                    'institute-crm': { status: 'connected', active: false, lastSynced: '2026-10-18T09:10:00' } },
+                    'cdp':      { status: 'connected', active: true,  lastSynced: '2026-10-21T11:32:00' } },
   'ws-technova':  { 'hubspot':  { status: 'connected', active: true,  lastSynced: '2026-10-21T10:05:00' },
                     'sleekflow': { status: 'error', active: true, lastSynced: '2026-10-19T08:41:00', error: 'Webhook verification failed. New messaging events are queued until the connection is fixed.' } },
   'ws-innowave':  { 'salesforce': { status: 'pending', active: false, lastSynced: null, error: 'OAuth authorisation incomplete.' } },
@@ -1375,6 +1379,20 @@ function activeCrm(wsId) {
 }
 // The client workspace's single Primary Contact (V1 rule: exactly one per workspace), or null.
 function wsPrimaryContact(wsId) { return members.find(m => m.org === wsId && m.isPrimary && m.status !== 'deactivated') || null; }
+// One connected product per lane: a workspace can have only one CRM, one chat platform and one call tracker.
+const PRODUCT_LANES = {
+  crm:   { label: 'CRM', noun: 'CRM', ids: () => products.filter(p => p.category === 'CRM').map(p => p.id) },
+  chat:  { label: 'Automated Chat', noun: 'chat platform', ids: () => ['aurix', 'sleekflow', 'wati'] },
+  calls: { label: 'Call Tracking', noun: 'call tracker', ids: () => ['delacon'] }
+};
+function productLane(pid) { return Object.keys(PRODUCT_LANES).find(k => PRODUCT_LANES[k].ids().includes(pid)) || null; }
+// The product already holding pid's lane in this workspace (any status), or null.
+function laneOccupant(wsId, pid) {
+  const lane = productLane(pid);
+  if (!lane) return null;
+  const hit = PRODUCT_LANES[lane].ids().find(id => id !== pid && wsProducts(wsId)[id]);
+  return hit ? productById(hit) : null;
+}
 function wsAdAccounts(wsId) { return adAccounts.filter(a => a.workspaceId === wsId); }
 function wsPlatforms(wsId) { return ['google', 'meta'].filter(p => wsAdAccounts(wsId).some(a => a.platform === p)); }
 
@@ -2583,9 +2601,6 @@ function dashEntryStatus(e) {
   if (!e.active) return ['grey', 'Inactive'];
   return ['green', e.routedVia ? `Via ${productById(e.routedVia)?.name || 'CRM'}` : 'Connected'];
 }
-function dashHubDot([color, label]) {
-  return `<span class="dot-label dash-hub-status dash-hub-${color}"><span class="dot dot-${color}${color === 'grey' ? '' : '-strong'}"></span>${esc(label)}</span>`;
-}
 
 // Opening an OOm product: CRMs open Leads inside Galaxis; others hand off to the product (toast in the demo).
 function dashOpenProduct(pid) {
@@ -2603,22 +2618,36 @@ function dashToggleHub() {
   if (el) { el.outerHTML = dashHubPanel(currentWs()); refreshIcons(); }
 }
 
-// Fixed rows, as in the V2 prototype: three per column.
+// Fixed rows, as in the V2 prototype: one card with three sections of three rows, every row the same height.
 const DASH_HUB_OOM = ['crm-lite', 'aurix', 'seo-cloud'];
-const DASH_HUB_LANES = [
-  { label: 'CRM', icon: 'contact', ids: () => products.filter(p => p.category === 'CRM').map(p => p.id), empty: 'No CRM connected' },
-  { label: 'Automated Chat', icon: 'message-circle', ids: () => ['aurix', 'sleekflow', 'wati'], empty: 'No chat platform connected' },
-  { label: 'Call Tracking', icon: 'phone', ids: () => ['delacon'], empty: 'No call tracking connected' }
-];
+const DASH_HUB_LANE_ICON = { crm: 'contact', chat: 'message-circle', calls: 'phone' };
+const DASH_HUB_EMPTY = { crm: 'No CRM', chat: 'No chat', calls: 'No tracker' };
 
-// Connection lanes: the best entry per lane wins (active > needs attention > inactive).
+// One connected product per lane (PRODUCT_LANES in core.js), so each Connections row shows at most one product.
 function dashHubLanes(wsId) {
   const entries = wsProducts(wsId);
-  const rank = e => !e ? 0 : e.status === 'connected' && e.active ? 4 : e.status === 'error' || e.status === 'pending' ? 3 : 1;
-  return DASH_HUB_LANES.map(l => {
-    const hits = l.ids().filter(id => entries[id]).sort((a, b) => rank(entries[b]) - rank(entries[a]));
-    return { ...l, hit: hits.length ? { pid: hits[0], e: entries[hits[0]], more: hits.length - 1 } : null };
+  return Object.entries(PRODUCT_LANES).map(([key, l]) => {
+    const pid = l.ids().find(id => entries[id]);
+    return { key, label: l.label, noun: l.noun, icon: DASH_HUB_LANE_ICON[key], hit: pid ? { pid, e: entries[pid] } : null };
   });
+}
+
+// Status pill for a Connections row (V2 style: Connected / Error / Pending setup / Disabled / Not connected).
+function dashHubPill(e) {
+  const [color, label] = dashEntryStatus(e);
+  const cls = { green: 'dash-hub-pill-green', red: 'dash-hub-pill-red', orange: 'dash-hub-pill-orange', grey: 'dash-hub-pill-grey' }[color];
+  return `<span class="dash-hub-tag ${cls}">${color === 'green' ? '<i data-lucide="check"></i>' : ''}${esc(label)}</span>`;
+}
+
+function dashHubSection(icon, title, sub, rows, extra = '') {
+  return `<div class="dash-hub-section">
+    <div class="dash-hub-card-head">
+      <span class="dash-hub-head-icon"><i data-lucide="${icon}"></i></span>
+      <div class="grow"><div class="h-card">${esc(title)}</div><div class="dash-hub-card-sub">${esc(sub)}</div></div>
+      ${extra}
+    </div>
+    <div class="dash-hub-rows">${rows}</div>
+  </div>`;
 }
 
 function dashHubPanel(ws) {
@@ -2627,56 +2656,50 @@ function dashHubPanel(ws) {
   const open = state.ui.dashHubOpen;
   const live = e => !!e && e.status === 'connected' && e.active;
   const needsFix = e => !!e && (e.status === 'error' || e.status === 'pending');
+  const link = (label, onclick, icon = 'arrow-right') => `<button type="button" class="t-link dash-hub-action" onclick="${onclick}">${esc(label)}<i data-lucide="${icon}"></i></button>`;
 
-  // Column 1: OOm products (always the same three rows).
+  // OOm Products: always the same three rows.
   const oomRows = DASH_HUB_OOM.map(pid => {
     const p = productById(pid);
     const e = entries[pid];
     const alert = live(e) ? dashProductAlerts(ws.id, pid) : null;
-    const label = !e ? 'Connect' : needsFix(e) ? 'Fix' : e.status === 'disabled' ? 'Enable' : 'Activate';
-    const action = live(e)
-      ? `<button type="button" class="t-link" onclick="dashOpenProduct('${pid}')">Open<i data-lucide="${p.category === 'CRM' ? 'arrow-right' : 'external-link'}"></i></button>`
-      : `<button type="button" class="t-link" onclick="dashIntegAction('${pid}', '${needsFix(e) ? 'config' : 'about'}')">${label}<i data-lucide="arrow-right"></i></button>`;
+    const action = live(e) ? link('Open', `dashOpenProduct('${pid}')`, p.category === 'CRM' ? 'arrow-right' : 'external-link')
+      : link(!e ? 'Connect' : needsFix(e) ? 'Fix' : 'Enable', `dashIntegAction('${pid}', '${needsFix(e) ? 'config' : 'about'}')`);
     return `<div class="dash-hub-row">
-      ${productLogo(pid, 28)}
-      <div class="dash-hub-main"><div class="dash-hub-name">${esc(p.name)}${alert ? `<span class="pill pill-sm ${alert.cls}">${esc(alert.text)}</span>` : ''}</div>
-        <div class="dash-hub-meta">${esc(p.category)}${live(e) ? '' : ` · ${dashHubDot(dashEntryStatus(e))}`}</div></div>
+      ${productLogo(pid, 30)}
+      <div class="dash-hub-main"><span class="dash-hub-name">${esc(p.name)}</span>${alert ? `<span class="pill pill-sm ${alert.cls}">${esc(alert.text)}</span>` : live(e) ? '' : dashHubPill(e)}</div>
       ${action}
     </div>`;
   }).join('');
 
-  // Column 2: connections — CRM, Automated Chat, Call Tracking.
-  const lanes = dashHubLanes(ws.id);
-  const laneRows = lanes.map(l => {
-    const h = l.hit;
-    const p = h && productById(h.pid);
-    const action = !h
-      ? `<button type="button" class="t-link" onclick="navigate('integrations')">Connect<i data-lucide="arrow-right"></i></button>`
-      : `<button type="button" class="t-link" onclick="dashIntegAction('${h.pid}', '${needsFix(h.e) ? 'config' : 'about'}')">${needsFix(h.e) ? 'Fix now' : 'Manage'}<i data-lucide="arrow-right"></i></button>`;
-    return `<div class="dash-hub-row">
-      <span class="dash-hub-icon"><i data-lucide="${l.icon}"></i></span>
-      <div class="dash-hub-main"><div class="dash-hub-name">${esc(l.label)}</div>
-        <div class="dash-hub-meta">${h ? `${esc(p.name)}${h.more ? ` +${h.more}` : ''} · ${dashHubDot(dashEntryStatus(h.e))}` : `<span class="t-muted">${esc(l.empty)}</span>`}</div></div>
-      ${action}
-    </div>`;
-  }).join('');
-
-  // Column 3: quick links.
+  // Quick Links.
   const crm = activeCrm(ws.id);
   const links = [
-    crm ? { icon: 'contact', label: 'View leads', sub: `Synced from ${crm.name}`, go: "navigate('leads')" }
-        : { icon: 'contact', label: 'View leads', sub: 'Connect a CRM to sync leads', go: "navigate('integrations')", muted: true },
-    { icon: 'blocks', label: 'Manage integrations', sub: 'Products, credentials and sync', go: "navigate('integrations')" },
-    { icon: 'building-2', label: 'Organisation settings', sub: 'Business, brand and billing', go: "navigate('organisation')" }
+    { icon: 'contact', label: 'View Leads', action: crm ? 'Open' : 'Connect CRM', go: crm ? "navigate('leads')" : "navigate('integrations')" },
+    { icon: 'blocks', label: 'Manage Integrations', action: 'Manage', go: "navigate('integrations')" },
+    { icon: 'building-2', label: 'Organisation Settings', action: 'Configure', go: "navigate('organisation')" }
   ];
-  const linkRows = links.map(l => `<button type="button" class="dash-hub-row dash-hub-link ${l.muted ? 'muted' : ''}" onclick="${l.go}">
+  const linkRows = links.map(l => `<div class="dash-hub-row">
       <span class="dash-hub-icon"><i data-lucide="${l.icon}"></i></span>
-      <span class="dash-hub-main"><span class="dash-hub-name">${esc(l.label)}</span><span class="dash-hub-meta">${esc(l.sub)}</span></span>
-      <i data-lucide="chevron-right" class="dash-hub-chev"></i>
-    </button>`).join('');
+      <div class="dash-hub-main"><span class="dash-hub-name">${esc(l.label)}</span></div>
+      ${link(l.action, l.go)}
+    </div>`).join('');
 
-  // Header summary and count cover only the products shown in the panel.
-  const shown = [...new Set([...DASH_HUB_OOM, ...DASH_HUB_LANES.flatMap(l => l.ids())])];
+  // Connections: CRM, Automated Chat, Call Tracking — one product each.
+  const laneRows = dashHubLanes(ws.id).map(l => {
+    const h = l.hit;
+    const action = !h ? link('Connect', "navigate('integrations')")
+      : link(needsFix(h.e) ? 'Fix now' : 'Manage', `dashIntegAction('${h.pid}', '${needsFix(h.e) ? 'config' : 'about'}')`);
+    return `<div class="dash-hub-row">
+      <span class="dash-hub-icon"><i data-lucide="${l.icon}"></i></span>
+      <div class="dash-hub-main dash-hub-stack"><span class="dash-hub-lane">${esc(l.label)}</span>
+        <span class="dash-hub-line"><span class="dash-hub-name">${h ? esc(productById(h.pid).name) : esc(DASH_HUB_EMPTY[l.key])}</span>${dashHubPill(h && h.e)}</span></div>
+      ${action}
+    </div>`;
+  }).join('');
+
+  // Header summary covers only the products shown in the panel.
+  const shown = [...new Set([...DASH_HUB_OOM, ...Object.values(PRODUCT_LANES).flatMap(l => l.ids())])];
   const summary = [];
   DASH_HUB_OOM.forEach(pid => { const a = live(entries[pid]) && dashProductAlerts(ws.id, pid); if (a) summary.push({ text: `${productById(pid).name}: ${a.text}`, cls: a.cls, go: `dashOpenProduct('${pid}')` }); });
   shown.forEach(pid => {
@@ -2686,7 +2709,7 @@ function dashHubPanel(ws) {
   });
   const activeCount = shown.filter(pid => live(entries[pid])).length;
 
-  return `<section class="card dash-hub ${open ? '' : 'collapsed'}" id="dash-hub" aria-label="Products and connections">
+  return `<section class="card dash-hub" id="dash-hub" aria-label="Products and connections">
     <div class="dash-hub-head">
       <div><h2 class="h-card">Products &amp; Connections</h2>
         <div class="card-sub">${activeCount} active product${activeCount === 1 ? '' : 's'} connected to ${esc(ws.name)}.</div></div>
@@ -2696,9 +2719,9 @@ function dashHubPanel(ws) {
       </div>
     </div>
     ${open ? `<div class="dash-hub-body" id="dash-hub-body">
-      <div class="dash-hub-col"><div class="dash-hub-col-title"><i data-lucide="sparkles"></i>OOm Products</div>${oomRows}</div>
-      <div class="dash-hub-col"><div class="dash-hub-col-title"><i data-lucide="link"></i>Connections<button type="button" class="t-link dash-hub-viewall" onclick="navigate('integrations')">View all<i data-lucide="arrow-right"></i></button></div>${laneRows}</div>
-      <div class="dash-hub-col"><div class="dash-hub-col-title"><i data-lucide="compass"></i>Quick Links</div>${linkRows}</div>
+      ${dashHubSection('star', 'OOm Products', 'Your connected suite apps', oomRows)}
+      ${dashHubSection('compass', 'Quick Links', 'Common workspace actions', linkRows)}
+      ${dashHubSection('link', 'Connections', 'External services & integrations', laneRows, link('View all', "navigate('integrations')"))}
     </div>` : ''}
   </section>`;
 }
@@ -3207,7 +3230,7 @@ function dashSetAdOnly() {
 }
 function dashSetCrmConnected() {
   const wp = wsProducts(state.ctx);
-  Object.keys(wp).forEach(pid => { if (pid !== 'crm-lite' && productById(pid)?.category === 'CRM') wp[pid].active = false; });
+  Object.keys(wp).forEach(pid => { if (pid !== 'crm-lite' && productById(pid)?.category === 'CRM') delete wp[pid]; }); // one CRM per workspace
   wp['crm-lite'] = { ...(wp['crm-lite'] || {}), status: 'connected', active: true, lastSynced: new Date().toISOString() };
   render();
 }
@@ -3290,7 +3313,7 @@ Client-facing workspace dashboard giving a simplified, unified view of Meta and 
 - **Global Event-Based Date Filter**: Filters all dashboard data by the exact date the action (e.g. click or conversion) happened within the selected timeframe, independent of events higher up the funnel.
   - **Prototype note:** the date filter scales mock data to the selected range, and the Daily Performance chart plots one point per day of the range. It does **not** yet filter by event date.
 - **CRM mode (from V2)**: shown when the workspace has a connected, active CRM.
-  - **Products & Connections panel** (top of the page, from the V2 client home): collapsible card with three columns. three fixed rows per column, as in V2. OOm Products: CRM - lite, Aurix and SEO Cloud, with outstanding-work badges and Open links (CRM opens Leads), or Connect / Activate / Fix when not live. Connections: CRM, Automated Chat and Call Tracking, with live status and Manage / Fix now / Connect, plus View all. Quick Links: View leads, Manage integrations and Organisation settings. Items needing attention also show as pills in the header, so they stay visible when collapsed. Built from the same data as Integrations.
+  - **Products & Connections panel** (top of the page, from the V2 client home): collapsible card with three columns. one card with three sections in V2 order, three fixed rows each, all rows the same height. OOm Products: CRM - lite, Aurix and SEO Cloud, with outstanding-work badges and Open links (CRM opens Leads), or Connect / Enable / Fix when not live. Quick Links: View Leads, Manage Integrations and Organisation Settings. Connections: CRM, Automated Chat and Call Tracking, one product each (one-per-lane rule), with a status pill and Manage / Fix now / Connect, plus View all. Items needing attention also show as pills in the header, so they stay visible when collapsed. Built from the same data as Integrations.
   - A second row of 5 KPI cards, matching the ad-platform row: Attributed Leads (+ share of platform conversions), Cost per Lead (+ cost per conversion for comparison), Converted Leads (+ conversion rate), Attributed Revenue (+ average deal value) and ROAS (+ ad spend).
   - The table gains Leads, CPL, Revenue and ROAS columns.
   - The **attribution model** selector offers Multi-Touch (40/20/40), First-Touch and Last-Touch. Each model credits leads and revenue differently, so the figures change with the model.
@@ -5621,7 +5644,7 @@ Agency access governance for this workspace. Ported from the V1 "Workspace Setti
 Object.assign(state.ui, {
   integSearch: '',          // client: product search
   integCat: 'all',          // client: available-products category tab
-  integCfg: null,           // client: config drawer draft { pid, swap, authed, verified, webhookTested, showKey, key, backfill, mapping }
+  integCfg: null,           // client: config drawer draft { pid, authed, verified, webhookTested, showKey, key, backfill, mapping }
   integInline: {},          // agency: inline picks per workspace { wsId: { google: accId, meta: accId } }
   integQueuePlat: 'all',    // agency: queue platform filter
   integQueueTarget: {},     // agency: typed target workspace per queued account
@@ -5692,10 +5715,8 @@ function integIsOom(p) { return p.provider === 'oom'; }
 function integWebhookUrl(pid) { return `https://hub.example.com/webhook/leads/${pid}?id=gal_XXXX`; }
 function integDot(color, label) { return `<span class="dot-label integ-dot-${color}"><span class="dot dot-${color}${color === 'grey' ? '' : '-strong'}"></span>${esc(label)}</span>`; }
 function integFlowLabel(p) { return p.flow === 'internal' ? 'Managed by OOm' : p.flow === 'oauth' ? 'OAuth 2.0' : 'API & Webhook'; }
-// The CRM other than `exceptPid` that is currently active in the workspace.
-function integOtherActiveCrm(exceptPid) { const c = activeCrm(state.ctx); return c && c.id !== exceptPid ? c : null; }
-// An entry is on the "Active Products" side unless it is a connected-but-inactive product (shown with Activate).
-function integInActiveSection(e) { return !!e && !(e.status === 'connected' && !e.active); }
+// Every connected product is listed under Active Products (one per lane, so there is no connected-but-inactive state).
+function integInActiveSection(e) { return !!e; }
 
 function integStatusDots(pid, wsId = state.ctx) {
   const e = integEntry(pid, wsId);
@@ -5816,19 +5837,15 @@ function integActiveCard(p) {
 }
 
 function integAvailCard(p) {
-  const e = integEntry(p.id); // only "connected but inactive" entries reach this grid
-  const items = [{ label: 'View details', icon: 'info', onClick: `integOpenDrawer('${p.id}','about')` }];
-  if (e) items.push({ label: 'Configure', icon: 'settings-2', onClick: `integOpenDrawer('${p.id}','config')` }, 'sep', { label: 'Disconnect', icon: 'unplug', danger: true, onClick: `integDisconnect('${p.id}')` });
-  else items.push({ label: 'Connect', icon: 'plug', onClick: `integConnect('${p.id}')` });
+  const items = [{ label: 'View details', icon: 'info', onClick: `integOpenDrawer('${p.id}','about')` }, { label: 'Connect', icon: 'plug', onClick: `integConnect('${p.id}')` }];
   return `<div class="card integ-card" data-product="${p.id}">
     <div class="integ-card-head">${productLogo(p.id, 32)}
-      <div class="grow"><div class="h-card">${esc(p.name)}</div><div class="integ-cat">${esc(p.category)}</div>${e ? `<div class="integ-dots">${integStatusDots(p.id)}</div>` : ''}</div>
+      <div class="grow"><div class="h-card">${esc(p.name)}</div><div class="integ-cat">${esc(p.category)}</div></div>
       ${rowMenu(`integ-m-${p.id}`, items)}</div>
     <div class="integ-desc">${esc(p.description)}</div>
     <div class="integ-card-foot integ-foot-split">
       <button type="button" class="t-link integ-learn" onclick="integOpenDrawer('${p.id}','about')">Learn More</button>
-      ${e ? `<button type="button" class="btn btn-outline" onclick="integActivate('${p.id}')">Activate</button>`
-          : `<button type="button" class="btn btn-primary" onclick="integConnect('${p.id}')">Connect</button>`}
+      <button type="button" class="btn btn-primary" onclick="integConnect('${p.id}')">Connect</button>
     </div>
   </div>`;
 }
@@ -5840,55 +5857,54 @@ function integOpen(pid) {
   else integOpenDrawer(pid, 'about');
 }
 
-// ---------- Rules: connect / activate / disable / disconnect ----------
-const INTEG_SWAP_TEXT = 'Only one product can be active at a time. Activating this product will deactivate your currently active product. You can switch between connected products at any time.';
-
-function integConnect(pid) {
-  const p = productById(pid);
-  const other = p.category === 'CRM' ? integOtherActiveCrm(pid) : null;
-  if (other) {
-    confirmDialog({ title: 'Connect This Product?', text: INTEG_SWAP_TEXT, confirmLabel: 'Confirm', onConfirm: () => setTimeout(() => integBeginConnect(pid, true), 0) });
-    return;
-  }
-  integBeginConnect(pid, false);
+// ---------- Rules: connect / enable / disable / disconnect ----------
+// One per lane: a workspace can connect only one CRM, one chat platform and one call tracker (PRODUCT_LANES).
+// Connecting a second one asks to replace the current one, which is disconnected when the new one is saved.
+function integReplaceText(pid, old) {
+  const lane = PRODUCT_LANES[productLane(pid)];
+  return `Only one ${lane.noun} can be connected at a time. Connecting ${productById(pid).name} will disconnect ${old.name}. Data already synced from ${old.name} will not be deleted.`;
 }
 
-function integBeginConnect(pid, swap) {
+function integConnect(pid) {
+  const old = laneOccupant(state.ctx, pid);
+  if (old) {
+    confirmDialog({ title: `Replace ${old.name}?`, text: integReplaceText(pid, old), confirmLabel: `Replace with ${productById(pid).name}`,
+      onConfirm: () => setTimeout(() => integBeginConnect(pid), 0) });
+    return;
+  }
+  integBeginConnect(pid);
+}
+
+function integBeginConnect(pid) {
   const p = productById(pid);
   const crm = activeCrm(state.ctx);
   if (INTEG_ROUTABLE.includes(pid) && crm && INTEG_THIRD_CRMS.includes(crm.id) && !integEntry(pid)) { integOpenRouting(pid); return; }
   if (p.flow === 'internal') {
     closeDrawer();
-    integCommit(pid, { swap: true });
-    showToast(`${p.name} connected and active`);
+    const old = integCommit(pid).replaced;
+    showToast(old ? `${p.name} connected. ${old.name} was disconnected.` : `${p.name} connected and active`);
     return;
   }
-  integOpenDrawer(pid, 'config', { swap });
+  integOpenDrawer(pid, 'config');
 }
 
-// Write a connected entry. swap: make this CRM the active one (others stay connected but inactive).
-function integCommit(pid, { swap, extra = {} } = {}) {
-  const p = productById(pid);
+// Remove a product's entry; products routed through a CRM lose their path.
+function integRemove(pid, verb) {
+  if (productById(pid).category === 'CRM') integOrphanRouted(pid, verb);
+  delete wsProducts(state.ctx)[pid];
+}
+
+// Write a connected entry. Any other product in the same lane is disconnected (one per lane).
+// Swaps only happen here, on save, so closing the config drawer changes nothing.
+function integCommit(pid, { extra = {} } = {}) {
   const entries = wsProducts(state.ctx);
-  const prev = entries[pid];
-  let active = true;
-  if (p.category === 'CRM') {
-    const other = integOtherActiveCrm(pid);
-    if (other && !swap && !(prev && prev.active)) active = false;
-    if (active && other) integDeactivate(other.id);
-  }
-  const e = Object.assign({}, prev, { status: 'connected', active, lastSynced: integNow() }, extra);
+  const replaced = laneOccupant(state.ctx, pid);
+  if (replaced) integRemove(replaced.id, 'replaced');
+  const e = Object.assign({}, entries[pid], { status: 'connected', active: true, lastSynced: integNow() }, extra);
   delete e.error;
   entries[pid] = e;
   render();
-  return e;
-}
-
-function integDeactivate(pid) {
-  const e = integEntry(pid);
-  if (!e) return;
-  e.active = false;
-  integOrphanRouted(pid, 'deactivated');
+  return { entry: e, replaced };
 }
 
 // Products routed through a CRM lose their path when that CRM stops syncing.
@@ -5902,20 +5918,14 @@ function integOrphanRouted(crmId, verb) {
   });
 }
 
-// Activate a connected-but-inactive product, or re-enable a disabled one.
+// Re-enable a disabled product.
 function integActivate(pid) {
   const p = productById(pid);
-  const other = p.category === 'CRM' ? integOtherActiveCrm(pid) : null;
-  const go = () => {
-    if (other) integDeactivate(other.id);
-    const e = integEntry(pid);
-    e.status = 'connected'; e.active = true; e.lastSynced = integNow(); delete e.error;
-    closeDrawer();
-    render();
-    showToast(other ? `${p.name} is now your active CRM. ${other.name} stays connected.` : `${p.name} is active`);
-  };
-  if (other) confirmDialog({ title: 'Connect This Product?', text: INTEG_SWAP_TEXT, confirmLabel: 'Confirm', onConfirm: go });
-  else go();
+  const e = integEntry(pid);
+  e.status = 'connected'; e.active = true; e.lastSynced = integNow(); delete e.error;
+  closeDrawer();
+  render();
+  showToast(`${p.name} is active`);
 }
 
 function integDisable(pid) {
@@ -5944,8 +5954,7 @@ function integDisconnect(pid) {
     confirmLabel: 'Disconnect',
     danger: true,
     onConfirm: () => {
-      if (p.category === 'CRM') integOrphanRouted(pid, 'disconnected');
-      delete wsProducts(state.ctx)[pid];
+      integRemove(pid, 'disconnected');
       closeDrawer();
       render();
       showToast(`${p.name} disconnected`, 'unplug');
@@ -5982,8 +5991,8 @@ function integOpenRouting(pid) {
 function integRouteYes(pid) {
   const crm = activeCrm(state.ctx);
   closeModal();
-  integCommit(pid, { extra: { routedVia: crm.id } });
-  showToast(`${productById(pid).name} activity will be captured through ${crm.name}.`, 'git-merge');
+  const old = integCommit(pid, { extra: { routedVia: crm.id } }).replaced;
+  showToast(`${productById(pid).name} activity will be captured through ${crm.name}.${old ? ` ${old.name} was disconnected.` : ''}`, 'git-merge');
 }
 function integRouteNo(pid) {
   closeModal();
@@ -5998,13 +6007,13 @@ function integOpenProduct(pid, mode = 'about', wsId) {
   integOpenDrawer(pid, mode);
 }
 
-function integOpenDrawer(pid, mode = 'about', opts = {}) {
+function integOpenDrawer(pid, mode = 'about') {
   const p = productById(pid);
   const e = integEntry(pid);
   if (mode === 'config') {
     const g = integGuides[pid] || {};
     state.ui.integCfg = {
-      pid, swap: !!opts.swap,
+      pid,
       authed: !!e && e.status === 'connected' && !e.routedVia,
       verified: false, webhookTested: false, showKey: false,
       key: e && p.flow === 'api' && !e.routedVia ? 'sk_test_PLACEHOLDER' : '',
@@ -6026,15 +6035,14 @@ function integAboutHTML(pid) {
     <h4>About this integration</h4><p class="integ-drawer-p">${esc(about)}</p>
     <h4>What can be synced?</h4><ul>${p.syncs.map(s => `<li>${esc(s)}</li>`).join('')}</ul>
     <h4>Requirements</h4><ul>${p.requirements.map(s => `<li>${esc(s)}</li>`).join('')}</ul>
-    <h4>Before you connect</h4><p class="integ-drawer-p">You can connect multiple products, but only one CRM provider can be active at a time.</p>`;
+    <h4>Before you connect</h4><p class="integ-drawer-p">You can connect multiple products, but only one CRM, one chat platform and one call tracker can be connected at a time. Connecting another one replaces the current one.</p>`;
 }
 
 function integDrawerFooter(pid, mode) {
   const e = integEntry(pid);
   if (mode === 'about') {
     if (!e) return `<button type="button" class="btn btn-primary" onclick="integConnect('${pid}')">Connect</button>`;
-    const act = e.status === 'connected' && !e.active ? `<button type="button" class="btn btn-primary" onclick="integActivate('${pid}')">Activate</button>` : '';
-    return `<button type="button" class="btn ${act ? 'btn-outline' : 'btn-primary'}" onclick="integOpenDrawer('${pid}','config')"><i data-lucide="settings-2"></i>Configure</button>${act}`;
+    return `<button type="button" class="btn btn-primary" onclick="integOpenDrawer('${pid}','config')"><i data-lucide="settings-2"></i>Configure</button>`;
   }
   return `${e ? `<button type="button" class="btn btn-danger-outline integ-foot-left" onclick="integDisconnect('${pid}')">Disconnect</button>` : ''}
     <button type="button" class="btn btn-outline" onclick="closeDrawer()">Cancel</button>
@@ -6153,12 +6161,12 @@ function integSaveConfig() {
   const p = productById(c.pid);
   if (p.flow === 'oauth' && !c.authed) { showToast(`Connect ${p.name} via OAuth before saving`, 'triangle-alert'); return; }
   if (p.flow === 'api' && !c.key.trim()) { showToast('Enter an API key before saving', 'triangle-alert'); document.getElementById('integ-key')?.focus(); return; }
-  const e = integCommit(c.pid, { swap: c.swap, extra: { backfill: c.backfill, mapping: { ...c.mapping } } });
-  delete e.routedVia;
+  const { entry, replaced } = integCommit(c.pid, { extra: { backfill: c.backfill, mapping: { ...c.mapping } } });
+  delete entry.routedVia;
   state.ui.integCfg = null;
   closeDrawer();
   render();
-  showToast(`Configuration saved for ${p.name}. ${e.active ? 'Sync started.' : 'Activate it to start syncing.'}`);
+  showToast(`Configuration saved for ${p.name}. Sync started.${replaced ? ` ${replaced.name} was disconnected.` : ''}`);
 }
 
 // ---------- Ad platforms (V1 workspace linking, Figma card style) ----------
@@ -6472,7 +6480,6 @@ const INTEG_SCENARIOS = {
     'crm-lite': { status: 'connected', active: true, lastSynced: INTEG_SYNC },
     aurix: { status: 'connected', active: true, lastSynced: INTEG_SYNC },
     cdp: { status: 'connected', active: true, lastSynced: INTEG_SYNC },
-    sleekflow: { status: 'connected', active: true, lastSynced: INTEG_SYNC },
     delacon: { status: 'connected', active: true, lastSynced: INTEG_SYNC }
   }),
   'Pending Setup + Error': () => ({
@@ -6558,7 +6565,7 @@ The workspace's integrations hub, built from the Figma "Integrations" frames wit
   - ⋮ menu: View details, Configure, Disable (or Enable), Disconnect.
   - Error and pending cards show an inline box with the reason and **Fix Now** / **Resume Setup**, which open the configuration view.
   - Products routed through a CRM show "Routed via {CRM}".
-- **Available Products**: category tabs with counts (All / CRM / CCM / CDP / Marketing). Each card has Learn More and **Connect**. A connected-but-inactive product shows "Connected · Inactive" and **Activate**. The list ends with a Coming Soon card.
+- **Available Products**: category tabs with counts (All / CRM / CCM / CDP / Marketing). Each card has Learn More and **Connect**. The list ends with a Coming Soon card.
 - **Slide-over**
   - About mode: About this integration, What can be synced?, Requirements, Before you connect.
   - Config mode:
@@ -6569,12 +6576,12 @@ The workspace's integrations hub, built from the Figma "Integrations" frames wit
     - Footer: Disconnect and Save Configuration.
   - OOm products need no credentials ("Managed by OOm").
 - **Rules**
-  - **One active CRM.** Connecting or activating a CRM while another is active asks "Connect This Product?". On confirm, the new CRM becomes active and the old one stays connected but inactive.
+  - **One per lane.** A workspace can connect only one CRM, one chat platform (Aurix, SleekFlow, Wati) and one call tracker (Delacon). Connecting a second one asks "Replace {current}?"; on confirm and save, the new product is connected and the current one is disconnected (its synced data is kept). There is no connected-but-inactive state. This replaces the Figma "Connect This Product?" copy, which allowed several connected products with one active.
   - **Disable** pauses sync (status Disabled, inactive). **Disconnect** removes only that product (fixes V2's reset-everything bug). Neither deletes data that has already synced.
   - **Routing choice (V2).** Connecting SleekFlow, Wati or Delacon while a third-party CRM is active asks whether the CRM already captures that activity.
     - Yes: route via the CRM.
     - No: configure a direct connection.
-  - If a CRM that other products route through is disabled, disconnected or deactivated, those products move to Pending Setup and ask for a direct connection.
+  - If a CRM that other products route through is disabled, disconnected or replaced, those products move to Pending Setup and ask for a direct connection.
 - The active CRM drives the Leads nav item and the dashboard's CRM mode.
 
 ### Ad Platforms (V1 client-profile ad linking, In Review)

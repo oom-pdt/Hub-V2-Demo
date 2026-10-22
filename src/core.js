@@ -471,14 +471,19 @@ function markActionColumns(root = document) {
     const implicit = !!head && /^(remove|manage|)$/i.test(head.textContent.trim()) && rows.length > 0 &&
       rows.every(r => r.lastElementChild.querySelector('button, .menu-anchor, a'));
     table.classList.toggle('has-action-col', explicit || implicit);
-    const wrap = table.parentElement;
-    wrap.classList.toggle('is-overflowing', wrap.scrollWidth > wrap.clientWidth + 1);
+    markTableScroll(table.parentElement);
   });
+}
+// is-overflowing: columns are hidden horizontally; at-end: scrolled fully right, nothing left behind the action column.
+function markTableScroll(wrap) {
+  wrap.classList.toggle('is-overflowing', wrap.scrollWidth > wrap.clientWidth + 1);
+  wrap.classList.toggle('at-end', wrap.scrollLeft + wrap.clientWidth >= wrap.scrollWidth - 1);
 }
 let actionColFrame;
 new MutationObserver(() => { cancelAnimationFrame(actionColFrame); actionColFrame = requestAnimationFrame(() => markActionColumns()); })
   .observe(document.documentElement, { childList: true, subtree: true });
 window.addEventListener('resize', () => markActionColumns());
+document.addEventListener('scroll', e => { if (e.target.classList?.contains('table-wrap')) markTableScroll(e.target); }, true);
 
 // ---------- Global listeners ----------
 document.addEventListener('click', e => {

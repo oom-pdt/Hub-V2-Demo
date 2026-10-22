@@ -276,7 +276,15 @@ svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
    :where() keeps specificity low so row states (hover, pending, muted) still colour the cell. */
 :where(.table.has-action-col) tr > :last-child { position: sticky; right: 0; z-index: 2; background: var(--surface); }
 :where(.table.has-action-col) thead tr > :last-child { background: var(--tint); }
-:where(.table-wrap.is-overflowing) .table.has-action-col tr > :last-child { box-shadow: -8px 0 8px -8px rgba(43, 43, 43, .18); }
+/* While more columns are hidden behind the action column (.is-overflowing without .at-end): a fade over the
+   scrolling columns, a divider and a stronger shadow. They disappear once the table is scrolled to the end. */
+:where(.table-wrap.is-overflowing:not(.at-end)) .table.has-action-col tr > :last-child { box-shadow: -10px 0 12px -10px rgba(43, 43, 43, .28), inset 1px 0 0 var(--border); }
+:where(.table-wrap.is-overflowing:not(.at-end)) .table.has-action-col tr > :last-child::before {
+  content: ''; position: absolute; top: 0; bottom: 0; right: 100%; width: 48px; pointer-events: none;
+  background: linear-gradient(to right, rgba(255, 255, 255, 0), var(--surface));
+}
+:where(.table-wrap.is-overflowing:not(.at-end)) .table.has-action-col thead tr > :last-child::before { background: linear-gradient(to right, rgba(236, 245, 255, 0), var(--tint)); }
+:where(.table-wrap.is-overflowing:not(.at-end)) .table.has-action-col tr.clickable:hover > :last-child::before { background: linear-gradient(to right, rgba(248, 251, 255, 0), #F8FBFF); }
 :where(.table.has-action-col) tr > :last-child.menu-open-cell { z-index: 60; }
 .table-empty { text-align: center; padding: 40px 16px !important; color: var(--text-muted); }
 .table-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
@@ -1815,14 +1823,19 @@ function markActionColumns(root = document) {
     const implicit = !!head && /^(remove|manage|)$/i.test(head.textContent.trim()) && rows.length > 0 &&
       rows.every(r => r.lastElementChild.querySelector('button, .menu-anchor, a'));
     table.classList.toggle('has-action-col', explicit || implicit);
-    const wrap = table.parentElement;
-    wrap.classList.toggle('is-overflowing', wrap.scrollWidth > wrap.clientWidth + 1);
+    markTableScroll(table.parentElement);
   });
+}
+// is-overflowing: columns are hidden horizontally; at-end: scrolled fully right, nothing left behind the action column.
+function markTableScroll(wrap) {
+  wrap.classList.toggle('is-overflowing', wrap.scrollWidth > wrap.clientWidth + 1);
+  wrap.classList.toggle('at-end', wrap.scrollLeft + wrap.clientWidth >= wrap.scrollWidth - 1);
 }
 let actionColFrame;
 new MutationObserver(() => { cancelAnimationFrame(actionColFrame); actionColFrame = requestAnimationFrame(() => markActionColumns()); })
   .observe(document.documentElement, { childList: true, subtree: true });
 window.addEventListener('resize', () => markActionColumns());
+document.addEventListener('scroll', e => { if (e.target.classList?.contains('table-wrap')) markTableScroll(e.target); }, true);
 
 // ---------- Global listeners ----------
 document.addEventListener('click', e => {

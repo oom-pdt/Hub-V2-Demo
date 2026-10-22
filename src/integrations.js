@@ -619,7 +619,6 @@ function integRenderAgency() {
       <div class="integ-sub">Agency-level connections Galaxis uses to discover client ad accounts and to set up workspaces from the agency CRM.</div>
       <div class="integ-grid-3">${Object.keys(masterTokens).map(integTokenCard).join('')}${integCrmCard()}</div>
     </section>
-    <section class="integ-section card" id="integ-crm-map">${integCrmMapHTML()}</section>
     <section class="integ-section card" id="integ-unlinked">${integUnlinkedHTML()}</section>
     <section class="integ-section card" id="integ-queue">${integQueueHTML()}</section>
     <section class="integ-section card">
@@ -684,40 +683,6 @@ function integCrmReconnect() {
     showToast('Agency CRM reconnected. New conversions will create workspaces again.', 'plug');
   }, 900);
 }
-function integRenderCrmMap() { renderRegion('integ-crm-map', integCrmMapHTML()); }
-function integCrmMapHTML() {
-  const agencyRoles = roles.filter(r => r.org === 'agency' && !r.locked);
-  const agencyTeams = teams.filter(t => t.org === 'agency' && t.status === 'active');
-  const rows = crmRoleMap.map((r, i) => {
-    const who = crmCandidates(r.crmRole);
-    return `<tr><td class="t-bold">${esc(r.crmRole)}</td>
-      <td><select class="select integ-map-select" aria-label="Galaxis role for ${esc(r.crmRole)}" onchange="integCrmMapSet(${i}, 'roleId', this.value)">
-        <option value="" ${r.roleId ? '' : 'selected'}>Do not assign</option>${agencyRoles.map(x => `<option value="${x.id}" ${x.id === r.roleId ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></td>
-      <td><select class="select integ-map-select" aria-label="Team for ${esc(r.crmRole)}" onchange="integCrmMapSet(${i}, 'teamId', this.value)" ${r.roleId ? '' : 'disabled'}>
-        <option value="" ${r.teamId ? '' : 'selected'}>Any team</option>${agencyTeams.map(t => `<option value="${t.id}" ${t.id === r.teamId ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></td>
-      <td>${!r.roleId ? '<span class="t-muted">Not assigned</span>' : who.length ? `<span class="integ-map-who">${esc(who.map(m => m.name).join(', '))}</span>` : '<span class="integ-pill-warn"><i data-lucide="triangle-alert"></i>No matching user</span>'}</td></tr>`;
-  }).join('');
-  return `<div class="card-header"><div><h2 class="h-section">Agency CRM — role mapping & auto set-up</h2>
-      <div class="card-sub">When an account converts in the agency CRM, Galaxis creates the client workspace, copies its services and budgets, assigns agency members by role and adds the client contacts.</div></div></div>
-    <div class="table-wrap"><table class="table integ-table">
-      <thead><tr><th>CRM role</th><th>Galaxis role</th><th>Team</th><th>Galaxis users who match</th></tr></thead><tbody>${rows}</tbody></table></div>
-    <div class="t-caption t-muted integ-map-note">The CRM’s named user is assigned when they hold the mapped role and team. Otherwise the matching member with the fewest client workspaces is picked. Owners and Agency Admins already see every workspace.</div>
-    <div class="integ-crm-toggle"><div><div class="t-bold">Send client invites only after account-manager approval</div>
-        <div class="field-hint">On: client contacts from the CRM wait as “Awaiting approval” until the account manager approves them in the set-up checklist. Off: they are invited as soon as the workspace is created.</div></div>
-      <label class="toggle"><input type="checkbox" ${crmSettings.approvalRequired ? 'checked' : ''} onchange="integCrmApproval(this.checked)" aria-label="Send client invites only after account-manager approval"><span></span></label></div>`;
-}
-function integCrmMapSet(i, key, val) {
-  const r = crmRoleMap[i];
-  r[key] = val;
-  if (key === 'roleId' && !val) r.teamId = '';
-  integRenderCrmMap();
-  showToast(`Role mapping saved for ${r.crmRole}. Applies to the next CRM conversion.`, 'check-circle');
-}
-function integCrmApproval(on) {
-  crmSettings.approvalRequired = on;
-  showToast(on ? 'Client invites will wait for account-manager approval' : 'Client invites will be sent automatically on conversion', on ? 'shield-check' : 'send');
-}
-
 // Simulated OAuth: resets the token to valid with a new expiry (Google 1 year, Meta 60 days).
 function integReauth(k) {
   const t = masterTokens[k];
@@ -969,12 +934,7 @@ Agency-level integrations page ("My Workspace"). Bridges the external ad platfor
   - Shows status (Connected / Disconnected), "{N} accounts synced" and the last sync time.
   - **Re-sync** runs a sync (simulated) and refreshes the count and time. When disconnected the button becomes **Reconnect**.
   - Disconnected shows a red banner at the top of the page ("Agency CRM disconnected") with Reconnect. While disconnected, converted CRM accounts don't create workspaces.
-- **Role mapping & auto set-up card** below the connections:
-  - Table: CRM role → Galaxis role (select, or "Do not assign") → Team (select, or "Any team") → the Galaxis users who currently match.
-  - Defaults: Account Manager → Account Manager; SEO Specialist → SEO Lead, SEO Research team; Project Lead → Project Lead; Ads Specialist → Account Manager, Marketing team.
-  - Resolution: the CRM's named user is assigned when they hold the mapped role and team; otherwise the matching member with the fewest client workspaces. A role with no matching user is flagged here and in the set-up checklist.
-  - Changes apply to the next conversion and don't re-assign existing workspaces.
-  - Toggle **"Send client invites only after account-manager approval"** — on by default (Hannah's decision). Off sends invites straight away.
+- **Role mapping**: the CRM role → Galaxis role/team mapping card was removed from this page on 22/10/2026. Auto set-up uses the default mapping (Account Manager → Account Manager; SEO Specialist → SEO Lead, SEO Research team; Project Lead → Project Lead; Ads Specialist → Account Manager, Marketing team), and client invites always wait for account-manager approval. Where the mapping is managed (here, Team & Access, or the CRM) is an open question.
 - What auto set-up does is specified on Team & Access › Client Organisation.
 
 ### Client workspaces without linked ad accounts (V1, In Review)

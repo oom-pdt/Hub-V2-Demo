@@ -3,7 +3,7 @@
 // Every global here is prefixed `crm`. Contract used by the dashboard: crmPendingSetups(), crmOpenSetup(wsId), crmSimulateConversion().
 // All companies, people and emails below are fictional placeholders.
 
-// ---------- Role mapping (edited in agency Integrations) ----------
+// ---------- Role mapping (defaults; no editing UI since 22/10/2026 — where it is managed is an open question) ----------
 // Each CRM role maps to a Galaxis agency role and, optionally, a team. On conversion the CRM's named user is used when
 // they hold the mapped role (and team); otherwise the least-loaded agency member with that role and team is picked.
 // roleId '' means "do not assign".
@@ -97,7 +97,7 @@ function crmSetupSteps(wsId) {
   const missing = s.assignees.filter(a => !a.memberId);
   steps.push({ id: 'assignees', label: 'Agency assignees added', state: missing.length ? 'pending' : 'done',
     detail: assigned.map(a => `${memberById(a.memberId).name} (${a.crmRole})`).join(', ') || 'No agency members assigned.',
-    warn: missing.length ? `No Galaxis user matches ${missing.map(a => a.crmRole).join(', ')}. Assign one manually or update the role mapping.` : '' });
+    warn: missing.length ? `No Galaxis user matches ${missing.map(a => a.crmRole).join(', ')}. Assign one manually.` : '' });
   if (acc.services.some(x => x.type === 'SEO')) {
     const e = wsProducts(wsId)['seo-cloud'];
     steps.push({ id: 'seo', label: 'SEO Cloud project linked', state: seoProjects[wsId] ? 'done' : 'pending',
@@ -292,7 +292,7 @@ function crmSetupHTML(wsId) {
         <div class="row crm-setup-meta"><span class="crm-badge"><i data-lucide="sparkles"></i>From CRM</span><span class="t-caption t-muted">${esc(acc.crmId)} · Account manager ${esc(am?.name || 'not mapped')}</span></div></div></div>
     <div class="crm-progress-row"><span class="t-bold">Set-up checklist</span><span class="t-caption t-secondary">${p.done} of ${p.total} steps</span></div>
     <div class="progress crm-progress" role="progressbar" aria-valuenow="${p.done}" aria-valuemin="0" aria-valuemax="${p.total}"><span style="width:${pct}%"></span></div>
-    <p class="t-caption t-muted crm-setup-note">Galaxis created this workspace automatically when the account converted in the agency CRM. ${crmSettings.approvalRequired ? 'Client invites wait for the account manager’s approval.' : 'Client invites were sent automatically (approval is turned off in Integrations).'}</p>
+    <p class="t-caption t-muted crm-setup-note">Galaxis created this workspace automatically when the account converted in the agency CRM. ${crmSettings.approvalRequired ? 'Client invites wait for the account manager’s approval.' : 'Client invites were sent automatically.'}</p>
     <ol class="crm-steps">${items}</ol>`;
 }
 function crmContactList(wsId) {

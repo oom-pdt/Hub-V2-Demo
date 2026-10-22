@@ -1343,7 +1343,7 @@ Directory for creating and locating client organisations (workspaces). Ported fr
 When an account converts in the agency CRM, Galaxis creates the client workspace automatically:
 1. **Workspace created**, marked "From CRM" (badge on the card).
 2. **Services & budgets synced** from the CRM (shown read-only in Organisation › Business Information › Services & Contract).
-3. **Agency assignees added** through the role mapping in agency Integrations. The CRM's named user is used when they hold the mapped Galaxis role and team; otherwise the agency member with that role and team and the fewest workspaces is picked. Assignment writes to each member's assigned workspaces, so the workspace appears in their switcher.
+3. **Agency assignees added** through the default CRM role mapping (no editing UI since 22/10/2026). The CRM's named user is used when they hold the mapped Galaxis role and team; otherwise the agency member with that role and team and the fewest workspaces is picked. Assignment writes to each member's assigned workspaces, so the workspace appears in their switcher.
 4. **SEO Cloud project linked** (only when SEO is a live service). The project starts as *Pending setup* until keywords are set up in SEO Cloud.
 5. **Client contacts awaiting approval.** CRM contacts are added as members with status *Awaiting approval*. They are not invited and don't use a seat. The account manager approves them (all at once or one by one) or removes them; approved contacts become *Pending Invite*. The first primary contact becomes the workspace Primary Contact.
 6. **Ad accounts linked** — a manual step: "Link in Integrations" opens agency Integrations.

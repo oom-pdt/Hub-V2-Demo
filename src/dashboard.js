@@ -755,7 +755,7 @@ function dashRenderSeo(ws) {
       <div class="dash-seo-side">${dashSeoAvgCard(s)}${dashSeoOverviewCard(s)}</div>
       <div class="card dash-seo-chart-card">
         <div class="card-header">
-          <div><h2 class="h-section">Average Position Trend</h2><div class="card-sub">Daily average position of keywords in the top 100. Lower is better, so position 1 is at the top.</div></div>
+          <div><h2 class="h-section">Average Position Trend</h2><div class="card-sub">Daily average position of keywords in the top 100. Lower is better, so better positions are higher on the chart.</div></div>
         </div>
         <div class="dash-chart" id="dash-seo-chart"><svg role="img" aria-label="Average position trend"></svg></div>
       </div>
@@ -854,15 +854,17 @@ function dashSeoRenderChart() {
   const p = s.project;
   const vals = s.series.map(x => x.avg).filter(v => v !== null);
   if (!vals.length) { wrap.innerHTML = emptyState('chart-line', 'No ranked keywords yet', 'The trend appears once keywords rank in the top 100.'); return; }
-  // The axis always starts at position 1 (top) and runs down past the worst average in the range.
-  const max = Math.max(...vals) + 0.5;
-  const step = [1, 2, 5, 10, 20, 25, 50].find(st => (max - 1) / st <= 6) || 50;
-  const lo = 1, hi = Math.max(step, Math.ceil(max / step) * step);
-  const ticks = [1];
-  for (let v = step; v <= hi + 1e-9; v += step) if (v > 1) ticks.push(v);
+  // Same presentation as SEO Cloud: axis zoomed to the data in whole positions (better at the top),
+  // a dot on every day and angled "Oct-18" date labels.
+  const step = [1, 2, 5, 10].find(st => (Math.ceil(Math.max(...vals)) - Math.floor(Math.min(...vals)) + 2) / st <= 9) || 10;
+  const lo = Math.max(1, Math.floor((Math.min(...vals) - 1) / step) * step), hi = Math.ceil((Math.max(...vals) + 1) / step) * step;
+  const ticks = [];
+  for (let v = lo; v <= hi + 1e-9; v += step) ticks.push(v);
   const n = p.keywords.length || 1;
   dashLineChart(wrap, {
-    id: 'dash-seo', invert: true, lo, hi, ticks, fmtAxis: v => String(v),
+    id: 'dash-seo', invert: true, lo, hi, ticks, fmtAxis: v => String(v), height: 300,
+    rotateLabels: true, allDots: s.series.length <= 31,
+    dateLabel: d => `${MONTHS[d.getMonth()]}-${String(d.getDate()).padStart(2, '0')}`,
     series: s.series.map(x => ({ d: toDate(x.date), v: x.avg === null ? hi : x.avg })),
     tip: i => {
       const ago = s.days - i;
@@ -1548,19 +1550,21 @@ function dashSmoothPath(pts, floor) {
 // Smooth line chart with area fill, axis labels, hover guide and tooltip. Used by Daily Performance and the
 // SEO Average Position trend. o: { id, series: [{ d: Date, v }], lo, hi, ticks: [values], fmtAxis(v),
 // invert (lo at the top, e.g. ranking positions), tip(i) -> tooltip html, height }
+// o: { id, series: [{ d: Date, v }], lo, hi, ticks, fmtAxis, invert, tip(i), height,
+//      dateLabel(d) (x-axis text), rotateLabels (angled x labels), allDots (a dot on every point) }
 function dashLineChart(wrap, o) {
   if (!wrap) return;
   const svg = wrap.querySelector('svg');
   const series = o.series;
   const n = series.length;
   const W = Math.max(320, wrap.clientWidth || 600), H = o.height || 280;
-  const p = { l: 18 + Math.max(...o.ticks.map(v => o.fmtAxis(v).length)) * 7, r: 16, t: 12, b: 34 };
+  const p = { l: 18 + Math.max(...o.ticks.map(v => o.fmtAxis(v).length)) * 7, r: 16, t: 12, b: o.rotateLabels ? 54 : 34 };
   const iw = W - p.l - p.r, ih = H - p.t - p.b;
   const span = (o.hi - o.lo) || 1;
   const x = i => p.l + (n === 1 ? iw / 2 : i * iw / (n - 1));
   const y = v => o.invert ? p.t + (v - o.lo) / span * ih : p.t + ih - (v - o.lo) / span * ih;
   const ticks = n <= 6 ? series.map((_, i) => i) : Array.from({ length: 6 }, (_, j) => Math.round(j * (n - 1) / 5));
-  const lbl = d => `${String(d.getDate()).padStart(2, '0')} ${MONTHS[d.getMonth()]}`;
+  const lbl = o.dateLabel || (d => `${String(d.getDate()).padStart(2, '0')} ${MONTHS[d.getMonth()]}`);
   const bottom = o.invert ? o.hi : o.lo;
   let out = `<defs><linearGradient id="${o.id}-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#398FF7" stop-opacity=".14"/><stop offset="1" stop-color="#398FF7" stop-opacity="0"/></linearGradient></defs>`;
   o.ticks.forEach(v => {
@@ -1568,12 +1572,16 @@ function dashLineChart(wrap, o) {
     if (v !== bottom) out += `<line x1="${p.l}" x2="${W - p.r}" y1="${y(v)}" y2="${y(v)}" class="dash-grid"/>`;
   });
   out += `<line x1="${p.l}" y1="${p.t}" x2="${p.l}" y2="${p.t + ih}" class="dash-axis-line"/><line x1="${p.l}" y1="${p.t + ih}" x2="${W - p.r}" y2="${p.t + ih}" class="dash-axis-line"/>`;
-  ticks.forEach(i => { out += `<text x="${x(i)}" y="${H - 8}" text-anchor="middle" class="dash-axis">${lbl(series[i].d)}</text>`; });
+  ticks.forEach(i => {
+    out += o.rotateLabels
+      ? `<text x="${x(i)}" y="${p.t + ih + 14}" text-anchor="end" transform="rotate(-45 ${x(i)} ${p.t + ih + 14})" class="dash-axis">${lbl(series[i].d)}</text>`
+      : `<text x="${x(i)}" y="${H - 8}" text-anchor="middle" class="dash-axis">${lbl(series[i].d)}</text>`;
+  });
   const pts = series.map((s, i) => [x(i), y(s.v)]);
   const line = dashSmoothPath(pts, p.t + ih);
   out += `<path d="${line} L ${x(n - 1)} ${p.t + ih} L ${x(0)} ${p.t + ih} Z" fill="url(#${o.id}-area)"/>`;
   out += `<path d="${line}" fill="none" stroke="#398FF7" stroke-width="1.75" stroke-linejoin="round"/>`;
-  ticks.forEach(i => { out += `<circle cx="${pts[i][0]}" cy="${pts[i][1]}" r="3.5" fill="#66ACFD" stroke="#398FF7" stroke-width="1"/>`; });
+  (o.allDots ? series.map((_, i) => i) : ticks).forEach(i => { out += `<circle cx="${pts[i][0]}" cy="${pts[i][1]}" r="${o.allDots ? 3 : 3.5}" fill="#66ACFD" stroke="#398FF7" stroke-width="1"/>`; });
   out += `<line class="dash-guide" x1="0" x2="0" y1="${p.t}" y2="${p.t + ih}" stroke="#AEAEAE" stroke-dasharray="3 3" visibility="hidden"/>`;
   out += `<circle class="dash-hover-dot" r="5" fill="#fff" stroke="#398FF7" stroke-width="2" visibility="hidden"/>`;
   out += `<rect class="dash-hover-rect" x="${p.l}" y="${p.t}" width="${iw}" height="${ih}" fill="transparent"/>`;

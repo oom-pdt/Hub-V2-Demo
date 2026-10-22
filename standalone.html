@@ -411,6 +411,19 @@ svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
 .toast.show { display: flex; }
 @keyframes toastIn { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
 
+/* ---------- Column picker (colPickerButton in core.js) ---------- */
+.colpick-panel { width: 400px; max-height: min(70vh, 580px); overflow-y: auto; padding: 20px 22px 16px; }
+.colpick-head { margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-light); }
+.colpick-head .card-sub { margin-top: 4px; line-height: 16px; }
+.colpick-panel .filter-group { margin-bottom: 16px; }
+.colpick-group-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.colpick-group-head .filter-group-title { margin-bottom: 0; }
+.colpick-group-head .t-link { color: var(--link); font-size: 12px; }
+.colpick-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; }
+.colpick-options .check { display: flex; align-items: center; gap: 8px; font-size: 12px; line-height: 16px; min-width: 0; }
+.colpick-options .check input { flex-shrink: 0; }
+.colpick-panel .filter-actions { gap: 8px; padding-top: 14px; }
+
 /* ---------- Date filter (ported from V1) ---------- */
 .date-filter { position: relative; }
 .date-trigger { display: inline-flex; align-items: center; justify-content: space-between; gap: 24px; min-width: 240px; height: 44px; padding: 0 16px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); font-size: 16px; letter-spacing: .5px; }

@@ -27,7 +27,8 @@ const DASH_MODELS = [['mta', 'Multi-Touch (40/20/40)'], ['first', 'First-Touch']
 const DASH_MODEL_FACTOR = { google: { mta: 0.8, first: 0.6, last: 1 }, meta: { mta: 0.74, first: 0.66, last: 0.9 } };
 // Lead-to-customer rate also shifts by model (first-touch credits more early, colder leads).
 const DASH_MODEL_CLOSE = { mta: 1, first: 0.82, last: 1.12 };
-const DASH_SUM_KEYS = ['spend', 'impressions', 'clicks', 'conversions', 'leads', 'converted', 'revenue'];
+// Summable metrics. Platform-reported: spend … convValue. CRM-attributed: leads, converted, revenue.
+const DASH_SUM_KEYS = ['spend', 'impressions', 'reach', 'clicks', 'conversions', 'pLeads', 'purchases', 'convValue', 'engagements', 'leads', 'converted', 'revenue'];
 const DASH_QUALITY_LABEL = { good: 'Excellent', mid: 'Average', bad: 'Bad' };
 const DASH_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const dashCache = { tree: {}, metrics: {} };
@@ -86,11 +87,22 @@ function dashTree(wsId) {
           const spend = (400 + rnd() * 2600) * (status === 'Paused' ? 0.3 : 1);
           const impressions = spend / cpm * 1000;
           const clicks = impressions * ctr;
+          const conversions = clicks * cvr;
+          const freq = p === 'google' ? 1.2 + rnd() * 1.3 : 1.6 + rnd() * 1.8;
+          const engRate = (p === 'google' ? 0.4 + rnd() * 1.2 : 1 + rnd() * 3.5) / 100;
+          const purchases = conversions * (0.1 + rnd() * 0.2);
           t.ads.push({
             id, level: 'ad', platform: p, name: `Ad Creative Q${Math.ceil(adNo / 2)} - Variant ${adNo}`, format: fmt, status,
             parents: [cName, gName], campaignName: cName, adGroupName: gName,
             path: { platform: pid, campaign: cid, adgroup: gid, ad: id },
-            base: { spend, impressions, clicks, conversions: clicks * cvr }
+            base: {
+              spend, impressions, clicks, conversions,
+              reach: impressions / freq,
+              engagements: impressions * engRate,
+              pLeads: conversions * (0.45 + rnd() * 0.3),
+              purchases,
+              convValue: purchases * (60 + rnd() * 180)
+            }
           });
         }
       });
@@ -109,13 +121,24 @@ function dashTree(wsId) {
 // Date-range scaling. Not purely linear, so ratios (CPM, CTR, CPC) also move a little with the range.
 function dashFactors(days) {
   const f = days / 30;
-  return { spend: f, impressions: f * (1 + 0.03 * Math.sin(days)), clicks: f * (1 + 0.05 * Math.cos(days * 1.3)), conversions: f * (1 - 0.06 * Math.sin(days * 0.7)) };
+  const impressions = f * (1 + 0.03 * Math.sin(days));
+  const conversions = f * (1 - 0.06 * Math.sin(days * 0.7));
+  // Reach grows more slowly than impressions over longer ranges, so frequency rises with the range.
+  return { spend: f, impressions, reach: Math.pow(f, 0.8), engagements: impressions, clicks: f * (1 + 0.05 * Math.cos(days * 1.3)), conversions, pLeads: conversions, purchases: conversions, convValue: conversions };
 }
 function dashDerive(o) {
   o.cpm = o.impressions ? o.spend / o.impressions * 1000 : 0;
   o.ctr = o.impressions ? o.clicks / o.impressions * 100 : 0;
   o.cpc = o.clicks ? o.spend / o.clicks : 0;
   o.cpa = o.conversions ? o.spend / o.conversions : 0;
+  // Platform-reported metrics from the Google & Meta Ads Metrics sheet (Dev Notes, green rows).
+  o.freq = o.reach ? o.impressions / o.reach : 0;
+  o.cvr = o.clicks ? o.conversions / o.clicks * 100 : 0;
+  o.cpLead = o.pLeads ? o.spend / o.pLeads : 0;
+  o.cpp = o.purchases ? o.spend / o.purchases : 0;
+  o.pRoas = o.spend ? o.convValue / o.spend : 0;
+  o.engRate = o.impressions ? o.engagements / o.impressions * 100 : 0;
+  o.cpe = o.engagements ? o.spend / o.engagements : 0;
   o.cpl = o.leads ? o.spend / o.leads : 0;
   o.roas = o.spend ? o.revenue / o.spend : 0;
   o.convRate = o.leads ? o.converted / o.leads * 100 : 0;
@@ -147,7 +170,12 @@ function dashMetrics(wsId, scope) {
       ...a, formats: [a.format], childCount: 0,
       spend: a.base.spend * f.spend,
       impressions: Math.round(a.base.impressions * f.impressions),
+      reach: Math.round(a.base.reach * f.reach),
       clicks: Math.round(a.base.clicks * f.clicks),
+      engagements: Math.round(a.base.engagements * f.engagements),
+      pLeads: Math.round(a.base.pLeads * f.pLeads),
+      purchases: Math.round(a.base.purchases * f.purchases),
+      convValue: a.base.convValue * f.convValue,
       conversions, leads, converted, revenue: converted * deal * (0.85 + r() * 0.3)
     });
   });
@@ -831,6 +859,37 @@ function dashDrill(id) {
 }
 function dashClearDrill() { state.ui.dashDrill = null; state.ui.dashLevel = 'platform'; pager('dash-ct').page = 1; dashRenderCampaignCard(); }
 
+// Campaigns and Ads metric columns, in the order of the Google & Meta Ads Metrics sheet (green rows),
+// plus V1's Cost Per Conversion and the CRM-attributed columns. tip = the sheet's definition.
+// quality: 'low' = lower is better, 'high' = higher is better (coloured dot against the workspace total).
+const DASH_CT_COLS = [
+  { key: 'spend', label: 'Spend', tip: 'Amount spent on your campaign.', fmt: v => fmtMoney(v) },
+  { key: 'impressions', label: 'Impressions', tip: 'Total number of times the ad was shown on screen.', fmt: v => fmtNum(v) },
+  { key: 'reach', label: 'Reach', tip: 'Estimated number of unique individuals who saw the ad.', fmt: v => fmtNum(v) },
+  { key: 'cpm', label: 'CPM', tip: 'The average cost to show the ad 1,000 times.', fmt: v => fmtMoney(v, 2), quality: 'low' },
+  { key: 'freq', label: 'Frequency', tip: 'Average number of times each unique person saw the ad.', fmt: v => v.toFixed(2) },
+  { key: 'clicks', label: 'Clicks', tip: 'Number of clicks on links within the ad that direct users to specified destinations (like your website).', fmt: v => fmtNum(v) },
+  { key: 'ctr', label: 'CTR', tip: 'Percentage of impressions that resulted in a click.', fmt: v => fmtPct(v), quality: 'high' },
+  { key: 'cpc', label: 'CPC', tip: 'Average cost paid for each link click.', fmt: v => fmtMoney(v, 2), quality: 'low' },
+  { key: 'conversions', label: 'Conversions', tip: 'An action that a customer takes after interacting with your ad, such as making a purchase, signing up for a newsletter, or calling your business.', fmt: v => fmtNum(v) },
+  { key: 'cvr', label: 'Conversion Rate', tip: 'Percentage of clicks that successfully resulted in a lead submission.', fmt: v => fmtPct(v), quality: 'high', needs: 'clicks' },
+  { key: 'cpa', label: 'Cost Per Conversion', tip: 'Total spend divided by platform-reported conversions.', fmt: v => fmtMoney(v, 2), quality: 'low', needs: 'conversions' },
+  { key: 'cpLead', label: 'Cost Per Lead', tip: 'Average cost required to generate one successful lead.', fmt: v => fmtMoney(v, 2), quality: 'low', needs: 'pLeads' },
+  { key: 'cpp', label: 'Cost Per Purchase', tip: 'Average cost required to acquire one successful sale.', fmt: v => fmtMoney(v, 2), quality: 'low', needs: 'purchases' },
+  { key: 'pRoas', label: 'ROAS', tip: 'Revenue generated for every dollar spent on the campaign (platform-reported purchase value ÷ spend).', fmt: v => `${v.toFixed(2)}x`, quality: 'high', needs: 'spend' },
+  { key: 'convValue', label: 'Conversion Value', tip: 'Total monetary value of the purchases driven by the advertising efforts.', fmt: v => fmtMoney(v) },
+  { key: 'engRate', label: 'Engagement Rate', tip: 'Percentage of people who interacted with the ad after seeing it.', fmt: v => fmtPct(v), quality: 'high', needs: 'impressions' },
+  { key: 'engagements', label: 'Engagement', tip: 'Total actions taken on the ad (likes, comments, shares, video views, ad expansions).', fmt: v => fmtNum(v) },
+  { key: 'cpe', label: 'Cost Per Engagement', tip: 'Average cost for each interaction with the ad.', fmt: v => fmtMoney(v, 2), quality: 'low', needs: 'engagements' }
+];
+// CRM-attributed columns (CRM mode only). Prefixed "CRM" so they are not confused with platform-reported ROAS.
+const DASH_CT_CRM_COLS = [
+  { key: 'leads', label: 'CRM Leads', tip: 'Leads in your CRM attributed to this row under the selected attribution model.', fmt: v => fmtNum(v) },
+  { key: 'cpl', label: 'CRM CPL', tip: 'Spend ÷ CRM-attributed leads.', fmt: v => fmtMoney(v, 2), needs: 'leads' },
+  { key: 'revenue', label: 'CRM Revenue', tip: 'Closed revenue in your CRM credited to this row by the attribution model.', fmt: v => fmtMoney(v) },
+  { key: 'roas', label: 'CRM ROAS', tip: 'CRM-attributed revenue ÷ spend.', fmt: v => `${v.toFixed(2)}x`, needs: 'spend' }
+];
+
 function dashCampaignBody() {
   const u = state.ui;
   const level = u.dashLevel;
@@ -850,38 +909,27 @@ function dashCampaignBody() {
     return true;
   });
   if (!state.sorts['dash-ct']) state.sorts['dash-ct'] = { col: 'spend', dir: 'desc' };
+  const metricCols = DASH_CT_COLS.concat(crm ? DASH_CT_CRM_COLS : []);
   rows = applySort(rows, 'dash-ct', {
     name: e => e.name.toLowerCase(), format: e => e.formats[0] || '', status: e => DASH_STATUS_RANK[e.status],
-    spend: e => e.spend, impressions: e => e.impressions, cpm: e => e.cpm, clicks: e => e.clicks, ctr: e => e.ctr, cpc: e => e.cpc,
-    conversions: e => e.conversions, cpa: e => e.cpa, leads: e => e.leads, cpl: e => e.cpl, revenue: e => e.revenue, roas: e => e.roas
+    ...Object.fromEntries(metricCols.map(c => [c.key, e => e[c.key] || 0]))
   });
   const total = rows.length;
   const page = paginate(rows, 'dash-ct', 10);
   const ref = m.total;
   const next = DASH_LEVELS[DASH_LEVELS.indexOf(level) + 1];
-  const cols = [['name', DASH_NAME_COL[level]], ['format', 'Ad Format'], ['status', 'Status'], ['spend', 'Spend'], ['impressions', 'Impressions'], ['cpm', 'CPM'], ['clicks', 'Clicks'], ['ctr', 'CTR'], ['cpc', 'CPC'], ['conversions', 'Conversions'], ['cpa', 'Cost Per Conversion']]
-    .concat(crm ? [['leads', 'Leads'], ['cpl', 'CPL'], ['revenue', 'Revenue'], ['roas', 'ROAS']] : []);
+  const cols = [['name', DASH_NAME_COL[level]], ['format', 'Ad Format'], ['status', 'Status']].concat(metricCols.map(c => [c.key, c.label]));
+  const colDef = Object.fromEntries(metricCols.map(c => [c.key, c]));
   const fn = 'dashRefreshCampaignTable';
-  const head = cols.map(([c, l]) => `<th>${sortHeader('dash-ct', c, l, fn)}</th>`).join('') + (next ? '<th>Action</th>' : '');
+  const head = cols.map(([c, l]) => `<th${colDef[c] ? ` title="${esc(colDef[c].tip)}"` : ''}>${sortHeader('dash-ct', c, l, fn)}</th>`).join('') + (next ? '<th>Action</th>' : '');
   const cell = (e, c) => {
-    switch (c) {
-      case 'name': return dashNameCell(e, level);
-      case 'format': return dashFormatCell(e.formats);
-      case 'status': return statusPill(DASH_STATUS_KEY[e.status], e.status);
-      case 'spend': return fmtMoney(e.spend);
-      case 'impressions': return fmtNum(e.impressions);
-      case 'cpm': return dashDot(fmtMoney(e.cpm, 2), dashQuality(e.cpm, ref.cpm));
-      case 'clicks': return fmtNum(e.clicks);
-      case 'ctr': return dashDot(fmtPct(e.ctr), dashQuality(e.ctr, ref.ctr, true));
-      case 'cpc': return dashDot(fmtMoney(e.cpc, 2), dashQuality(e.cpc, ref.cpc));
-      case 'conversions': return fmtNum(e.conversions);
-      case 'cpa': return e.conversions ? dashDot(fmtMoney(e.cpa, 2), dashQuality(e.cpa, ref.cpa)) : '<span class="t-muted">—</span>';
-      case 'leads': return fmtNum(e.leads);
-      case 'cpl': return e.leads ? fmtMoney(e.cpl, 2) : '<span class="t-muted">—</span>';
-      case 'revenue': return fmtMoney(e.revenue);
-      case 'roas': return `${e.roas.toFixed(2)}x`;
-    }
-    return '';
+    if (c === 'name') return dashNameCell(e, level);
+    if (c === 'format') return dashFormatCell(e.formats);
+    if (c === 'status') return statusPill(DASH_STATUS_KEY[e.status], e.status);
+    const d = colDef[c];
+    if (d.needs && !e[d.needs]) return '<span class="t-muted">—</span>';
+    const text = d.fmt(e[c] || 0);
+    return d.quality ? dashDot(text, dashQuality(e[c], ref[c], d.quality === 'high')) : text;
   };
   const body = page.map(e => `
     <tr ${next ? `class="clickable" onclick="dashDrill('${q(e.id)}')"` : ''}>
@@ -1309,7 +1357,25 @@ Client-facing workspace dashboard giving a simplified, unified view of Meta and 
 - **Hierarchical Campaign Breakdown Table ("Campaigns and Ads")**: Users drill down through Platform → Campaign → Ad Group → Ad to compare key statistics.
   - **Level tabs**: Platform / Campaigns / Ad Groups / Ads.
   - **Drill-down**: clicking a row, or "View …" in the ⋮ menu, opens the next level with a "Filtered for X ✕" badge. Clearing the badge returns to Platform.
-  - **Columns**: Name (parent shown above), Ad Format (+N overflow), Status, Spend, Impressions, CPM, Clicks, CTR, CPC, Conversions, Cost Per Conversion. Every column is sortable, including Status (Active → Attention Required → Paused) and Ad Format (first format).
+  - **Columns**: Name (parent shown above), Ad Format (+N overflow), Status, then the platform metrics from the *Google & Meta Ads Metrics* sheet (Metrics (Dev Notes), green rows), in sheet order: Spend (Cost), Impressions, Reach, CPM, Frequency, Clicks, CTR, CPC, Conversions, Conversion Rate, Cost Per Conversion (kept from V1), Cost Per Lead, Cost Per Purchase, ROAS, Conversion Value, Engagement Rate, Engagement, Cost Per Engagement. In CRM mode, CRM Leads, CRM CPL, CRM Revenue and CRM ROAS follow ("CRM" prefix to separate CRM-attributed ROAS from platform-reported ROAS). Header tooltips show the sheet's definitions. Every column is sortable, including Status (Active → Attention Required → Paused) and Ad Format (first format).
+  - **API fields** (from the sheet, for development):
+    - Cost — Meta \`spend\`; Google \`metrics.cost_micros\`
+    - Impressions — Meta \`impressions\`; Google \`metrics.impressions\`
+    - Reach — Meta \`reach\`; Google \`metrics.unique_users\`
+    - CPM — Meta \`cpm\`; Google \`metrics.average_cpm\`
+    - Frequency — Meta \`frequency\`; Google \`metrics.average_impression_frequency_per_user\`
+    - Clicks — Meta \`inline_link_clicks\`; Google \`metrics.clicks\`
+    - CTR — Meta \`inline_link_click_ctr\`; Google \`metrics.ctr\`
+    - CPC — Meta \`cost_per_inline_link_click\`; Google \`metrics.average_cpc\`
+    - Conversions — Meta \`actions\`; Google \`metrics.conversions\`
+    - Conversion Rate — Meta \`actions / inline_link_clicks\`; Google \`metrics.conversions_from_interactions_rate\`
+    - Cost Per Lead / Cost Per Purchase — Meta \`cost_per_action_type\`; Google \`metrics.cost_per_conversion\`
+    - ROAS — Meta \`purchase_roas\`; Google \`metrics.conversions_value_per_cost\`
+    - Conversion Value — Meta \`action_values\`; Google \`metrics.conversions_value\`
+    - Engagement Rate — Meta \`actions / impressions\` (action_type = post_engagement); Google \`metrics.engagement_rate\`
+    - Engagement — Meta \`actions\` (action_type = post_engagement); Google \`metrics.interactions\`
+    - Cost Per Engagement — Meta \`cost_per_action_type\` (action_type = post_engagement); Google \`metrics.average_cpe\`
+  - **Open question:** Google reports Cost Per Lead and Cost Per Purchase from the same field (\`metrics.cost_per_conversion\`), so they only differ if conversion actions are set up separately for leads and purchases.
   - **Quality dots** on CPM, CTR, CPC and Cost per Conversion compare each row with the workspace average.
   - Only the workspace's linked platforms appear. The hierarchy is generated per workspace.
 - **Table Filters**:

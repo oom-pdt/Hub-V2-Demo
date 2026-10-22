@@ -232,7 +232,6 @@ const DASH_FILTERS = {
     store: () => state.ui.dashMgrFilter,
     groups: () => [
       { key: 'platform', title: 'Ad Platforms', options: [['google', 'Google'], ['meta', 'Meta'], ['none', 'No platform linked']] },
-      { key: 'status', title: 'Status', options: [['new', 'New'], ['active', 'Active'], ['inactive', 'Inactive'], ['attention', 'Attention Required']] },
       { key: 'perf', title: 'Performance (Cost per Conversion)', options: [['good', 'Excellent'], ['mid', 'Average'], ['bad', 'Bad']] },
       { key: 'seo', title: 'SEO Status', options: [['on', 'On track'], ['off', 'Off track'], ['critical', 'Critical'], ['none', 'Not on SEO Cloud']] }
     ],
@@ -523,22 +522,15 @@ function dashAttentionList() {
     </div>`).join('')}</div>`;
 }
 
-// ---------- Managed Accounts table ----------
-function dashLastActivity(w) {
-  const d = new Date('2026-10-21T00:00:00');
-  d.setDate(d.getDate() - ((w.seed * 5) % 9));
-  return toDateInput(d);
-}
 function dashManagedRows() {
   const port = dashPortfolio().total;
   const days = dateRangeDays('agency');
   return dashAgencyWorkspaces().map(w => {
     const t = dashMetrics(w.id, 'agency').total;
     const linked = t.spend > 0;
-    const contact = wsPrimaryContact(w.id);
     const services = crmAccounts[w.id]?.services || [];
     return {
-      w, t, linked, plats: wsPlatforms(w.id), contact, last: dashLastActivity(w),
+      w, t, linked, plats: wsPlatforms(w.id),
       services, budget: services.reduce((s, x) => s + (x.monthlyBudget || 0), 0),
       seo: seoConnected(w.id) ? seoStats(w.id, days) : null,
       q: { cpm: linked ? dashQuality(t.cpm, port.cpm) : '', cpc: linked ? dashQuality(t.cpc, port.cpc) : '', cpa: linked ? dashQuality(t.cpa, port.cpa) : '' }
@@ -548,9 +540,6 @@ function dashManagedRows() {
 
 // Managed Accounts columns, in table order. Client and Action are always shown; the rest are in the column picker.
 const DASH_MG_COLS = [
-  { key: 'status', group: 'account', label: 'Status' },
-  { key: 'contact', group: 'account', label: 'Primary Contact' },
-  { key: 'last', group: 'account', label: 'Last Activity' },
   { key: 'platforms', group: 'ads', label: 'Ad Platforms' },
   { key: 'spend', group: 'ads', label: 'Combined Spend' },
   { key: 'cpm', group: 'ads', label: 'CPM' },
@@ -564,7 +553,7 @@ const DASH_MG_COLS = [
 ];
 registerColumnPicker('managed', {
   columns: () => DASH_MG_COLS,
-  groups: [['account', 'Account', { summary: 'status', tone: 'neutral' }], ['ads', 'Ads', { summary: 'spend', tone: 'ads' }],
+  groups: [['ads', 'Ads', { summary: 'spend', tone: 'ads' }],
     ['seo', 'SEO', { summary: 'seoStatus', tone: 'seo' }], ['crm', 'CRM', { summary: 'budget', tone: 'crm' }]],
   collapsible: true,
   note: 'Client and Action are always shown',
@@ -576,7 +565,7 @@ function dashManagedCard() {
   return `<div class="card-header">
       <div><h2 class="h-section">Managed Accounts</h2><div class="card-sub">A complete overview of all client accounts currently assigned to you.</div></div>
       <div class="row">
-        <div class="search dash-search"><input class="input" placeholder="Search client or contact" value="${esc(state.ui.dashMgrSearch)}" oninput="dashManagedSearch(this.value)" aria-label="Search managed accounts"><i data-lucide="search"></i></div>
+        <div class="search dash-search"><input class="input" placeholder="Search client" value="${esc(state.ui.dashMgrSearch)}" oninput="dashManagedSearch(this.value)" aria-label="Search managed accounts"><i data-lucide="search"></i></div>
         ${dashFilterButton('managed')}
         ${colPickerButton('managed')}
       </div>
@@ -595,25 +584,22 @@ function dashManagedBody() {
   const term = state.ui.dashMgrSearch.trim().toLowerCase();
   const f = state.ui.dashMgrFilter;
   let rows = dashManagedRows().filter(r => {
-    if (term && !`${r.w.name} ${r.contact ? r.contact.email + ' ' + r.contact.name : 'unassigned'}`.toLowerCase().includes(term)) return false;
-    if (f.status.length && !f.status.includes(r.w.status)) return false;
+    if (term && !r.w.name.toLowerCase().includes(term)) return false;
     if (f.platform.length && !f.platform.some(p => p === 'none' ? !r.plats.length : r.plats.includes(p))) return false;
     if (f.perf.length && !f.perf.includes(r.q.cpa)) return false;
     if (f.seo.length && !f.seo.includes(r.seo ? r.seo.status.key : 'none')) return false;
     return true;
   });
-  const statusRank = { attention: 0, new: 1, active: 2, inactive: 3 };
   const seoRank = { critical: 0, off: 1, on: 2 };
   // Workspaces without data ("—") always sort last, whichever direction.
   const asc = (state.sorts['dash-managed'] || {}).dir === 'asc';
   const num = v => v || (asc ? Infinity : -1);
   const miss = v => v === null || v === undefined ? (asc ? Infinity : -Infinity) : v;
   rows = applySort(rows, 'dash-managed', {
-    name: r => r.w.name.toLowerCase(), platforms: r => r.plats.length, status: r => statusRank[r.w.status],
+    name: r => r.w.name.toLowerCase(), platforms: r => r.plats.length,
     spend: r => num(r.t.spend), cpm: r => num(r.t.cpm), cpc: r => num(r.t.cpc), cpa: r => num(r.t.cpa),
     seoStatus: r => miss(r.seo ? seoRank[r.seo.status.key] : null), top10: r => miss(r.seo ? r.seo.top10Pct : null),
-    avgPos: r => miss(r.seo ? r.seo.avgPos : null), services: r => num(r.services.length), budget: r => num(r.budget),
-    contact: r => r.contact ? r.contact.email : '~', last: r => r.last
+    avgPos: r => miss(r.seo ? r.seo.avgPos : null), services: r => num(r.services.length), budget: r => num(r.budget)
   });
   const total = rows.length;
   const page = paginate(rows, 'dash-managed', 10);
@@ -627,7 +613,6 @@ function dashManagedBody() {
   const cell = (r, k) => {
     switch (k) {
       case 'platforms': return `<div class="chips dash-nowrap">${r.plats.map(p => platformBadge(p)).join('') || '<span class="t-muted">No platform linked</span>'}</div>`;
-      case 'status': return statusPill(r.w.status);
       case 'spend': return r.linked ? fmtMoney(r.t.spend) : dash;
       case 'cpm': case 'cpc': case 'cpa': return money(r, k);
       case 'seoStatus': return r.seo ? `<span class="pill pill-sm ${r.seo.status.pill}">${esc(r.seo.status.label)}</span>` : dash;
@@ -635,8 +620,6 @@ function dashManagedBody() {
       case 'avgPos': return r.seo && r.seo.avgPos !== null ? dashNum1(r.seo.avgPos) : dash;
       case 'services': return dashServiceChips(r.services);
       case 'budget': return r.budget ? fmtMoney(r.budget) : dash;
-      case 'contact': return r.contact ? `<span class="dash-email" title="${esc(r.contact.name)} · ${esc(r.contact.email)}">${esc(r.contact.email)}</span>` : '<span class="t-muted">Unassigned</span>';
-      case 'last': return fmtDate(r.last);
     }
     return '';
   };
@@ -1734,7 +1717,7 @@ function dashBindHeatmap() {
 // Screen registration, dev toggles
 // =====================================================================
 Object.assign(state.ui, {
-  dashMgrSearch: '', dashMgrFilter: { platform: [], status: [], perf: [], seo: [] },
+  dashMgrSearch: '', dashMgrFilter: { platform: [], perf: [], seo: [] },
   dashAttFilter: { type: [], priority: [] },
   dashModel: 'mta', dashChartMetric: 'spend', dashHeatMetric: 'spend',
   dashFpSnap: {}, dashFpCollapsed: {},
@@ -1873,19 +1856,19 @@ Central command dashboard for agency administrators managing many client ad acco
   - **SEO Critical** (High) and **SEO Off Track** (Medium): an SEO Cloud project below target, e.g. "50% of keywords in top 10 vs 55% target (5 pts below)" → View SEO (opens that workspace's dashboard on the SEO Performance tab).
   - **CRM Set-up** (Medium): an Agency CRM auto set-up with client invites awaiting approval, "N client invites awaiting approval" → Review set-up (the CRM module's set-up checklist; falls back to Team & Access › Client Organisation). Shown only when the CRM module is loaded.
   - The banner adds "N SEO projects below target" when any project is Off track or Critical.
-- **Managed Accounts table** (the V1 Client Workspace Directory, with Figma columns): Client, Ad Platforms, Status, Combined Spend, CPM, CPC, Cost Per Conversion, SEO Status, Top 10 %, Avg Position, Live Services, Monthly Budget, Primary Contact, Last Activity, Action.
+- **Managed Accounts table** (the V1 Client Workspace Directory, with Figma columns): Client, then Ad Platforms, Combined Spend, CPM, CPC, Cost Per Conversion, SEO Status, Top 10 %, Avg Position, Live Services, Monthly Budget, Action. Account columns (Status, Primary Contact, Last Activity) were removed on 22/10/2026 to keep the table focused on performance.
   - **SEO columns**: SEO Status pill ("—" when the workspace is not on SEO Cloud); Top 10 % as "current / target", coloured by status; Avg Position (mean position of keywords ranking in the top 100).
   - **CRM columns**: Live Services as chips from the Agency CRM account (max 2, then "+N"); Monthly Budget = the sum of every live service's monthly budget (SGD).
-  - **Column groups**: columns sit under coloured, collapsible group bands, in the order Account (Status, Primary Contact, Last Activity) · Ads (Ad Platforms, Combined Spend, CPM, CPC, Cost Per Conversion) · SEO (SEO Status, Top 10 %, Avg Position) · CRM (Live Services, Monthly Budget). Collapsing a group leaves its summary column (Status, Combined Spend, SEO Status, Monthly Budget), still sortable; the band shows how many columns are hidden. "Collapse all / Expand all" sits above the Client column. All groups start expanded; each viewer's choice is remembered (prototype: localStorage).
+  - **Column groups**: columns sit under coloured, collapsible group bands, in the order Ads (Ad Platforms, Combined Spend, CPM, CPC, Cost Per Conversion) · SEO (SEO Status, Top 10 %, Avg Position) · CRM (Live Services, Monthly Budget). Collapsing a group leaves its summary column (Combined Spend, SEO Status, Monthly Budget), still sortable; the band shows how many columns are hidden. "Collapse all / Expand all" sits above the Client column. All groups start expanded; each viewer's choice is remembered (prototype: localStorage).
   - **Column picker**: show or hide columns within those groups. A group with every column hidden disappears. Client and Action are always shown. Remembered per viewer (prototype: localStorage).
   - The ⋮ menu adds "View SEO performance" for workspaces on SEO Cloud.
   - Coloured dots on CPM / CPC / Cost per Conversion compare each workspace with the portfolio average. Green (Excellent) is at least 10% better; orange (Average) is within -10% to +15%; red (Bad) is more than 15% worse. This replaces V1's heat cells.
-  - Search by client or contact.
-  - Figma "Managed Account Filter": Ad Platforms, Status, Performance band (on Cost per Conversion) and SEO Status (On track / Off track / Critical / Not on SEO Cloud).
+  - Search by client name.
+  - Figma "Managed Account Filter": Ad Platforms, Performance band (on Cost per Conversion) and SEO Status (On track / Off track / Critical / Not on SEO Cloud).
   - Every column is sortable. Rows without SEO or CRM data sort last in both directions. Pagination uses "Showing Per Page".
   - Clicking a row or a client name opens that workspace's dashboard.
   - The ⋮ menu has Go to workspace, Organisation settings and Integrations.
-  - Workspaces with no linked accounts show "—" for metrics. Primary Contact shows "Unassigned" when a workspace has none.
+  - Workspaces with no linked accounts show "—" for metrics.
 - **Filter dropdowns**: Changes apply immediately. Each group has an "All" option. **Clear Filter** removes every filter. **Revert To Original** restores the selection from when the panel was opened. **Apply** closes the panel.
 - **Cross-Client Campaigns**: Removed on purpose. Per V1 notes, pulling campaign KPIs across every client is too heavy for v1, and the Managed Accounts table is enough for cross-client comparison.
 
@@ -1893,7 +1876,6 @@ Central command dashboard for agency administrators managing many client ad acco
 - **KPIs TBC**: the final portfolio KPI set still needs performance-marketing and account-management sign-off.
 - Should "missing platform links" also count workspaces linked to only one of Google / Meta?
 - Performance-review triggers (CTR drop, budget pacing) are placeholders. Thresholds are TBC.
-- "Last Activity" is mock data. Its source (last login, last sync or last edit) is TBC.
 - Is the keyword contract (X keywords, Y% top-10 target) owned by SEO Cloud or by the Agency CRM?
 - Should the average position count keywords outside the top 100 as position 100, instead of leaving them out?
 

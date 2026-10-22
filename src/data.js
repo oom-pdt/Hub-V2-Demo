@@ -154,16 +154,35 @@ const products = [
 const workspaceProducts = {
   'ws-visual':    { 'crm-lite': { status: 'connected', active: true,  lastSynced: '2026-10-21T11:32:00' },
                     'aurix':    { status: 'connected', active: true,  lastSynced: '2026-10-21T11:32:00' },
-                    'cdp':      { status: 'connected', active: true,  lastSynced: '2026-10-21T11:32:00' } },
+                    'cdp':      { status: 'connected', active: true,  lastSynced: '2026-10-21T11:32:00' },
+                    'seo-cloud': { status: 'connected', active: true, lastSynced: '2026-10-22T06:00:00' } },
   'ws-technova':  { 'hubspot':  { status: 'connected', active: true,  lastSynced: '2026-10-21T10:05:00' },
+                    'seo-cloud': { status: 'connected', active: true, lastSynced: '2026-10-22T06:00:00' },
                     'sleekflow': { status: 'error', active: true, lastSynced: '2026-10-19T08:41:00', error: 'Webhook verification failed. New messaging events are queued until the connection is fixed.' } },
   'ws-innowave':  { 'salesforce': { status: 'pending', active: false, lastSynced: null, error: 'OAuth authorisation incomplete.' } },
   'ws-kinspired': { 'aurix': { status: 'connected', active: true, lastSynced: '2026-10-21T07:00:00' },
                     'seo-cloud': { status: 'connected', active: true, lastSynced: '2026-10-20T23:00:00' } },
   'ws-nexgen':    { 'crm-lite': { status: 'connected', active: true, lastSynced: '2026-10-21T09:15:00' },
+                    'seo-cloud': { status: 'connected', active: true, lastSynced: '2026-10-22T06:00:00' },
                     'delacon': { status: 'error', active: true, lastSynced: '2026-10-17T16:20:00', error: 'Webhook access token expired. Real-time call logs are queued pending token renewal.' } },
-  'ws-bright':    { 'institute-crm': { status: 'connected', active: true, lastSynced: '2026-10-21T08:00:00' } },
-  'ws-visionary': { 'salesforce': { status: 'connected', active: true, lastSynced: '2026-10-21T06:45:00' } }
+  'ws-bright':    { 'institute-crm': { status: 'connected', active: true, lastSynced: '2026-10-21T08:00:00' },
+                    'seo-cloud': { status: 'connected', active: true, lastSynced: '2026-10-22T06:00:00' } },
+  'ws-visionary': { 'salesforce': { status: 'connected', active: true, lastSynced: '2026-10-21T06:45:00' },
+                    'seo-cloud': { status: 'connected', active: true, lastSynced: '2026-10-22T06:00:00' } },
+  'ws-lumaforge': { 'seo-cloud': { status: 'connected', active: true, lastSynced: '2026-10-22T06:00:00' } }
+};
+
+// ---------- SEO Cloud projects ----------
+// Contract and target per workspace with SEO Cloud connected (keywords and daily positions are generated in seo.js).
+// scenarioTop10Pct is the generator's aim for today's share of keywords in the top 10 (sets On track / Off track / Critical).
+const seoProjects = {
+  'ws-visual':    { contractedKeywords: 80,  targetTop10Pct: 55, scenarioTop10Pct: 50, startedAt: '2026-02-01' },
+  'ws-technova':  { contractedKeywords: 60,  targetTop10Pct: 50, scenarioTop10Pct: 55, startedAt: '2026-03-15' },
+  'ws-kinspired': { contractedKeywords: 40,  targetTop10Pct: 45, scenarioTop10Pct: 42, startedAt: '2025-09-01' },
+  'ws-nexgen':    { contractedKeywords: 100, targetTop10Pct: 50, scenarioTop10Pct: 58, startedAt: '2025-07-01' },
+  'ws-bright':    { contractedKeywords: 80,  targetTop10Pct: 60, scenarioTop10Pct: 52, startedAt: '2025-06-01' },
+  'ws-visionary': { contractedKeywords: 50,  targetTop10Pct: 40, scenarioTop10Pct: 37, startedAt: '2025-04-01' },
+  'ws-lumaforge': { contractedKeywords: 60,  targetTop10Pct: 55, scenarioTop10Pct: 57, startedAt: '2025-10-01' }
 };
 
 // ---------- People ----------
@@ -237,3 +256,34 @@ function seededRandom(seed) {
     return s / 233280;
   };
 }
+
+// ---------- Agency CRM (internal) ----------
+// One converted CRM account per workspace: live services with monthly budgets (SGD), account manager,
+// agency assignees and client contacts. Built from the workspace data so budgets match the dashboard.
+const CRM_SERVICE_TYPES = ['SEO', 'Content Marketing', 'SEM', 'Google Ads', 'Facebook Ads', 'Social Media'];
+const CRM_AD_SERVICES = ['SEM', 'Google Ads', 'Facebook Ads'];   // services whose budget is ad spend
+const agencyCrm = { status: 'connected', lastSynced: '2026-10-22T07:30:00', accountsSynced: 0 };
+const crmAccounts = {};
+(function crmSeed() {
+  workspaces.forEach(ws => {
+    const r = seededRandom(ws.seed * 17 + 3);
+    const plats = ['google', 'meta'].filter(p => adAccounts.some(a => a.workspaceId === ws.id && a.platform === p));
+    const services = [];
+    const start = ws.createdAt;
+    const end = `${Number(ws.createdAt.slice(0, 4)) + 1}${ws.createdAt.slice(4)}`;
+    const ad = plats.length ? plats : ['google'];   // a live ad service can exist before its account is linked
+    const split = ad.length === 2 ? [0.6, 0.4] : [1];
+    ad.forEach((p, i) => services.push({ type: p === 'google' ? 'Google Ads' : 'Facebook Ads', monthlyBudget: Math.round(ws.budget * split[i]), start, end }));
+    if (seoProjects[ws.id]) services.push({ type: 'SEO', monthlyBudget: 2000 + Math.round(r() * 8) * 500, start, end });
+    if (ws.seed % 3 === 0) services.push({ type: 'Content Marketing', monthlyBudget: 1500 + Math.round(r() * 3) * 500, start, end });
+    const assigned = members.filter(m => m.org === 'agency' && m.workspaces.includes(ws.id));
+    const am = assigned.find(m => m.roleId === 'r-a-am') || members.find(m => m.id === 'm-a3');
+    const assignees = [{ role: 'Account Manager', memberId: am.id }];
+    if (seoProjects[ws.id]) assignees.push({ role: 'SEO Specialist', memberId: 'm-a2' });
+    const pl = assigned.find(m => m.roleId === 'r-a-pl');
+    if (pl) assignees.push({ role: 'Project Lead', memberId: pl.id });
+    const contacts = members.filter(m => m.org === ws.id).slice(0, 3).map(m => ({ name: m.name, email: m.email, role: m.isPrimary ? 'Primary contact' : 'Marketing' }));
+    crmAccounts[ws.id] = { crmId: `CRM-${1000 + ws.seed}`, stage: 'converted', convertedAt: ws.createdAt, services, accountManager: am.id, assignees, clientContacts: contacts, source: 'crm' };
+  });
+  agencyCrm.accountsSynced = Object.keys(crmAccounts).length;
+})();

@@ -50,6 +50,11 @@ function laneOccupant(wsId, pid) {
   const hit = PRODUCT_LANES[lane].ids().find(id => id !== pid && wsProducts(wsId)[id]);
   return hit ? productById(hit) : null;
 }
+// Monthly ad budget for a workspace: the CRM's SEM + Google Ads + Facebook Ads services, else the workspace default.
+function wsAdBudget(wsId) {
+  const services = (crmAccounts[wsId]?.services || []).filter(x => CRM_AD_SERVICES.includes(x.type));
+  return services.length ? services.reduce((t, x) => t + x.monthlyBudget, 0) : (wsById(wsId)?.budget || 0);
+}
 function wsAdAccounts(wsId) { return adAccounts.filter(a => a.workspaceId === wsId); }
 function wsPlatforms(wsId) { return ['google', 'meta'].filter(p => wsAdAccounts(wsId).some(a => a.platform === p)); }
 
@@ -458,6 +463,72 @@ function applyDateFilter(scope, onApply) {
   state.dateFilters[scope] = c;
   closeAllPopovers();
   if (onApply && window[onApply]) window[onApply]();
+}
+
+// ---------- Column picker (show / hide table columns) ----------
+// registerColumnPicker('campaigns', {
+//   columns: () => [{ key, group, label }],   // toggleable columns (fixed columns are simply not listed)
+//   groups: [['delivery', 'Delivery'], …],     // group order and labels; empty groups are skipped
+//   note: 'Name and Action are always shown',
+//   onChange: 'dashRefreshCampaignTable',      // global fn re-rendering the table
+//   storageKey: 'galaxis-demo:…'               // optional; hidden columns are a per-viewer convenience
+// })
+const columnPickers = {};
+function registerColumnPicker(id, def) {
+  def.storageKey = def.storageKey || `galaxis-demo:${id}-columns-hidden`;
+  try { def.hidden = JSON.parse(localStorage.getItem(def.storageKey)) || def.defaultHidden || []; } catch (e) { def.hidden = def.defaultHidden || []; }
+  columnPickers[id] = def;
+}
+function colVisible(id, key) { return !columnPickers[id].hidden.includes(key); }
+function colHiddenCount(id) { const d = columnPickers[id]; return d.columns().filter(c => d.hidden.includes(c.key)).length; }
+function colPickerButton(id) {
+  const n = colHiddenCount(id);
+  return `<div class="menu-anchor">
+    <button type="button" class="icon-btn" aria-label="Show or hide columns" title="Columns" onclick="toggleMenu('colpick-${id}', event)"><i data-lucide="columns-3"></i><span class="count" id="colpick-count-${id}" ${n ? '' : 'hidden'}>${n}</span></button>
+    <div class="filter-panel colpick-panel" id="colpick-${id}" onclick="event.stopPropagation()"><div id="colpick-inner-${id}">${colPickerInner(id)}</div></div>
+  </div>`;
+}
+function colPickerInner(id) {
+  const d = columnPickers[id];
+  const cols = d.columns();
+  const shown = cols.filter(c => colVisible(id, c.key)).length;
+  const groups = d.groups.map(([g, label]) => {
+    const items = cols.filter(c => c.group === g);
+    if (!items.length) return '';
+    const on = items.filter(c => colVisible(id, c.key)).length;
+    return `<div class="filter-group">
+      <div class="colpick-group-head"><span class="filter-group-title">${esc(label)}</span>
+        <button type="button" class="t-link" onclick="colSetGroup('${id}', '${g}', ${on !== items.length})">${on === items.length ? 'Hide all' : 'Show all'}</button></div>
+      <div class="colpick-options">${items.map(c => `<label class="check"><input type="checkbox" ${colVisible(id, c.key) ? 'checked' : ''} onchange="colSet('${id}', '${c.key}', this.checked)">${esc(c.label)}</label>`).join('')}</div>
+    </div>`;
+  }).join('');
+  return `<div class="colpick-head"><div class="h-card">Columns</div><div class="card-sub">${shown} of ${cols.length} shown${d.note ? ` · ${esc(d.note)}` : ''}</div></div>
+    ${groups}
+    <div class="filter-actions"><button type="button" class="btn btn-outline btn-sm" onclick="colShowAll('${id}')" ${shown === cols.length ? 'disabled' : ''}>Show all columns</button></div>`;
+}
+function colSet(id, key, on) {
+  const d = columnPickers[id];
+  const h = new Set(d.hidden);
+  if (on) h.delete(key); else h.add(key);
+  d.hidden = [...h];
+  colChanged(id);
+}
+function colSetGroup(id, group, on) {
+  const d = columnPickers[id];
+  const h = new Set(d.hidden);
+  d.columns().filter(c => c.group === group).forEach(c => on ? h.delete(c.key) : h.add(c.key));
+  d.hidden = [...h];
+  colChanged(id);
+}
+function colShowAll(id) { columnPickers[id].hidden = []; colChanged(id); }
+function colChanged(id) {
+  const d = columnPickers[id];
+  try { localStorage.setItem(d.storageKey, JSON.stringify(d.hidden)); } catch (e) { /* storage unavailable: keep in memory */ }
+  if (d.onChange && window[d.onChange]) window[d.onChange]();
+  renderRegion(`colpick-inner-${id}`, colPickerInner(id));
+  const n = colHiddenCount(id);
+  const badge = document.getElementById(`colpick-count-${id}`);
+  if (badge) { badge.textContent = n; badge.hidden = !n; }
 }
 
 // ---------- Pinned first and action columns ----------

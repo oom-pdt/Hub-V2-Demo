@@ -113,7 +113,7 @@ function dashTree(wsId) {
   // Fit 30-day spend to 72–94% of the monthly budget so budget pacing looks plausible.
   const total = t.ads.reduce((s, a) => s + a.base.spend, 0);
   if (total) {
-    const f = ws.budget * (0.72 + dashRng(`${wsId}:budget`)() * 0.22) / total;
+    const f = wsAdBudget(wsId) * (0.72 + dashRng(`${wsId}:budget`)() * 0.22) / total;
     t.ads.forEach(a => Object.keys(a.base).forEach(k => { a.base[k] *= f; }));
   }
   dashCache.tree[key] = t;
@@ -755,7 +755,7 @@ function dashKpi(title, tip, value, sub, extra = '') {
 }
 function dashClientKpis(ws, m) {
   const t = m.total;
-  const budget = Math.round(ws.budget * m.days / 30);
+  const budget = Math.round(wsAdBudget(ws.id) * m.days / 30);
   const used = budget ? Math.round(t.spend / budget * 100) : 0;
   const unique = Math.round(t.impressions * (0.6 + dashRng(`${ws.id}:reach`)() * 0.12));
   const g = m.byPlatform.google, mt = m.byPlatform.meta;
@@ -838,7 +838,7 @@ function dashCampaignCard() {
       </div>
       <div class="search grow"><input class="input" placeholder="Search by name" value="${esc(state.ui.dashCtSearch)}" oninput="dashCtSearchInput(this.value)" aria-label="Search campaigns and ads"><i data-lucide="search"></i></div>
       ${dashFilterButton('campaigns')}
-      ${dashColPickerButton()}
+      ${colPickerButton('campaigns')}
     </div>
     <div id="dash-ct-body">${dashCampaignBody()}</div>`;
 }
@@ -893,67 +893,15 @@ const DASH_CT_CRM_COLS = [
   { key: 'roas', group: 'crm', label: 'CRM ROAS', tip: 'CRM-attributed revenue ÷ spend.', fmt: v => `${v.toFixed(2)}x`, needs: 'spend' }
 ];
 
-// ---------- Column picker (show / hide columns) ----------
-// Name, Status and Action are always shown. Hidden columns are a per-viewer convenience kept in localStorage.
-const DASH_COL_GROUPS = [['details', 'Details'], ['delivery', 'Delivery'], ['clicks', 'Clicks'], ['conversions', 'Conversions'], ['engagement', 'Engagement'], ['crm', 'CRM']];
-const DASH_COL_STORE = 'galaxis-demo:campaign-columns-hidden';
-state.ui.dashHiddenCols = (() => { try { return JSON.parse(localStorage.getItem(DASH_COL_STORE)) || []; } catch (e) { return []; } })();
-
-// Columns the picker can toggle, for the current CRM mode.
-function dashPickableCols() {
-  const crm = !!activeCrm(state.ctx);
-  return [{ key: 'format', group: 'details', label: 'Ad Format' }].concat(DASH_CT_COLS, crm ? DASH_CT_CRM_COLS : []);
-}
-function dashColVisible(key) { return !state.ui.dashHiddenCols.includes(key); }
-function dashSaveCols() { try { localStorage.setItem(DASH_COL_STORE, JSON.stringify(state.ui.dashHiddenCols)); } catch (e) { /* storage unavailable: keep in memory */ } }
-function dashSetCol(key, on) {
-  const h = new Set(state.ui.dashHiddenCols);
-  if (on) h.delete(key); else h.add(key);
-  state.ui.dashHiddenCols = [...h];
-  dashColsChanged();
-}
-function dashSetColGroup(group, on) {
-  const keys = dashPickableCols().filter(c => c.group === group).map(c => c.key);
-  const h = new Set(state.ui.dashHiddenCols);
-  keys.forEach(k => on ? h.delete(k) : h.add(k));
-  state.ui.dashHiddenCols = [...h];
-  dashColsChanged();
-}
-function dashShowAllCols() { state.ui.dashHiddenCols = []; dashColsChanged(); }
-function dashColsChanged() {
-  dashSaveCols();
-  dashRefreshCampaignTable();
-  renderRegion('dash-cols-inner', dashColPickerInner());
-  const n = dashHiddenCount();
-  const badge = document.getElementById('dash-cols-count');
-  if (badge) { badge.textContent = n; badge.hidden = !n; }
-}
-function dashHiddenCount() { return dashPickableCols().filter(c => !dashColVisible(c.key)).length; }
-
-function dashColPickerButton() {
-  const n = dashHiddenCount();
-  return `<div class="menu-anchor">
-    <button type="button" class="icon-btn" aria-label="Show or hide columns" title="Columns" onclick="toggleMenu('dash-cols-panel', event)"><i data-lucide="columns-3"></i><span class="count" id="dash-cols-count" ${n ? '' : 'hidden'}>${n}</span></button>
-    <div class="filter-panel dash-cols-panel" id="dash-cols-panel" onclick="event.stopPropagation()"><div id="dash-cols-inner">${dashColPickerInner()}</div></div>
-  </div>`;
-}
-function dashColPickerInner() {
-  const cols = dashPickableCols();
-  const shown = cols.filter(c => dashColVisible(c.key)).length;
-  const groups = DASH_COL_GROUPS.map(([g, label]) => {
-    const items = cols.filter(c => c.group === g);
-    if (!items.length) return '';
-    const on = items.filter(c => dashColVisible(c.key)).length;
-    return `<div class="filter-group">
-      <div class="dash-cols-group-head"><span class="filter-group-title">${esc(label)}</span>
-        <button type="button" class="t-link" onclick="dashSetColGroup('${g}', ${on !== items.length})">${on === items.length ? 'Hide all' : 'Show all'}</button></div>
-      <div class="dash-cols-options">${items.map(c => `<label class="check"><input type="checkbox" ${dashColVisible(c.key) ? 'checked' : ''} onchange="dashSetCol('${c.key}', this.checked)">${esc(c.label)}</label>`).join('')}</div>
-    </div>`;
-  }).join('');
-  return `<div class="dash-cols-head"><div><div class="h-card">Columns</div><div class="card-sub">${shown} of ${cols.length} shown · Name, Status and Action are always shown</div></div></div>
-    ${groups}
-    <div class="filter-actions"><button type="button" class="btn btn-outline btn-sm" onclick="dashShowAllCols()" ${shown === cols.length ? 'disabled' : ''}>Show all columns</button></div>`;
-}
+// ---------- Column picker (show / hide columns; shared helper in core.js) ----------
+// Name, Status and Action are always shown.
+registerColumnPicker('campaigns', {
+  columns: () => [{ key: 'format', group: 'details', label: 'Ad Format' }].concat(DASH_CT_COLS, activeCrm(state.ctx) ? DASH_CT_CRM_COLS : []),
+  groups: [['details', 'Details'], ['delivery', 'Delivery'], ['clicks', 'Clicks'], ['conversions', 'Conversions'], ['engagement', 'Engagement'], ['crm', 'CRM']],
+  note: 'Name, Status and Action are always shown',
+  onChange: 'dashRefreshCampaignTable',
+  storageKey: 'galaxis-demo:campaign-columns-hidden'
+});
 
 function dashCampaignBody() {
   const u = state.ui;
@@ -984,7 +932,7 @@ function dashCampaignBody() {
   const ref = m.total;
   const next = DASH_LEVELS[DASH_LEVELS.indexOf(level) + 1];
   const cols = [['name', DASH_NAME_COL[level]], ['format', 'Ad Format'], ['status', 'Status']].concat(metricCols.map(c => [c.key, c.label]))
-    .filter(([c]) => c === 'name' || c === 'status' || dashColVisible(c));
+    .filter(([c]) => c === 'name' || c === 'status' || colVisible('campaigns', c));
   const colDef = Object.fromEntries(metricCols.map(c => [c.key, c]));
   const fn = 'dashRefreshCampaignTable';
   const head = cols.map(([c, l]) => `<th${colDef[c] ? ` title="${esc(colDef[c].tip)}"` : ''}>${sortHeader('dash-ct', c, l, fn)}</th>`).join('') + (next ? '<th>Action</th>' : '');

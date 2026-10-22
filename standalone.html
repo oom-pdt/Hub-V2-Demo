@@ -800,7 +800,10 @@ svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
 .dash-product-row .t-caption { color: var(--text-secondary); }
 .dash-product-open { color: var(--primary); flex-shrink: 0; }
 .dash-svc-icons { display: inline-flex; align-items: center; vertical-align: middle; }
-.dash-svc-icons .dash-svc-icon { display: inline-flex; border-radius: 50%; box-shadow: 0 0 0 2px var(--surface); }
+.dash-svc-icons .dash-svc-icon { display: inline-grid; place-items: center; border-radius: 50%; box-shadow: 0 0 0 2px var(--surface); line-height: 0; }
+.dash-svc-icon .product-logo, .dash-svc-icon.product-logo { display: grid; place-items: center; line-height: 1; }
+.dash-svc-icon svg.lucide { display: block; }
+.dash-products .dash-svc-icon { display: inline-grid; place-items: center; }
 .dash-svc-icons .dash-svc-icon + .dash-svc-icon { margin-left: -6px; }
 .dash-svc-icons + .more-count { margin-left: 6px; font-size: 11px; }
 .dash-health { min-width: 120px; }

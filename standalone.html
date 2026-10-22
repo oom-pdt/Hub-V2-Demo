@@ -810,6 +810,38 @@ svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
 .dash-issues-link { font-size: 12px; }
 .dash-issues-drawer .dash-att-item { padding: 12px 14px; }
 
+/* ---------- Ad Performance: All Platforms | Google Ads | Meta Ads ---------- */
+.dash-views { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin: -6px 0 24px; }
+.dash-view-seg button { display: inline-flex; align-items: center; gap: 8px; padding: 5px 14px 5px 6px; }
+.dash-view-logo { width: 22px; height: 22px; border-radius: 50%; background: var(--surface); display: inline-grid; place-items: center; box-shadow: 0 0 0 1px var(--border-light); flex-shrink: 0; }
+.dash-view-logo .logo { width: 13px; height: 13px; }
+.dash-view-seg button.active .dash-view-logo { box-shadow: none; }
+.dash-view-logos { display: inline-flex; }
+.dash-view-logos .dash-view-logo + .dash-view-logo { margin-left: -7px; }
+.dash-views-note { font-size: 12px; color: var(--text-muted); letter-spacing: .25px; }
+
+/* ---------- Platform views ---------- */
+.dash-pf-kpis { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 14px; }
+.dash-pf-kpis .kpi-card { padding: 16px 14px; min-width: 0; }
+.dash-pf-kpis .kpi-title { white-space: nowrap; }
+.dash-pf-kpis .kpi-value { font-size: 22px; line-height: 26px; white-space: nowrap; }
+.dash-pf-kpis .kpi-sub { line-height: 16px; }
+.dash-pf-csv { flex-shrink: 0; height: 36px; }
+.dash-pf-csv svg.lucide { width: 14px; height: 14px; }
+.dash-pf-status { font-weight: 400; color: var(--text); }
+.dash-pf-url { display: inline-block; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; color: var(--link); }
+.dash-pf-table tfoot tr.dash-pf-total > td { background: var(--grey-light); border-top: 1px solid var(--border); font-weight: 700; }
+.dash-pf-table tfoot tr.dash-pf-total .cell-sub { font-weight: 400; }
+.dash-pf-daily-card { margin-bottom: 24px; }
+@media (max-width: 1360px) {
+  .dash-pf-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 960px) {
+  .dash-pf-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.dash-ct-card > .card-header > .seg { flex-shrink: 0; }
+.dash-ct-card > .card-header > .seg button { white-space: nowrap; }
+
 /* organisation module styles — component-specific only; shared components live in design.css */
 
 .org-header-card { padding: 28px 32px; }
@@ -1222,14 +1254,9 @@ svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
   .integ-dir-search { width: 100%; }
 }
 
-/* Agency CRM master connection + role mapping (crm.js) */
+/* Agency CRM master connection (crm.js) */
 .integ-crm-logo { background: var(--tint); color: var(--primary); }
 .integ-crm-logo svg.lucide { width: 18px; height: 18px; }
-.integ-map-select { height: 36px; min-width: 180px; font-size: 12px; }
-.integ-map-who { font-size: 12px; }
-.integ-map-note { margin-top: 12px; }
-.integ-crm-toggle { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 20px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--r-md); }
-.integ-crm-toggle .t-bold { font-size: 14px; }
 
 /* leads module styles — component-specific only; shared components live in design.css */
 
@@ -2712,8 +2739,14 @@ function dashPickStatus(rnd, attentionBias) {
   if (r < 0.12 + (attentionBias ? 0.2 : 0.07)) return 'Attention Required';
   return 'Active';
 }
-// Linked platforms as the dashboard sees them (the dev toggle can simulate "no ad accounts linked").
-function dashPlatforms(wsId) { return state.flags.dashNoAccounts && !isAgency() ? [] : wsPlatforms(wsId); }
+// Linked platforms as the dashboard sees them. Dev toggles can simulate "no ad accounts linked" and
+// "single platform (Google only)" without changing ad-account data.
+function dashPlatforms(wsId) {
+  if (isAgency()) return wsPlatforms(wsId);
+  if (state.flags.dashNoAccounts) return [];
+  const plats = wsPlatforms(wsId);
+  return state.flags.dashGoogleOnly && plats.includes('google') ? ['google'] : plats;
+}
 
 // Platform → campaign → ad group → ad hierarchy for one workspace, only for its linked platforms.
 // `base` holds 30-day metrics; dashMetrics() scales them to the selected date range.
@@ -3287,7 +3320,7 @@ const DASH_MG_COLS = [
   { key: 'cpc', group: 'ads', label: 'CPC' },
   { key: 'adsDays', group: 'ads', label: 'Contract Days Left', tip: 'Days left on the Agency CRM contract for the live ad services (Google Ads, Facebook Ads, SEM). Shown per platform when they run on different contracts. Amber at 60 days or fewer, red at 30 or fewer.' },
   { key: 'seoStatus', group: 'seo', label: 'SEO Status', tip: 'SEO Cloud project status: On track at or above the top-10 target, Off track less than 5 points below, Critical 5 or more points below.' },
-  { key: 'top10', group: 'seo', label: 'Top 10 %', tip: 'Key SEO KPI: share of tracked keywords ranking in the top 10 today, against the contracted target.' },
+  { key: 'top10', group: 'seo', label: 'Keywords in Top 10', tip: 'Key SEO KPI: share of tracked keywords ranking in the top 10 today, against the contracted target.' },
   { key: 'avgPos', group: 'seo', label: 'Avg Position', tip: 'Mean position of keywords ranking in the top 100 (lower is better).' },
   { key: 'seoDays', group: 'seo', label: 'Contract Days Left', tip: 'Days left on the Agency CRM contract for the SEO service. Amber at 60 days or fewer, red at 30 or fewer.' },
   { key: 'contact', group: 'contact', label: 'Primary Contact' },
@@ -3448,10 +3481,13 @@ function dashSyncClientState() {
     dashLevel: 'platform', dashDrill: null, dashCtSearch: '',
     dashCtFilter: { platform: [], format: [], status: [] },
     dashEntSel: [], dashEntType: 'all', dashEntQ: '',
-    dashSeoBucket: 'all', dashSeoSearch: '', dashSeoFilter: { intent: [], difficulty: [], group: [] }, dashSeoCollapsed: {}
+    dashSeoBucket: 'all', dashSeoSearch: '', dashSeoFilter: { intent: [], difficulty: [], group: [] }, dashSeoCollapsed: {},
+    dashPf: dashPfInitState()
   });
   pager('dash-ct').page = 1;
   pager('dash-seo', 25).page = 1;
+  pager('dash-pf-google').page = 1;
+  pager('dash-pf-meta').page = 1;
 }
 
 // ---------- Tabs: Ad Performance | SEO Performance ----------
@@ -3487,7 +3523,11 @@ function dashRenderClient() {
   dashSyncClientState();
   const tab = dashTab();
   if (state.params.tab) state.ui.dashTab = state.params.tab;
-  const sub = tab === 'seo' ? 'Keyword rankings from SEO Cloud for this workspace.' : 'Google and Meta advertising performance for this workspace.';
+  const hasAds = tab === 'ads' && dashPlatforms(ws.id).length > 0;
+  const view = hasAds ? dashAdView(ws) : 'all';
+  if (hasAds && state.params.view === view) state.ui.dashAdView = view;
+  const sub = tab === 'seo' ? 'Keyword rankings from SEO Cloud for this workspace.'
+    : view === 'all' ? 'Google and Meta advertising performance for this workspace.' : `${DASH_VIEW_LABEL[view]} performance for this workspace, with the full ${DASH_VIEW_LABEL[view]} report.`;
   const header = `<div class="dash-welcome">
       <div><h2 class="h-welcome">Welcome Back, ${esc(ws.name)}</h2><p class="dash-welcome-sub">${sub}</p></div>
       ${dateFilterHTML('client', 'dashRerender')}
@@ -3495,10 +3535,13 @@ function dashRenderClient() {
     ${dashHubPanel(ws)}
     ${dashTabBar(tab, ws)}`;
   if (tab === 'seo') return header + dashRenderSeo(ws);
-  if (!dashPlatforms(ws.id).length) return header + dashNoAccountsCard();
+  if (!hasAds) return header + dashNoAccountsCard();
+  const switcher = dashViewSwitcher(ws, view);
+  if (view !== 'all') return header + switcher + dashRenderPlatform(ws, view);
   const m = dashMetrics(ws.id, 'client');
   const crm = activeCrm(ws.id);
   return `${header}
+    ${switcher}
     ${dashClientKpis(ws, m)}
     ${dashCrmSection(m, crm)}
     <div class="card dash-ct-card" id="dash-campaigns">${dashCampaignCard()}</div>
@@ -4136,10 +4179,12 @@ registerColumnPicker('campaigns', {
   collapsible: true,
   note: 'Name and Action are always shown',
   onChange: 'dashRefreshCampaignTable',
-  // Default view: the columns that matter for every client (spend, reach of the ads, clicks and conversion cost).
-  // Specialist columns (purchase / e-commerce, engagement, frequency, CPM) start hidden and are one click away.
-  defaultHidden: ['format', 'reach', 'cpm', 'freq', 'cpLead', 'cpp', 'pRoas', 'convValue', 'engRate', 'engagements', 'cpe'],
-  storageKey: 'galaxis-demo:campaign-columns-hidden-v2'
+  // Default view (22/10/2026): every column shown, every metric group collapsed to its summary column;
+  // Overview stays expanded. Keys bumped (v3 / v2) so viewers with the old hidden-columns default get the new one.
+  defaultHidden: [],
+  defaultCollapsed: ['delivery', 'clicks', 'conversions', 'engagement', 'crm'],
+  storageKey: 'galaxis-demo:campaign-columns-hidden-v3',
+  collapsedKey: 'galaxis-demo:campaign-groups-collapsed-v2'
 });
 
 function dashCampaignBody() {
@@ -4299,18 +4344,21 @@ function dashDailySeg() {
 }
 function dashSetChartMetric(k) { state.ui.dashChartMetric = k; renderRegion('dash-daily-seg', dashDailySeg()); dashRenderDaily(); }
 
-function dashDailySeries() {
+// totals: the figures the days add up to (default: the workspace total); seed: the random-stream prefix
+// (default: the workspace id, so the All Platforms chart keeps its shape). Platform views pass their own.
+function dashDailySeries(totals, seed) {
   const ws = currentWs();
-  const m = dashMetrics(ws.id, 'client');
+  const tot = totals || dashMetrics(ws.id, 'client').total;
+  const key = seed || ws.id;
   const range = resolveDateRange(state.dateFilters.client);
   const days = dateRangeDays('client');
   const start = new Date((range ? range.start : toDateInput(new Date())) + 'T00:00:00');
-  const phase = dashRng(`${ws.id}:phase`)() * 6;
+  const phase = dashRng(`${key}:phase`)() * 6;
   const pts = [];
   for (let i = 0; i < days; i++) {
     const d = new Date(start);
     d.setDate(start.getDate() + i);
-    const r = dashRng(`${ws.id}:${toDateInput(d)}`);
+    const r = dashRng(`${key}:${toDateInput(d)}`);
     const dow = d.getDay();
     const w = Math.max(0.2, 1 + 0.28 * Math.sin(i / 3.1 + phase) + (dow === 0 || dow === 6 ? -0.16 : 0.04) + 0.14 * (r() - 0.5));
     pts.push({ d, w, wc: w * (0.85 + r() * 0.3), wv: w * (0.75 + r() * 0.5) });
@@ -4318,9 +4366,9 @@ function dashDailySeries() {
   const sw = pts.reduce((s, p) => s + p.w, 0), sc = pts.reduce((s, p) => s + p.wc, 0), sv = pts.reduce((s, p) => s + p.wv, 0);
   return pts.map(p => ({
     d: p.d,
-    spend: m.total.spend * p.w / sw,
-    clicks: Math.round(m.total.clicks * p.wc / sc),
-    conversions: Math.round(m.total.conversions * p.wv / sv)
+    spend: tot.spend * p.w / sw,
+    clicks: Math.round(tot.clicks * p.wc / sc),
+    conversions: Math.round(tot.conversions * p.wv / sv)
   }));
 }
 function dashNiceMax(v) {
@@ -4513,6 +4561,669 @@ function dashBindHeatmap() {
 }
 
 // =====================================================================
+// AD PERFORMANCE › PLATFORM VIEWS (Google Ads, Meta Ads)
+// Native-report replicas: the platform's own levels, attribute columns and every metric it has in the
+// Google & Meta Ads Metrics sheet, under the platform's own column names. Built on the same ad rows as the
+// consolidated table (dashMetrics), so Cost / Impressions / Clicks / Conversions always equal its platform row.
+// New metrics use their own random streams (`:platform-attrs`, `:platform-ext`, `:keywords`, `:kw-split`).
+// =====================================================================
+const DASH_VIEW_LABEL = { all: 'All Platforms', google: 'Google Ads', meta: 'Meta Ads' };
+const DASH_PF_LEVELS = { google: ['campaign', 'adgroup', 'ad', 'keyword'], meta: ['campaign', 'adgroup', 'ad'] };
+const DASH_PF_LEVEL_TAB = { google: { campaign: 'Campaigns', adgroup: 'Ad groups', ad: 'Ads', keyword: 'Keywords' }, meta: { campaign: 'Campaigns', adgroup: 'Ad sets', ad: 'Ads' } };
+const DASH_PF_LEVEL_ONE = { google: { campaign: 'Campaign', adgroup: 'Ad group', ad: 'Ad', keyword: 'Keyword' }, meta: { campaign: 'Campaign', adgroup: 'Ad set', ad: 'Ad' } };
+const DASH_PF_NAME_COL = { google: { campaign: 'Campaign', adgroup: 'Ad group', ad: 'Ad', keyword: 'Keyword' }, meta: { campaign: 'Campaign name', adgroup: 'Ad set name', ad: 'Ad name' } };
+const DASH_PF_FN = { google: 'dashPfRefreshGoogle', meta: 'dashPfRefreshMeta' };
+
+// Native attributes (derived from the campaign name, the ad format and a per-entity random stream).
+const DASH_G_CAMP_TYPE = { 'Search Campaign': 'Search', 'Brand Search': 'Search', 'Display Remarketing': 'Display', 'Performance Max': 'Performance Max', 'YouTube Awareness': 'Video' };
+const DASH_G_TYPES = ['Search', 'Display', 'Video', 'Performance Max'];
+const DASH_G_BID = { Search: ['Maximise conversions', 'Target CPA', 'Manual CPC', 'Maximise clicks'], Display: ['Target CPA', 'Maximise conversions'], Video: ['Target CPM', 'Maximum CPV'], 'Performance Max': ['Maximise conversion value', 'Target ROAS'] };
+const DASH_G_AG_TYPE = { Search: 'Search standard', Display: 'Display standard', Video: 'Video responsive', 'Performance Max': 'Asset group' };
+const DASH_G_AD_TYPE = { 'Text/Search': 'Responsive search ad', Image: 'Responsive display ad', Video: 'Video responsive ad' };
+const DASH_G_STATUS = { 'Active': 'Enabled', 'Paused': 'Paused', 'Attention Required': 'Limited' };
+const DASH_G_STATUSES = ['Enabled', 'Limited', 'Paused'];
+const DASH_G_MATCH = ['Exact', 'Phrase', 'Broad'];
+// Keyword templates: {b} = brand (first word of the workspace name), {i} = industry. Placeholder terms only.
+const DASH_KW_POOL = ['{b}', '{b} singapore', '{b} {i}', '{i} singapore', '{i} services', '{i} company near me', '{i} agency', 'affordable {i}', '{i} consultation', '{i} pricing', '{b} reviews', '{i} solutions sg'];
+const DASH_M_OBJECTIVE = { 'Paid Social Campaign': 'Traffic', 'Lead Gen - Instant Forms': 'Leads', 'Retargeting - Site Visitors': 'Sales', 'Awareness Reach': 'Awareness', 'Advantage+ Catalogue': 'Sales' };
+const DASH_M_OBJECTIVES = ['Leads', 'Sales', 'Traffic', 'Awareness', 'Engagement'];
+const DASH_M_GOAL = { Leads: 'Leads', Sales: 'Conversions', Traffic: 'Landing page views', Awareness: 'Reach', Engagement: 'Post engagement' };
+const DASH_M_DELIVERIES = ['Active', 'Learning', 'Learning limited', 'Paused'];
+const DASH_M_FORMAT = { Image: 'Single image', Video: 'Single video', Carousel: 'Carousel' };
+const DASH_M_ATTRIBUTION = '7-day click, 1-day view';
+const DASH_PF_STATUS_DOT = { Enabled: 'dot-green', Active: 'dot-green', Learning: 'dot-blue', Limited: 'dot-orange', 'Learning limited': 'dot-orange', Paused: 'dot-grey' };
+// Extra summable metrics for the platform views (on top of DASH_SUM_KEYS). si* = Search impression-share
+// building blocks (eligible impressions etc.), v* = video, the rest are platform counts.
+const DASH_PF_SUM_KEYS = ['allConv', 'siImpr', 'siElig', 'siTop', 'siAbs', 'siRank', 'siBudget', 'vImpr', 'vViews', 'v25', 'v50', 'v75', 'v100', 'storeVisits',
+  'allClicks', 'lpv', 'shares', 'saves', 'igFollows', 'igVisits', 'msgs', 'thruplays', 'addsToCart', 'checkouts'];
+const DASH_PF_INT_KEYS = new Set(['impressions', 'reach', 'clicks', 'conversions', 'pLeads', 'purchases', 'engagements', 'leads', 'converted', 'allConv', 'vViews', 'storeVisits',
+  'allClicks', 'lpv', 'shares', 'saves', 'igFollows', 'igVisits', 'msgs', 'thruplays', 'v25', 'v50', 'v75', 'v100', 'addsToCart', 'checkouts']);
+dashCache.pfStatic = {};
+dashCache.pf = {};
+
+// Definitions from the metric sheet (Metrics (Original) › Definition). Rows the sheet leaves blank use
+// prototype wording, marked "Not in the sheet" in the spec.
+const DASH_SHEET = {
+  cost: 'Amount spent on your campaign.',
+  impressions: 'Total number of times the ad was shown on screen.',
+  reach: 'Estimated number of unique individuals who saw the ad.',
+  cpm: 'The average cost to show the ad 1,000 times.',
+  freq: 'Average number of times each unique person saw the ad.',
+  clicks: 'Number of clicks on links within the ad that direct users to specified destinations (like your website).',
+  allClicks: 'The number of clicks, taps or swipes on your ads.',
+  ctr: 'Percentage of impressions that resulted in a click.',
+  ctrAll: 'The percentage of impressions where a click (all) occurred out of the total number of impressions.',
+  cpc: 'Average cost paid for each link click.',
+  cpcAll: 'The average cost for each click (all).',
+  lpv: 'Number of times a person clicked the ad and the destination page successfully loaded.',
+  cplpv: 'Average cost for each landing page view.',
+  leads: 'Total number of generated leads, sign-ups, or form submissions.',
+  cpLead: 'Average cost required to generate one successful lead.',
+  conversions: 'An action that a customer takes after interacting with your ad, such as making a purchase, signing up for a newsletter, or calling your business.',
+  allConv: 'Total number of conversions driven by Google Ads, including primary, secondary, and cross-device conversion actions.',
+  cvr: 'Percentage of clicks that successfully resulted in a lead submission.',
+  purchases: 'Total number of completed transactions or sales.',
+  cpp: 'Average cost required to acquire one successful sale.',
+  roas: 'Revenue generated for every dollar spent on the campaign.',
+  convValue: 'Total monetary value of the purchases driven by the advertising efforts.',
+  addsToCart: 'Number of times a product was added to the shopping cart by a user.',
+  checkouts: 'Number of times a user started the checkout process.',
+  is: 'The percentage of impressions your ads receive compared to the total number of impressions they were eligible to get on the Search Network.',
+  topIs: 'The percentage of impressions your ads received in top locations above organic search results relative to the total estimated impressions your ads were eligible to receive in those top locations.',
+  absIs: 'Percentage of eligible impressions your ad received in the absolute top position as the very first ad on the page.',
+  lostRank: 'Percentage of time your ads did not show on the Search Network due to poor Ad Rank.',
+  lostBudget: 'Percentage of time your ads did not show on the Search Network due to insufficient budget.',
+  storeVisits: 'Number of visits to physical locations after interacting with Google Ads.',
+  thruplays: 'The number of times your video was played to completion, or for at least 15 seconds.',
+  vViews: 'ThruView views. The watch time counted varies by ad format: skippable in-stream ads 30 seconds; in-feed video and Shorts ads 10 seconds. Also counted when someone watches the entire video ad, regardless of length, or clicks or taps on it.',
+  engRate: 'Percentage of people who interacted with the ad after seeing it.',
+  engagements: 'Total actions taken on the ad (likes, comments, shares, video views, ad expansions).',
+  cpe: 'Average cost for each interaction with the ad.',
+  // Not defined in the sheet (prototype wording, to confirm):
+  msgs: 'Number of times people started a messaging conversation with your business after interacting with the ad.',
+  cpMsg: 'Average cost for each messaging conversation started.',
+  shares: 'Number of times people shared the ad post.',
+  saves: 'Number of times people saved the ad post.',
+  igFollows: 'Number of Instagram follows gained from the ad.',
+  igVisits: 'Number of visits to your Instagram profile from the ad.',
+  mVideo: n => `Number of times your video was played to ${n}% of its length, including plays that skipped to this point.`,
+  gVideo: n => `Percentage of video impressions where the viewer watched ${n}% of the video.`
+};
+
+// ---------- Views: All Platforms | Google Ads | Meta Ads ----------
+// All Platforms appears with both platforms linked (or more than one ad account); a platform view appears when
+// that platform is linked. state.params.view deep-links a view; state.ui.dashAdView remembers the last one.
+function dashAdViews(ws) {
+  const plats = dashPlatforms(ws.id);
+  const accounts = wsAdAccounts(ws.id).filter(a => plats.includes(a.platform));
+  return [...(plats.length > 1 || accounts.length > 1 ? ['all'] : []), ...plats];
+}
+function dashAdView(ws) {
+  const views = dashAdViews(ws);
+  const v = state.params.view || state.ui.dashAdView || 'all';
+  return views.includes(v) ? v : views[0] || 'all';
+}
+function dashSetAdView(v) {
+  state.params = { ...state.params, tab: 'ads', view: v };
+  state.ui.dashAdView = v;
+  closeAllPopovers();
+  rerender();
+}
+function dashViewLogo(p) { return `<span class="dash-view-logo">${platformLogo(p)}</span>`; }
+function dashViewSwitcher(ws, view) {
+  const views = dashAdViews(ws);
+  if (!views.length) return '';
+  const logos = v => v === 'all' ? `<span class="dash-view-logos">${dashPlatforms(ws.id).map(dashViewLogo).join('')}</span>` : dashViewLogo(v);
+  const btn = v => `<button type="button" role="tab" aria-selected="${v === view}" class="${v === view ? 'active' : ''}" onclick="dashSetAdView('${v}')">${logos(v)}${DASH_VIEW_LABEL[v]}</button>`;
+  const note = views.length === 1 ? `<span class="dash-views-note">Only ${DASH_VIEW_LABEL[views[0]]} is linked to this workspace.</span>` : '';
+  return `<div class="dash-views"><div class="seg dash-view-seg" role="tablist" aria-label="Ad platform view">${views.map(btn).join('')}</div>${note}</div>`;
+}
+
+// ---------- Mock data ----------
+function dashSlug(s) { return String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
+// Date-independent attributes per campaign / ad group / ad, and the Google keyword list.
+function dashPfStatic(wsId) {
+  const key = `${wsId}|${wsPlatforms(wsId).join(',')}`;
+  if (dashCache.pfStatic[key]) return dashCache.pfStatic[key];
+  const t = dashTree(wsId);
+  const ws = wsById(wsId);
+  const site = ws.site || 'www.example.com';
+  const attrs = {}, keywords = [];
+  const base = pred => t.ads.filter(pred).reduce((s, a) => ({ spend: s.spend + a.base.spend, clicks: s.clicks + a.base.clicks }), { spend: 0, clicks: 0 });
+  const round5 = v => Math.max(5, Math.round(v / 5) * 5);
+  t.campaigns.forEach(c => {
+    const r = dashRng(`${c.id}:platform-attrs`);
+    const daily = round5(base(a => a.path.campaign === c.id).spend / 30 * (1.1 + r() * 0.4));
+    if (c.platform === 'google') {
+      const type = DASH_G_CAMP_TYPE[c.name] || 'Search';
+      const bids = DASH_G_BID[type];
+      attrs[c.id] = { pfStatus: DASH_G_STATUS[c.status], campType: type, bid: bids[Math.floor(r() * bids.length)], budget: { amount: daily, kind: 'daily', daily } };
+    } else {
+      const objective = DASH_M_OBJECTIVE[c.name] || 'Traffic';
+      const cbo = r() < 0.55, lifetime = r() < 0.35;
+      attrs[c.id] = {
+        pfStatus: c.status === 'Paused' ? 'Paused' : c.status === 'Attention Required' ? 'Learning limited' : 'Active', campType: objective, cbo, attribution: DASH_M_ATTRIBUTION,
+        budget: cbo ? (lifetime ? { amount: daily * 30, kind: 'lifetime', daily } : { amount: daily, kind: 'daily', daily }) : { note: 'Using ad set budget' }
+      };
+    }
+  });
+  t.adGroups.forEach(g => {
+    const c = attrs[g.path.campaign];
+    const r = dashRng(`${g.id}:platform-attrs`);
+    const roll = r(), spread = r();
+    const b = base(a => a.path.adgroup === g.id);
+    if (g.platform === 'google') {
+      attrs[g.id] = { pfStatus: DASH_G_STATUS[g.status], campType: c.campType, agType: DASH_G_AG_TYPE[c.campType] };
+      if (c.campType !== 'Search') return;
+      const kr = dashRng(`${g.id}:keywords`);
+      const brand = ws.name.split(/\s+/)[0].toLowerCase(), ind = (ws.industry || 'services').toLowerCase();
+      const cpc = b.clicks ? b.spend / b.clicks : 1;
+      const n = 3 + Math.floor(kr() * 4);
+      dashShuffle(DASH_KW_POOL, kr).slice(0, n).forEach((tpl, i) => {
+        const id = `${g.id}~k${i + 1}`;
+        const match = DASH_G_MATCH[Math.floor(kr() * 3)];
+        const qs = Math.max(1, Math.min(10, Math.round(2.5 + kr() * 7.5)));
+        const w = 0.25 + kr();
+        const paused = kr() < 0.1;
+        keywords.push({
+          id, level: 'keyword', platform: 'google', adgroupId: g.id, name: tpl.replace('{b}', brand).replace('{i}', ind), match, qs, w,
+          maxCpc: cpc * (1.15 + kr() * 0.5), pfStatus: g.status === 'Paused' || paused ? 'Paused' : 'Enabled', campType: 'Search',
+          parents: [g.campaignName, g.name], campaignName: g.campaignName, adGroupName: g.name, path: { ...g.path, keyword: id }, childCount: 0
+        });
+      });
+    } else {
+      const delivery = g.status === 'Paused' ? 'Paused' : g.status === 'Attention Required' ? 'Learning limited' : roll < 0.25 ? 'Learning' : 'Active';
+      const daily = round5(b.spend / 30 * (1.1 + spread * 0.4));
+      attrs[g.id] = { pfStatus: delivery, campType: c.campType, attribution: DASH_M_ATTRIBUTION, optGoal: DASH_M_GOAL[c.campType],
+        budget: c.cbo ? { note: 'Using campaign budget' } : { amount: daily, kind: 'daily', daily } };
+    }
+  });
+  t.ads.forEach(a => {
+    const g = attrs[a.path.adgroup];
+    if (a.platform === 'google') attrs[a.id] = { pfStatus: DASH_G_STATUS[a.status], campType: g.campType, adType: DASH_G_AD_TYPE[a.format], finalUrl: `https://${site}/${dashSlug(a.adGroupName)}` };
+    else attrs[a.id] = {
+      pfStatus: a.status === 'Paused' ? 'Paused' : a.status === 'Attention Required' ? 'Learning limited' : /^Learning/.test(g.pfStatus) ? g.pfStatus : 'Active',
+      campType: g.campType, adFormat: DASH_M_FORMAT[a.format], attribution: DASH_M_ATTRIBUTION
+    };
+  });
+  return (dashCache.pfStatic[key] = { attrs, keywords });
+}
+
+// Extra platform metrics for one ad, as ratios of its (date-scaled) consolidated metrics, so they follow the
+// date filter. A fixed number of draws keeps every ad's stream stable whatever branch it takes.
+function dashPfAdExt(a, att) {
+  const r = dashRng(`${a.id}:platform-ext`);
+  const u = Array.from({ length: 16 }, () => r());
+  const o = Object.fromEntries(DASH_PF_SUM_KEYS.map(k => [k, 0]));
+  const video = a.format === 'Video';
+  if (a.platform === 'google') {
+    o.allConv = Math.round(a.conversions * (1.08 + u[0] * 0.37));
+    if (att.campType === 'Search' && a.impressions) {   // impression share: Search campaigns only (10–90%)
+      const is = 0.1 + u[1] * 0.8, top = is * (0.55 + u[2] * 0.35), abs = top * (0.35 + u[3] * 0.35), rank = (1 - is) * (0.35 + u[4] * 0.5);
+      const elig = a.impressions / is;
+      Object.assign(o, { siImpr: a.impressions, siElig: elig, siTop: elig * top, siAbs: elig * abs, siRank: elig * rank, siBudget: elig * (1 - is - rank) });
+    }
+    if (video) {
+      const p25 = 0.55 + u[5] * 0.25, p50 = p25 * (0.6 + u[6] * 0.2), p75 = p50 * (0.6 + u[7] * 0.2), p100 = p75 * (0.55 + u[8] * 0.25);
+      Object.assign(o, { vImpr: a.impressions, vViews: Math.round(a.impressions * (0.18 + u[9] * 0.2)), v25: a.impressions * p25, v50: a.impressions * p50, v75: a.impressions * p75, v100: a.impressions * p100 });
+    }
+    if (!video && u[10] < 0.25) o.storeVisits = Math.round(a.clicks * (0.004 + u[11] * 0.016));   // sparse
+  } else {
+    o.allClicks = Math.round(a.clicks * (1.5 + u[0] * 1.1));
+    o.lpv = Math.round(a.clicks * (0.58 + u[1] * 0.28));
+    o.shares = Math.round(a.engagements * (0.008 + u[2] * 0.027));
+    o.saves = Math.round(a.engagements * (0.004 + u[3] * 0.016));
+    o.igFollows = Math.round(a.engagements * (0.002 + u[4] * 0.007));
+    o.igVisits = Math.round(a.engagements * (0.015 + u[5] * 0.035));
+    if (u[6] < 0.4) o.msgs = Math.round(a.clicks * (0.02 + u[7] * 0.05));
+    if (video) {
+      const v25 = Math.round(a.impressions * (0.18 + u[8] * 0.16)), v50 = Math.round(v25 * (0.55 + u[9] * 0.2)), v75 = Math.round(v50 * (0.55 + u[10] * 0.2));
+      Object.assign(o, { vImpr: a.impressions, v25, v50, v75, v100: Math.round(v75 * (0.5 + u[11] * 0.25)), thruplays: Math.round(v50 * (0.7 + u[12] * 0.25)) });
+    }
+    o.addsToCart = Math.round(a.purchases * (2.5 + u[13] * 3));
+    o.checkouts = Math.round(a.purchases * (1.4 + u[14]));
+  }
+  return o;
+}
+function dashPfDerive(o) {
+  dashDerive(o);
+  const si = k => o.siElig ? o[k] / o.siElig * 100 : 0;
+  o.is = si('siImpr'); o.topIs = si('siTop'); o.absIs = si('siAbs'); o.lostRank = si('siRank'); o.lostBudget = si('siBudget');
+  const vr = k => o.vImpr ? o[k] / o.vImpr * 100 : 0;
+  o.v25r = vr('v25'); o.v50r = vr('v50'); o.v75r = vr('v75'); o.v100r = vr('v100');
+  o.ctrAll = o.impressions ? o.allClicks / o.impressions * 100 : 0;
+  o.cpcAll = o.allClicks ? o.spend / o.allClicks : 0;
+  o.cplpv = o.lpv ? o.spend / o.lpv : 0;
+  o.cpMsg = o.msgs ? o.spend / o.msgs : 0;
+  return o;
+}
+function dashPfSum(items) {
+  const o = {};
+  DASH_SUM_KEYS.concat(DASH_PF_SUM_KEYS).forEach(k => { o[k] = items.reduce((s, c) => s + (c[k] || 0), 0); });
+  return dashPfDerive(o);
+}
+// Keywords split their ad group's metrics (counts stay whole and add up exactly); impression share varies per keyword.
+function dashPfKeywords(st, adgroups) {
+  const out = [];
+  const keys = DASH_SUM_KEYS.concat(DASH_PF_SUM_KEYS).filter(k => !/^si/.test(k));
+  adgroups.forEach(g => {
+    const kws = st.keywords.filter(k => k.adgroupId === g.id);
+    if (!kws.length) return;
+    const r = dashRng(`${g.id}:kw-split`);
+    const rows = kws.map(k => ({ ...k }));
+    keys.forEach(key => {
+      const w = kws.map(k => k.w * (0.8 + r() * 0.4));
+      const sw = w.reduce((a, b) => a + b, 0);
+      const all = g[key] || 0;
+      let left = all;
+      rows.forEach((row, i) => {
+        if (i === rows.length - 1) { row[key] = Math.max(0, left); return; }
+        const v = Math.min(left, DASH_PF_INT_KEYS.has(key) ? Math.round(all * w[i] / sw) : all * w[i] / sw);
+        row[key] = v; left -= v;
+      });
+    });
+    const gIs = g.siElig ? g.siImpr / g.siElig : 0;
+    rows.forEach(row => {
+      const x = r();
+      if (gIs && row.impressions) {
+        const is = Math.max(0.08, Math.min(0.95, gIs * (0.75 + x * 0.5)));
+        const elig = row.impressions / is;
+        const topF = g.siTop / g.siImpr, absF = g.siAbs / g.siTop, rankF = g.siRank / ((g.siRank + g.siBudget) || 1);
+        Object.assign(row, { siImpr: row.impressions, siElig: elig, siTop: elig * is * topF, siAbs: elig * is * topF * absF, siRank: elig * (1 - is) * rankF, siBudget: elig * (1 - is) * (1 - rankF) });
+      } else Object.assign(row, { siImpr: 0, siElig: 0, siTop: 0, siAbs: 0, siRank: 0, siBudget: 0 });
+      out.push(dashPfDerive(row));
+    });
+  });
+  return out;
+}
+// Every level for platform p under the client date filter and the attribution model (CRM columns).
+function dashPfData(wsId, p) {
+  const m = dashMetrics(wsId, 'client');
+  const key = `${wsId}|${m.days}|${state.ui.dashModel || 'mta'}|${wsPlatforms(wsId).join(',')}|${p}`;
+  if (dashCache.pf[key]) return dashCache.pf[key];
+  const st = dashPfStatic(wsId);
+  const ad = m.ad.filter(a => a.platform === p).map(a => dashPfDerive({ ...a, ...st.attrs[a.id], ...dashPfAdExt(a, st.attrs[a.id]) }));
+  const roll = (parents, kids, lk) => parents.filter(x => x.platform === p).map(x => {
+    const ks = kids.filter(c => c.path[lk] === x.id);
+    return { ...x, ...st.attrs[x.id], ...dashPfSum(ks), childCount: ks.length };
+  });
+  const adgroup = roll(m.adgroup, ad, 'adgroup');
+  const campaign = roll(m.campaign, adgroup, 'campaign');
+  const keyword = p === 'google' ? dashPfKeywords(st, adgroup) : [];
+  adgroup.forEach(g => { g.kwCount = keyword.filter(k => k.path.adgroup === g.id).length; });
+  campaign.forEach(c => { c.kwCount = keyword.filter(k => k.path.campaign === c.id).length; });
+  return (dashCache.pf[key] = { campaign, adgroup, ad, keyword, total: dashPfSum(campaign), days: m.days });
+}
+
+// ---------- Columns ----------
+// t: status | text | budget | url | qs | money | money2 | int | pct | dec | roas. levels: where the column exists natively.
+const DASH_PF_FMT = { money: v => fmtMoney(v), money2: v => fmtMoney(v, 2), int: v => fmtNum(Math.round(v)), pct: v => fmtPct(v), dec: v => Number(v || 0).toFixed(2), roas: v => `${Number(v || 0).toFixed(2)}x` };
+function dashPfCol(key, group, label, t, tip, o = {}) { return { key, group, label, t, tip, ...o }; }
+const DASH_PF_NOT_KW = ['campaign', 'adgroup', 'ad'];
+const DASH_PF_COLS = {
+  google: [
+    dashPfCol('pfStatus', 'attr', 'Status', 'status', 'Whether the item can serve: Enabled, Limited (by budget, policy or learning) or Paused.'),
+    dashPfCol('campType', 'attr', 'Campaign type', 'text', 'The campaign type set in Google Ads: Search, Display, Video or Performance Max.', { levels: ['campaign'] }),
+    dashPfCol('bid', 'attr', 'Bid strategy type', 'text', 'How Google Ads sets bids for the campaign.', { levels: ['campaign'] }),
+    dashPfCol('budget', 'attr', 'Budget', 'budget', 'Average daily budget set on the campaign.', { levels: ['campaign'] }),
+    dashPfCol('agType', 'attr', 'Ad group type', 'text', 'The ad group type, set by the campaign type (Performance Max uses asset groups).', { levels: ['adgroup'] }),
+    dashPfCol('adType', 'attr', 'Ad type', 'text', 'The ad format in Google Ads.', { levels: ['ad'] }),
+    dashPfCol('finalUrl', 'attr', 'Final URL', 'url', 'The page people reach after clicking the ad.', { levels: ['ad'] }),
+    dashPfCol('match', 'attr', 'Match type', 'text', 'How closely a search must match the keyword: Exact [ ], Phrase " " or Broad.', { levels: ['keyword'] }),
+    dashPfCol('qs', 'attr', 'Quality Score', 'qs', 'Google\'s 1–10 estimate of the quality of the keyword, its ads and landing page.', { levels: ['keyword'] }),
+    dashPfCol('maxCpc', 'attr', 'Max. CPC', 'money2', 'The most you will pay for a click on this keyword.', { levels: ['keyword'] }),
+    dashPfCol('impressions', 'perf', 'Impr.', 'int', DASH_SHEET.impressions),
+    dashPfCol('clicks', 'perf', 'Clicks', 'int', DASH_SHEET.clicks),
+    dashPfCol('ctr', 'perf', 'CTR', 'pct', DASH_SHEET.ctr, { quality: 'high', needs: 'impressions' }),
+    dashPfCol('cpc', 'perf', 'Avg. CPC', 'money2', DASH_SHEET.cpc, { quality: 'low', needs: 'clicks' }),
+    dashPfCol('spend', 'perf', 'Cost', 'money2', DASH_SHEET.cost),
+    dashPfCol('cpm', 'perf', 'Avg. CPM', 'money2', DASH_SHEET.cpm, { quality: 'low', needs: 'impressions' }),
+    dashPfCol('engagements', 'perf', 'Interactions', 'int', DASH_SHEET.engagements),
+    dashPfCol('engRate', 'perf', 'Engagement rate', 'pct', DASH_SHEET.engRate, { needs: 'impressions' }),
+    dashPfCol('cpe', 'perf', 'Avg. CPE', 'money2', DASH_SHEET.cpe, { needs: 'engagements' }),
+    dashPfCol('conversions', 'conv', 'Conversions', 'int', DASH_SHEET.conversions),
+    dashPfCol('cvr', 'conv', 'Conv. rate', 'pct', DASH_SHEET.cvr, { needs: 'clicks' }),
+    dashPfCol('cpa', 'conv', 'Cost / conv.', 'money2', `${DASH_SHEET.cpLead} Google reports cost per lead and cost per purchase as Cost / conv. of that conversion action.`, { quality: 'low', needs: 'conversions' }),
+    dashPfCol('allConv', 'conv', 'All conv.', 'int', DASH_SHEET.allConv),
+    dashPfCol('convValue', 'conv', 'Conv. value', 'money2', DASH_SHEET.convValue),
+    dashPfCol('pRoas', 'conv', 'Conv. value / cost', 'dec', DASH_SHEET.roas, { needs: 'spend' }),
+    dashPfCol('is', 'comp', 'Search impr. share', 'pct', DASH_SHEET.is, { needs: 'siElig', levels: ['campaign', 'adgroup', 'keyword'] }),
+    dashPfCol('topIs', 'comp', 'Search top IS', 'pct', DASH_SHEET.topIs, { needs: 'siElig', levels: ['campaign', 'adgroup', 'keyword'] }),
+    dashPfCol('absIs', 'comp', 'Search abs. top IS', 'pct', DASH_SHEET.absIs, { needs: 'siElig', levels: ['campaign', 'adgroup', 'keyword'] }),
+    dashPfCol('lostRank', 'comp', 'Search lost IS (rank)', 'pct', DASH_SHEET.lostRank, { needs: 'siElig', levels: ['campaign', 'adgroup', 'keyword'] }),
+    dashPfCol('lostBudget', 'comp', 'Search lost IS (budget)', 'pct', DASH_SHEET.lostBudget, { needs: 'siElig', levels: ['campaign', 'adgroup'] }),
+    dashPfCol('reach', 'reach', 'Unique reach', 'int', DASH_SHEET.reach, { levels: DASH_PF_NOT_KW }),
+    dashPfCol('freq', 'reach', 'Avg. impr. freq. / user', 'dec', DASH_SHEET.freq, { needs: 'reach', levels: DASH_PF_NOT_KW }),
+    dashPfCol('vViews', 'video', 'Video views', 'int', DASH_SHEET.vViews, { needs: 'vImpr', levels: DASH_PF_NOT_KW }),
+    ...[25, 50, 75, 100].map(n => dashPfCol(`v${n}r`, 'video', `Video played to ${n}%`, 'pct', DASH_SHEET.gVideo(n), { needs: 'vImpr', levels: DASH_PF_NOT_KW })),
+    dashPfCol('storeVisits', 'store', 'Store visits', 'int', DASH_SHEET.storeVisits, { levels: DASH_PF_NOT_KW })
+  ],
+  meta: [
+    dashPfCol('pfStatus', 'attr', 'Delivery', 'status', 'Whether the item is delivering: Active, Learning (the delivery system is still optimising), Learning limited or Paused.'),
+    dashPfCol('campType', 'attr', 'Objective', 'text', 'The campaign objective chosen in Meta Ads Manager.', { levels: ['campaign'] }),
+    dashPfCol('budget', 'attr', 'Budget', 'budget', 'Daily or lifetime budget, set on the campaign (Advantage campaign budget) or on each ad set.', { levels: ['campaign', 'adgroup'] }),
+    dashPfCol('optGoal', 'attr', 'Optimisation goal', 'text', 'The result the ad set is optimised to get.', { levels: ['adgroup'] }),
+    dashPfCol('adFormat', 'attr', 'Ad format', 'text', 'The creative format of the ad.', { levels: ['ad'] }),
+    dashPfCol('attribution', 'attr', 'Attribution setting', 'text', 'The window in which a conversion is credited to the ad after a click or view.'),
+    dashPfCol('conversions', 'perf', 'Results', 'int', DASH_SHEET.conversions),
+    dashPfCol('cvr', 'perf', 'Result rate', 'pct', DASH_SHEET.cvr, { needs: 'clicks' }),
+    dashPfCol('cpa', 'perf', 'Cost per result', 'money2', 'Amount spent divided by results.', { quality: 'low', needs: 'conversions' }),
+    dashPfCol('spend', 'perf', 'Amount spent', 'money2', DASH_SHEET.cost),
+    dashPfCol('reach', 'perf', 'Reach', 'int', DASH_SHEET.reach),
+    dashPfCol('impressions', 'perf', 'Impressions', 'int', DASH_SHEET.impressions),
+    dashPfCol('freq', 'perf', 'Frequency', 'dec', DASH_SHEET.freq, { needs: 'reach' }),
+    dashPfCol('cpm', 'perf', 'CPM (cost per 1,000 impressions)', 'money2', DASH_SHEET.cpm, { quality: 'low', needs: 'impressions' }),
+    dashPfCol('clicks', 'clicks', 'Link clicks', 'int', DASH_SHEET.clicks),
+    dashPfCol('ctr', 'clicks', 'CTR (link click-through rate)', 'pct', DASH_SHEET.ctr, { quality: 'high', needs: 'impressions' }),
+    dashPfCol('cpc', 'clicks', 'CPC (cost per link click)', 'money2', DASH_SHEET.cpc, { quality: 'low', needs: 'clicks' }),
+    dashPfCol('allClicks', 'clicks', 'Clicks (all)', 'int', DASH_SHEET.allClicks),
+    dashPfCol('ctrAll', 'clicks', 'CTR (all)', 'pct', DASH_SHEET.ctrAll, { needs: 'impressions' }),
+    dashPfCol('cpcAll', 'clicks', 'CPC (all)', 'money2', DASH_SHEET.cpcAll, { needs: 'allClicks' }),
+    dashPfCol('lpv', 'clicks', 'Landing page views', 'int', DASH_SHEET.lpv),
+    dashPfCol('cplpv', 'clicks', 'Cost per landing page view', 'money2', DASH_SHEET.cplpv, { needs: 'lpv' }),
+    dashPfCol('engagements', 'eng', 'Post engagement', 'int', DASH_SHEET.engagements),
+    dashPfCol('cpe', 'eng', 'Cost per post engagement', 'money2', DASH_SHEET.cpe, { needs: 'engagements' }),
+    dashPfCol('engRate', 'eng', 'Engagement rate', 'pct', DASH_SHEET.engRate, { needs: 'impressions' }),
+    dashPfCol('shares', 'eng', 'Post shares', 'int', DASH_SHEET.shares),
+    dashPfCol('saves', 'eng', 'Post saves', 'int', DASH_SHEET.saves),
+    dashPfCol('igFollows', 'eng', 'Instagram follows', 'int', DASH_SHEET.igFollows),
+    dashPfCol('igVisits', 'eng', 'Instagram profile visits', 'int', DASH_SHEET.igVisits),
+    dashPfCol('msgs', 'msg', 'Messaging conversations started', 'int', DASH_SHEET.msgs),
+    dashPfCol('cpMsg', 'msg', 'Cost per messaging conversation started', 'money2', DASH_SHEET.cpMsg, { needs: 'msgs' }),
+    dashPfCol('thruplays', 'video', 'ThruPlays', 'int', DASH_SHEET.thruplays, { needs: 'vImpr' }),
+    ...[25, 50, 75, 100].map(n => dashPfCol(`v${n}`, 'video', `Video plays at ${n}%`, 'int', DASH_SHEET.mVideo(n), { needs: 'vImpr' })),
+    dashPfCol('pLeads', 'conv', 'Leads', 'int', DASH_SHEET.leads),
+    dashPfCol('cpLead', 'conv', 'Cost per lead', 'money2', DASH_SHEET.cpLead, { needs: 'pLeads' }),
+    dashPfCol('purchases', 'conv', 'Purchases', 'int', DASH_SHEET.purchases),
+    dashPfCol('cpp', 'conv', 'Cost per purchase', 'money2', DASH_SHEET.cpp, { needs: 'purchases' }),
+    dashPfCol('convValue', 'conv', 'Purchases conversion value', 'money2', DASH_SHEET.convValue),
+    dashPfCol('pRoas', 'conv', 'Purchase ROAS (return on ad spend)', 'dec', DASH_SHEET.roas, { needs: 'spend' }),
+    dashPfCol('addsToCart', 'conv', 'Adds to cart', 'int', DASH_SHEET.addsToCart),
+    dashPfCol('checkouts', 'conv', 'Checkouts initiated', 'int', DASH_SHEET.checkouts)
+  ]
+};
+// CRM-attributed columns (CRM mode only), the same as the consolidated table's CRM group. Not at keyword level.
+const DASH_PF_CRM_COLS = DASH_CT_CRM_COLS.map(c => ({ ...c, t: { leads: 'int', cpl: 'money2', revenue: 'money2', roas: 'roas' }[c.key], levels: DASH_PF_NOT_KW }));
+// Bands as each platform groups its columns. summary = the primary field a collapsed group keeps.
+// Meta Conversions → Leads: most workspaces run lead objectives and the Hub's CRM mode is lead-based;
+// Purchase ROAS only means something with purchase tracking (it stays one click away).
+const DASH_PF_GROUPS = {
+  google: [['attr', 'Attributes', { summary: 'pfStatus', tone: 'neutral' }], ['perf', 'Performance', { summary: 'spend', tone: 'ads' }],
+    ['conv', 'Conversions', { summary: 'cpa', tone: 'ads2' }], ['comp', 'Competitive metrics', { summary: 'is', tone: 'ads' }],
+    ['reach', 'Reach metrics', { summary: 'reach', tone: 'ads2' }], ['video', 'Video', { summary: 'vViews', tone: 'ads' }],
+    ['store', 'Store visits', { summary: 'storeVisits', tone: 'ads2' }], ['crm', 'CRM', { summary: 'roas', tone: 'crm' }]],
+  meta: [['attr', 'Settings', { summary: 'pfStatus', tone: 'neutral' }], ['perf', 'Performance', { summary: 'cpa', tone: 'ads' }],
+    ['clicks', 'Clicks', { summary: 'ctr', tone: 'ads2' }], ['eng', 'Engagement', { summary: 'engagements', tone: 'ads' }],
+    ['msg', 'Messaging', { summary: 'msgs', tone: 'ads2' }], ['video', 'Video', { summary: 'thruplays', tone: 'ads' }],
+    ['conv', 'Conversions', { summary: 'pLeads', tone: 'ads2' }], ['crm', 'CRM', { summary: 'roas', tone: 'crm' }]]
+};
+function dashPfState(p) { return state.ui.dashPf[p]; }
+function dashPfLevelCols(p, level) {
+  return DASH_PF_COLS[p].concat(activeCrm(state.ctx) ? DASH_PF_CRM_COLS : []).filter(c => !c.levels || c.levels.includes(level));
+}
+// Default: every column shown; every metric group collapsed to its primary field; Attributes / Settings expanded.
+['google', 'meta'].forEach(p => registerColumnPicker(`pf-${p}`, {
+  columns: () => dashPfLevelCols(p, dashPfState(p).level),
+  groups: DASH_PF_GROUPS[p],
+  collapsible: true,
+  note: 'Name and Action are always shown',
+  onChange: DASH_PF_FN[p],
+  defaultHidden: [],
+  defaultCollapsed: DASH_PF_GROUPS[p].map(g => g[0]).filter(k => k !== 'attr'),
+  storageKey: `galaxis-demo:pf-${p}-columns-hidden-v1`,
+  collapsedKey: `galaxis-demo:pf-${p}-groups-collapsed-v1`
+}));
+// Filters: Status + Campaign type (Google), Delivery + Objective (Meta). Lower levels filter by their campaign's type.
+['google', 'meta'].forEach(p => {
+  DASH_FILTERS[`pf-${p}`] = {
+    store: () => dashPfState(p).filter,
+    groups: () => p === 'google'
+      ? [{ key: 'status', title: 'Status', options: DASH_G_STATUSES.map(s => [s, s]) }, { key: 'type', title: 'Campaign type', options: DASH_G_TYPES.map(s => [s, s]) }]
+      : [{ key: 'status', title: 'Delivery', options: DASH_M_DELIVERIES.map(s => [s, s]) }, { key: 'type', title: 'Objective', options: DASH_M_OBJECTIVES.map(s => [s, s]) }],
+    refresh: () => { pager(`dash-pf-${p}`).page = 1; dashPfRefresh(p); }
+  };
+});
+
+// ---------- Platform view page ----------
+function dashRenderPlatform(ws, p) {
+  const m = dashMetrics(ws.id, 'client');
+  const d = dashPfData(ws.id, p);
+  const chart = { google: 'Daily cost, conversions and clicks from Google Ads.', meta: 'Daily amount spent, results and link clicks from Meta Ads.' }[p];
+  return `${dashPfKpis(ws, p, d, m)}
+    ${dashCrmSection({ total: m.byPlatform[p] }, activeCrm(ws.id))}
+    <div class="card dash-ct-card" id="dash-pf-card">${dashPfReportCard(p)}</div>
+    <div class="card dash-pf-daily-card">
+      <div class="card-header">
+        <div><h2 class="h-section">Daily Performance</h2><div class="card-sub">${chart}</div></div>
+        <div class="seg" id="dash-pf-daily-seg">${dashPfDailySeg(p)}</div>
+      </div>
+      <div class="dash-chart" id="dash-pf-daily" data-platform="${p}"><svg role="img" aria-label="${DASH_VIEW_LABEL[p]} daily performance chart"></svg></div>
+    </div>`;
+}
+function dashPfKpis(ws, p, d, m) {
+  const t = d.total;
+  const S = DASH_SHEET;
+  const accts = wsAdAccounts(ws.id).filter(a => a.platform === p);
+  const share = dashPlatforms(ws.id).length > 1 && m.total.spend ? `<b>${Math.round(t.spend / m.total.spend * 100)}%</b> of workspace ad spend` : `Across <b>${d.campaign.length}</b> campaigns`;
+  const cards = p === 'google' ? [
+    dashKpi('Cost', S.cost, fmtMoney(t.spend, 2), share),
+    dashKpi('Impressions', S.impressions, fmtNum(t.impressions), `Avg. CPM <b>${fmtMoney(t.cpm, 2)}</b>`),
+    dashKpi('Clicks', S.clicks, fmtNum(t.clicks), `CTR <b>${fmtPct(t.ctr)}</b> • Avg. CPC <b>${fmtMoney(t.cpc, 2)}</b>`),
+    dashKpi('Conversions', S.conversions, fmtNum(t.conversions), `Conv. rate <b>${fmtPct(t.cvr)}</b>`),
+    dashKpi('Cost / conv.', 'Cost divided by conversions.', t.conversions ? fmtMoney(t.cpa, 2) : '—', `All conv. <b>${fmtNum(t.allConv)}</b>`),
+    dashKpi('Conv. value / cost', S.roas, t.spend ? t.pRoas.toFixed(2) : '—', `Conv. value <b>${fmtMoney(t.convValue)}</b>`),
+    dashKpi('Search impr. share', S.is, t.siElig ? fmtPct(t.is, 1) : '—', t.siElig ? `Lost (budget) <b>${fmtPct(t.lostBudget, 1)}</b>` : 'No Search campaigns')
+  ] : [
+    dashKpi('Amount spent', S.cost, fmtMoney(t.spend, 2), share),
+    dashKpi('Reach', S.reach, fmtNum(t.reach), `Frequency <b>${t.freq.toFixed(2)}</b>`),
+    dashKpi('Impressions', S.impressions, fmtNum(t.impressions), `CPM <b>${fmtMoney(t.cpm, 2)}</b>`),
+    dashKpi('Link clicks', S.clicks, fmtNum(t.clicks), `CTR (link) <b>${fmtPct(t.ctr)}</b> • CPC (link) <b>${fmtMoney(t.cpc, 2)}</b>`),
+    dashKpi('Results', S.conversions, fmtNum(t.conversions), `Result rate <b>${fmtPct(t.cvr)}</b>`),
+    dashKpi('Cost per result', 'Amount spent divided by results.', t.conversions ? fmtMoney(t.cpa, 2) : '—', t.pLeads ? `Cost per lead <b>${fmtMoney(t.cpLead, 2)}</b>` : 'No leads yet'),
+    dashKpi('Purchase ROAS', S.roas, t.spend ? t.pRoas.toFixed(2) : '—', `<b>${fmtMoney(t.convValue)}</b> purchase value`)
+  ];
+  const acct = accts.map(a => `${esc(a.name)} (${esc(a.id)})`).join(', ');
+  return `<div class="dash-section-head"><div><h2 class="h-card">${DASH_VIEW_LABEL[p]}</h2>
+      <div class="card-sub">Platform-reported results from ${acct} for the selected dates, under ${PLATFORM_NAME[p]}'s own metric names. SGD · Asia/Singapore.</div></div></div>
+    <div class="dash-kpis dash-pf-kpis">${cards.join('')}</div>`;
+}
+function dashPfReportCard(p) {
+  const s = dashPfState(p);
+  const tabs = DASH_PF_LEVELS[p].map(l => `<button type="button" role="tab" class="${l === s.level ? 'active' : ''}" onclick="dashPfSetLevel('${p}','${l}')">${DASH_PF_LEVEL_TAB[p][l]}</button>`).join('');
+  return `<div class="card-header">
+      <div><h2 class="h-section">${DASH_VIEW_LABEL[p]} report</h2><div class="card-sub">Every ${DASH_VIEW_LABEL[p]} column, under its native name. Metric groups start collapsed to their key column: expand a group, or choose columns with the column picker.</div></div>
+      <div class="seg" role="tablist" aria-label="${DASH_VIEW_LABEL[p]} level">${tabs}</div>
+    </div>
+    <div class="dash-ct-toolbar">
+      <div class="search grow"><input class="input" placeholder="Search ${DASH_PF_LEVEL_TAB[p][s.level].toLowerCase()}" value="${esc(s.search)}" oninput="dashPfSearch('${p}', this.value)" aria-label="Search ${DASH_PF_LEVEL_TAB[p][s.level].toLowerCase()}"><i data-lucide="search"></i></div>
+      ${dashFilterButton(`pf-${p}`)}
+      ${colPickerButton(`pf-${p}`)}
+      <button type="button" class="btn btn-outline btn-sm dash-pf-csv" onclick="dashPfCsv('${p}')"><i data-lucide="download"></i>Download CSV</button>
+    </div>
+    <div id="dash-pf-body">${dashPfBody(p)}</div>`;
+}
+function dashPfRefresh(p) { renderRegion('dash-pf-body', dashPfBody(p)); }
+function dashPfRefreshGoogle() { dashPfRefresh('google'); }
+function dashPfRefreshMeta() { dashPfRefresh('meta'); }
+function dashPfRenderCard(p) { renderRegion('dash-pf-card', dashPfReportCard(p)); }
+function dashPfSetLevel(p, l) { dashPfState(p).level = l; pager(`dash-pf-${p}`).page = 1; dashPfRenderCard(p); }
+function dashPfSearch(p, v) { dashPfState(p).search = v; pager(`dash-pf-${p}`).page = 1; dashPfRefresh(p); }
+function dashPfNext(p, level) { return { campaign: 'adgroup', adgroup: 'ad' }[level] || null; }
+function dashPfDrill(p, id, to) {
+  const s = dashPfState(p);
+  const e = dashPfData(state.ctx, p)[s.level].find(x => x.id === id);
+  const next = to || dashPfNext(p, s.level);
+  if (!e || !next) return;
+  s.drill = { level: s.level, id, name: e.name, path: e.path };
+  s.level = next;
+  pager(`dash-pf-${p}`).page = 1;
+  dashPfRenderCard(p);
+}
+function dashPfClearDrill(p) { const s = dashPfState(p); s.drill = null; s.level = 'campaign'; pager(`dash-pf-${p}`).page = 1; dashPfRenderCard(p); }
+
+// Filtered and sorted rows of the current level (all pages): the table, its total row and the CSV use these.
+function dashPfRows(p) {
+  const s = dashPfState(p);
+  const d = dashPfData(state.ctx, p);
+  const f = s.filter;
+  const term = s.search.trim().toLowerCase();
+  const rows = d[s.level].filter(e => {
+    if (s.drill && !dashPathsMatch(e.path, s.drill.path)) return false;
+    if (f.status.length && !f.status.includes(e.pfStatus)) return false;
+    if (f.type.length && !f.type.includes(e.campType)) return false;
+    if (term && !`${e.name} ${e.parents.join(' ')}`.toLowerCase().includes(term)) return false;
+    return true;
+  });
+  const tid = `dash-pf-${p}`;
+  const cols = dashPfLevelCols(p, s.level);
+  const acc = { name: e => e.name.toLowerCase(), ...Object.fromEntries(cols.map(c => [c.key, e => dashPfSortVal(p, e, c)])) };
+  if (!state.sorts[tid] || !acc[state.sorts[tid].col]) state.sorts[tid] = { col: 'spend', dir: 'desc' };
+  return applySort(rows, tid, acc);
+}
+function dashPfSortVal(p, e, c) {
+  const v = e[c.key];
+  if (c.t === 'status') return (p === 'google' ? DASH_G_STATUSES : DASH_M_DELIVERIES).indexOf(v);
+  if (c.t === 'text' || c.t === 'url') return String(v || '').toLowerCase();
+  if (c.t === 'budget') return v && v.daily ? v.daily : -1;
+  if (c.needs && !e[c.needs]) return -1;
+  return v || 0;
+}
+function dashPfStatus(v) { return v ? `<span class="dot-label dash-pf-status"><span class="dot ${DASH_PF_STATUS_DOT[v] || 'dot-grey'}"></span>${esc(v)}</span>` : ''; }
+function dashPfBudgetText(b) { return !b ? '' : b.note || (b.kind === 'lifetime' ? `${fmtMoney(b.amount, 2)} lifetime` : `${fmtMoney(b.amount, 2)}/day`); }
+function dashPfCell(e, c, ref) {
+  const v = e[c.key];
+  const dash = '<span class="t-muted">—</span>';
+  if (c.t === 'status') return dashPfStatus(v);
+  if (c.t === 'text') return v ? esc(v) : dash;
+  if (c.t === 'budget') return v ? (v.note ? `<span class="t-muted">${esc(v.note)}</span>` : esc(dashPfBudgetText(v))) : dash;
+  if (c.t === 'url') return v ? `<span class="dash-pf-url" title="${esc(v)}">${esc(v.replace(/^https:\/\//, ''))}</span>` : dash;
+  if (c.t === 'qs') return v ? `<span class="metric-dot ${v >= 7 ? 'good' : v >= 5 ? 'mid' : 'bad'}">${v}/10</span>` : dash;
+  if (c.needs && !e[c.needs]) return dash;
+  const text = DASH_PF_FMT[c.t](v || 0);
+  return c.quality && ref ? dashDot(text, dashQuality(v, ref[c.key], c.quality === 'high')) : text;
+}
+function dashPfKeywordText(e) { return e.match === 'Exact' ? `[${e.name}]` : e.match === 'Phrase' ? `"${e.name}"` : e.name; }
+function dashPfNameCell(p, e, level) {
+  const acct = wsAdAccounts(state.ctx).find(a => a.platform === p);
+  const parent = level === 'campaign' ? (acct ? acct.name : DASH_VIEW_LABEL[p]) : e.parents.join(' › ');
+  const name = level === 'keyword' ? dashPfKeywordText(e) : e.name;
+  return `<div class="dash-name"><span class="dash-name-parent" title="${esc(parent)}">${platformLogo(p)}<span>${esc(parent)}</span></span><b>${esc(name)}</b></div>`;
+}
+function dashPfBody(p) {
+  const s = dashPfState(p);
+  const level = s.level;
+  const pid = `pf-${p}`, tid = `dash-pf-${p}`, fn = DASH_PF_FN[p];
+  const d = dashPfData(state.ctx, p);
+  const rows = dashPfRows(p);
+  const page = paginate(rows, tid, 10);
+  const layout = colLayout(pid, dashPfLevelCols(p, level).filter(c => colVisible(pid, c.key)));
+  const cols = layout.columns;
+  const next = dashPfNext(p, level);
+  const levelName = DASH_PF_LEVEL_TAB[p][level].toLowerCase();
+  const head = `${colGroupHeaderRow(pid, layout, { lead: 1, trail: next ? 1 : 0 })}
+    <tr><th>${sortHeader(tid, 'name', DASH_PF_NAME_COL[p][level], fn)}</th>${cols.map(c => `<th class="${colCellClass(c)}" title="${esc(c.tip)}">${sortHeader(tid, c.key, c.label, fn)}</th>`).join('')}${next ? '<th>Action</th>' : ''}</tr>`;
+  const menu = e => {
+    const items = [{ label: `View ${DASH_PF_LEVEL_TAB[p][next].toLowerCase()} (${e.childCount})`, icon: 'arrow-right', onClick: `dashPfDrill('${p}','${q(e.id)}')` }];
+    if (p === 'google' && e.kwCount) items.push({ label: `View keywords (${e.kwCount})`, icon: 'key-round', onClick: `dashPfDrill('${p}','${q(e.id)}','keyword')` });
+    return rowMenu(`dash-pfm-${dashHash(e.id)}`, items);
+  };
+  const body = page.map(e => `
+    <tr ${next ? `class="clickable" onclick="dashPfDrill('${p}','${q(e.id)}')"` : ''}>
+      <td>${dashPfNameCell(p, e, level)}</td>
+      ${cols.map(c => `<td class="dash-nowrap ${colCellClass(c)}">${dashPfCell(e, c, d.total)}</td>`).join('')}
+      ${next ? `<td onclick="event.stopPropagation()">${menu(e)}</td>` : ''}
+    </tr>`).join('');
+  const tot = dashPfSum(rows);
+  const foot = rows.length ? `<tfoot><tr class="dash-pf-total"><td><b>Total: ${rows.length} ${rows.length === 1 ? DASH_PF_LEVEL_ONE[p][level].toLowerCase() : levelName}</b>${rows.length < d[level].length ? '<div class="cell-sub">Filtered</div>' : ''}</td>
+      ${cols.map(c => `<td class="dash-nowrap ${colCellClass(c)}">${c.group === 'attr' ? '' : dashPfCell(tot, c, null)}</td>`).join('')}${next ? '<td></td>' : ''}</tr></tfoot>` : '';
+  const empty = level === 'keyword' && !d.keyword.length ? 'No keywords. Keywords exist only in Search campaigns.'
+    : level === 'keyword' && s.drill ? 'No keywords here. Keywords exist only in Search campaigns.' : 'No data matches criteria.';
+  const drill = s.drill ? `<div class="dash-drill"><span>Filtered for ${DASH_PF_LEVEL_ONE[p][s.drill.level]}: <b>${esc(s.drill.name)}</b></span><button type="button" class="chip-remove" onclick="dashPfClearDrill('${p}')" aria-label="Clear filter"><i data-lucide="x"></i></button></div>` : '';
+  return `${drill}
+    <div class="table-wrap dash-table-wrap"><table class="table table-wrap-heads dash-pf-table">
+      <thead>${head}</thead>
+      <tbody>${body || `<tr><td colspan="${cols.length + 1 + (next ? 1 : 0)}" class="table-empty">${empty}</td></tr>`}</tbody>
+      ${foot}
+    </table></div>
+    ${paginationBar(tid, rows.length, fn)}`;
+}
+
+// ---------- Download CSV (the native "Download report") ----------
+// Current level, every column switched on in the column picker (collapsed groups included), all filtered rows
+// in the current sort order (not just this page), then a total row. Numbers are plain values; money in SGD.
+function dashCsvCell(v) {
+  if (typeof v === 'number') return String(v);
+  let s = String(v ?? '');
+  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;   // stop spreadsheet formula injection from text cells
+  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+function dashPfCsvValue(e, c) {
+  const v = e[c.key];
+  if (c.t === 'status' || c.t === 'text' || c.t === 'url') return v || '';
+  if (c.t === 'budget') return dashPfBudgetText(v);
+  if (c.t === 'qs') return v || '';
+  if (c.needs && !e[c.needs]) return '';
+  return c.t === 'int' ? Math.round(v || 0) : Number((v || 0).toFixed(2));
+}
+function dashPfCsv(p) {
+  try {
+    const ws = currentWs();
+    const s = dashPfState(p);
+    const level = s.level;
+    const rows = dashPfRows(p);
+    const cols = dashPfLevelCols(p, level).filter(c => colVisible(`pf-${p}`, c.key));
+    const parentHead = level === 'campaign' ? [] : level === 'adgroup' ? ['Campaign'] : ['Campaign', DASH_PF_LEVEL_ONE[p].adgroup];
+    const label = c => c.t.startsWith('money') || c.t === 'budget' ? `${c.label} (SGD)` : c.t === 'pct' && !c.label.includes('%') ? `${c.label} (%)` : c.label;
+    const parents = e => level === 'campaign' ? [] : level === 'adgroup' ? [e.campaignName] : [e.campaignName, e.adGroupName];
+    const lines = [[DASH_PF_NAME_COL[p][level], ...parentHead, ...cols.map(label)]];
+    rows.forEach(e => lines.push([e.name, ...parents(e), ...cols.map(c => dashPfCsvValue(e, c))]));
+    const tot = dashPfSum(rows);
+    if (rows.length) lines.push(['Total', ...parentHead.map(() => ''), ...cols.map(c => c.group === 'attr' ? '' : dashPfCsvValue(tot, c))]);
+    const csv = '﻿' + lines.map(r => r.map(dashCsvCell).join(',')).join('\r\n');
+    const range = resolveDateRange(state.dateFilters.client) || { start: '', end: '' };
+    const name = `${dashSlug(ws.name)}_${p}-ads_${dashSlug(DASH_PF_LEVEL_TAB[p][level])}_${range.start}_${range.end}.csv`;
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    state.ui.dashPfLastCsv = { name, rows: rows.length, cols: cols.length + 1 + parentHead.length };
+    showToast(`Downloaded ${name}`, 'download');
+  } catch (err) {
+    showToast('The CSV could not be created. Try again.', 'triangle-alert');
+  }
+}
+
+// ---------- Daily Performance (platform only) ----------
+const DASH_PF_CHART = { google: [['spend', 'Cost'], ['conversions', 'Conversions'], ['clicks', 'Clicks']], meta: [['spend', 'Amount spent'], ['conversions', 'Results'], ['clicks', 'Link clicks']] };
+function dashPfDailySeg(p) {
+  const cur = state.ui.dashPfChartMetric;
+  return DASH_PF_CHART[p].map(([k, l]) => `<button type="button" class="${k === cur ? 'active' : ''}" onclick="dashPfSetChartMetric('${p}','${k}')">${l}</button>`).join('');
+}
+function dashPfSetChartMetric(p, k) { state.ui.dashPfChartMetric = k; renderRegion('dash-pf-daily-seg', dashPfDailySeg(p)); dashPfRenderDaily(); }
+function dashPfRenderDaily() {
+  const wrap = document.getElementById('dash-pf-daily');
+  if (!wrap) return;
+  const p = wrap.dataset.platform;
+  const ws = currentWs();
+  const metric = state.ui.dashPfChartMetric;
+  const series = dashDailySeries(dashMetrics(ws.id, 'client').byPlatform[p], `${ws.id}:${p}`);
+  const fmtV = v => metric === 'spend' ? fmtMoney(v) : fmtNum(Math.round(v));
+  const max = dashNiceMax(Math.max(1, ...series.map(s => s[metric])));
+  const names = Object.fromEntries(DASH_PF_CHART[p]);
+  dashLineChart(wrap, {
+    id: 'dash-pf-daily', series: series.map(s => ({ d: s.d, v: s[metric] })), lo: 0, hi: max,
+    ticks: [0, 1, 2, 3, 4, 5].map(k => max * k / 5), fmtAxis: fmtV,
+    tip: i => {
+      const s = series[i];
+      const row = (k, v) => `<div class="dash-tip-row ${k === metric ? 'on' : ''}"><span>${names[k]}</span><b>${v}</b></div>`;
+      return `<div class="dash-tip-date">${fmtDate(s.d)}</div>${row('spend', fmtMoney(s.spend, 2))}${row('conversions', fmtNum(s.conversions))}${row('clicks', fmtNum(s.clicks))}`;
+    }
+  });
+}
+window.addEventListener('resize', () => { clearTimeout(dashResizeTimer); dashResizeTimer = setTimeout(() => { dashRenderDaily(); dashPfRenderDaily(); dashSeoRenderChart(); }, 120); });
+
+// =====================================================================
 // Screen registration, dev toggles
 // =====================================================================
 Object.assign(state.ui, {
@@ -4520,25 +5231,43 @@ Object.assign(state.ui, {
   dashModel: 'mta', dashChartMetric: 'spend', dashHeatMetric: 'spend',
   dashFpSnap: {}, dashFpCollapsed: {},
   dashCtWs: undefined, dashCtFilter: { platform: [], format: [], status: [] }, dashEntSel: [], dashEntType: 'all', dashEntQ: '', dashCtSearch: '', dashLevel: 'platform', dashDrill: null,
-  dashTab: 'ads', dashSeoView: 'group', dashSeoBucket: 'all', dashSeoSearch: '', dashSeoFilter: { intent: [], difficulty: [], group: [] }, dashSeoCollapsed: {}, dashSeoRemoved: {}
+  dashTab: 'ads', dashSeoView: 'group', dashSeoBucket: 'all', dashSeoSearch: '', dashSeoFilter: { intent: [], difficulty: [], group: [] }, dashSeoCollapsed: {}, dashSeoRemoved: {},
+  dashAdView: 'all', dashPf: dashPfInitState(), dashPfChartMetric: 'spend'
 });
+function dashPfInitState() {
+  const one = () => ({ level: 'campaign', drill: null, search: '', filter: { status: [], type: [] } });
+  return { google: one(), meta: one() };
+}
 
 registerScreen('dashboard', {
   contexts: ['agency', 'client'],
   title: () => 'Dashboard',
   desc: () => '',
-  key: () => isAgency() ? 'agency-dashboard' : `client-dashboard-${dashTab()}`,
+  // client-dashboard-ads (All Platforms) | client-dashboard-ads-google | client-dashboard-ads-meta | client-dashboard-seo
+  key: () => {
+    if (isAgency()) return 'agency-dashboard';
+    const tab = dashTab();
+    const ws = currentWs();
+    if (tab !== 'ads' || !ws || !dashPlatforms(ws.id).length) return `client-dashboard-${tab}`;
+    const view = dashAdView(ws);
+    return view === 'all' ? 'client-dashboard-ads' : `client-dashboard-ads-${view}`;
+  },
   render: () => isAgency() ? dashRenderAgency() : dashRenderClient(),
   afterRender: () => {
     dashTipHide();
-    if (!isAgency()) { dashRenderDaily(); dashBindHeatmap(); dashSeoRenderChart(); }
+    if (!isAgency()) { dashRenderDaily(); dashPfRenderDaily(); dashBindHeatmap(); dashSeoRenderChart(); }
   }
 });
 
-// Dev screens. Registering these keys makes app.js skip its generic agency-dashboard / client-dashboard entries.
-const DASH_DEV_KEYS = ['agency-dashboard', 'client-dashboard-ads', 'client-dashboard-seo'];
+// Dev screens. Registering these keys makes app.js skip its generic agency-dashboard / client-dashboard entries
+// (it skips any key equal to or starting with "client-dashboard-").
+const DASH_DEV_KEYS = ['agency-dashboard', 'client-dashboard-ads', 'client-dashboard-ads-google', 'client-dashboard-ads-meta', 'client-dashboard-seo'];
+// A platform screen needs a workspace with that platform linked: keep the current one if it has it, else Visual Studio.
+function dashDevCtxFor(p) { const c = devClientCtx(); return wsPlatforms(c).includes(p) ? c : 'ws-visual'; }
 registerDevScreen('Agency', 'agency-dashboard', 'Dashboard', () => { state.ctx = null; state.persona = 'agency'; navigate('dashboard'); });
-registerDevScreen('Client workspace', 'client-dashboard-ads', 'Dashboard › Ad Performance', () => { state.ctx = devClientCtx(); navigate('dashboard', { tab: 'ads' }); });
+registerDevScreen('Client workspace', 'client-dashboard-ads', 'Dashboard › Ad Performance', () => { state.ctx = devClientCtx(); state.ui.dashAdView = 'all'; navigate('dashboard', { tab: 'ads', view: 'all' }); });
+registerDevScreen('Client workspace', 'client-dashboard-ads-google', 'Dashboard › Ad Performance › Google Ads', () => { state.ctx = dashDevCtxFor('google'); navigate('dashboard', { tab: 'ads', view: 'google' }); });
+registerDevScreen('Client workspace', 'client-dashboard-ads-meta', 'Dashboard › Ad Performance › Meta Ads', () => { state.ctx = dashDevCtxFor('meta'); state.flags.dashGoogleOnly = false; navigate('dashboard', { tab: 'ads', view: 'meta' }); });
 registerDevScreen('Client workspace', 'client-dashboard-seo', 'Dashboard › SEO Performance', () => { state.ctx = devClientCtx(); navigate('dashboard', { tab: 'seo' }); });
 // app.js lists core pages before module-registered screens; move the dashboard entries back to the top of each group.
 document.addEventListener('DOMContentLoaded', () => {
@@ -4600,14 +5329,19 @@ registerDevToggles('agency-dashboard', () => [
   'sep',
   { label: 'Simulate CRM conversion', active: false, run: dashSimulateCrm }
 ]);
-registerDevToggles('client-dashboard-ads', () => {
+// Shared by All Platforms, Google Ads and Meta Ads. "Single platform (Google only)" hides Meta for a workspace
+// that has both, so the single-platform behaviour (no All Platforms, Google view only) can be demoed.
+function dashAdsDevToggles() {
   const crm = !!activeCrm(state.ctx);
+  const plats = wsPlatforms(state.ctx);
   return [
     { label: 'Ad-only (no CRM)', active: !crm, run: dashSetAdOnly },
     { label: 'CRM connected', active: crm, run: dashSetCrmConnected },
-    { label: 'No ad accounts linked', active: !!state.flags.dashNoAccounts, run: () => { state.flags.dashNoAccounts = !state.flags.dashNoAccounts; rerender(); } }
+    { label: 'No ad accounts linked', active: !!state.flags.dashNoAccounts, run: () => { state.flags.dashNoAccounts = !state.flags.dashNoAccounts; rerender(); } },
+    ...(plats.includes('google') && plats.length > 1 ? [{ label: 'Single platform (Google only)', active: !!state.flags.dashGoogleOnly, run: () => { state.flags.dashGoogleOnly = !state.flags.dashGoogleOnly; rerender(); } }] : [])
   ];
-});
+}
+['client-dashboard-ads', 'client-dashboard-ads-google', 'client-dashboard-ads-meta'].forEach(k => registerDevToggles(k, dashAdsDevToggles));
 registerDevToggles('client-dashboard-seo', () => {
   const on = seoConnected(state.ctx);
   const key = on ? dashSeoStats().status.key : null;
@@ -4624,6 +5358,38 @@ registerDevToggles('client-dashboard-seo', () => {
 // =====================================================================
 // Specs (ported from V1 agency-home / client-home and updated to this build)
 // =====================================================================
+// Shared part of the Google Ads and Meta Ads view specs.
+function dashPfSpecCommon(name) {
+  return `
+### Screen Purpose & Objectives
+A dedicated **${name}** view inside the Ad Performance tab that replicates the native ${name} report in the Galaxis style, so customers and agency users can stop opening ${name === 'Google Ads' ? 'Google Ads' : 'Meta Ads Manager'}: the full, configurable report is here. Google and Meta are separate views because some columns exist on one platform only. Source of truth for which metrics exist on which platform: the *Google & Meta Ads Metrics* sheet (Metrics (Original) for names and definitions, Metrics (Dev Notes) for API fields). Each metric uses **${name}'s own column name**.
+
+### Key Functional Specifications
+- **View switcher**: All Platforms | Google Ads | Meta Ads under the page tabs (rules in \`client-dashboard-ads\`). Route \`view: '${name === 'Google Ads' ? 'google' : 'meta'}'\`.
+- **Totals agree with All Platforms**: Cost / Impressions / Clicks / Conversions in this view (KPIs and the table's total row) equal the ${name === 'Google Ads' ? 'Google' : 'Meta'} platform row of the consolidated Campaigns and Ads table for the same dates. Both read the same platform data.
+- **Leads & Revenue** (CRM mode): the same section as All Platforms, scoped to this platform. Ad-only mode shows the locked cards and the Connect CRM banner.
+- **Report table**: level tabs, search, filter, column picker, **Download CSV**; grouped, collapsible column bands like the native column sets; every column sortable (default Cost / Amount spent, high to low; rows with no data sort last); 10 rows per page (10 / 20 / 50); name column and Action pinned; two-line headers; header tooltips with the sheet's definitions. Name cells show the parent above (campaign: ad account; lower levels: campaign › ad group). A grey **Total** row sums every filtered row (all pages), "Filtered" when a search, filter or drill-down applies; ratios are recalculated from the sums.
+- **Drill-down**: clicking a row, or "View …" in the ⋮ menu, opens the next level with a "Filtered for X ✕" badge; ✕ returns to Campaigns. Level tabs keep the drill-down filter.
+- **Table principle (22/10/2026)**: **all columns shown by default, in collapsed state**. Every metric group starts collapsed to its primary field ("+N" on the band shows how many columns are folded in); the Attributes / Settings group starts expanded, with Status / Delivery as its primary field when collapsed. "Collapse all / Expand all" above the name column; the column picker hides or shows single columns; **Reset to default** restores the defaults. Choices are remembered per viewer (prototype: localStorage; product: per user).
+- Only columns that exist at the current level natively are offered (e.g. Quality Score only for keywords).
+- Quality dots (green / orange / red vs this platform's total) on CTR, CPC, CPM and cost per conversion / result.
+- **Download CSV** (the native "Download report"): exports the current level, every column switched on in the column picker (collapsed groups included, since collapsing is only a display choice), every filtered row in the current sort order (not only the current page), then a Total row. Name and parent columns (Campaign, Ad group / Ad set) come first. Plain numbers: money in SGD to 2 dp ("(SGD)" in the header), percentages as numbers ("(%)"), "—" cells empty. UTF-8 with BOM for Excel. File name: \`{workspace}_${name === 'Google Ads' ? 'google' : 'meta'}-ads_{level}_{start}_{end}.csv\`. Text cells starting with = + - @ are prefixed with ' so spreadsheets do not run them as formulas.
+- **Daily Performance**: below the table, a daily line chart for this platform only (${name === 'Google Ads' ? 'Cost / Conversions / Clicks' : 'Amount spent / Results / Link clicks'} toggle, hover tooltip), adding up to this platform's totals.
+- **Date filter**: the shared client date filter applies to every number, as on All Platforms. **Prototype note:** mock data is scaled to the range, not filtered by event date.
+- **Mock data**: new platform metrics are generated per ad from their own random streams, so the consolidated numbers never change, and rolled up through the levels as sums or recalculated ratios.
+
+### Open questions
+- **Attribution windows differ**: Meta reports conversions under each ad set's attribution setting (default 7-day click, 1-day view); Google uses each conversion action's window and data-driven attribution. Platform totals are not like-for-like; how should All Platforms label or reconcile them?
+- **Exact native column sets to support** need performance-team sign-off (which columns, their order and the primary field of each group).
+- Are **keyword and search-term reports** needed (Google), and should keywords show search terms, negative keywords or match-type breakdowns?
+- **Currency and time zone per ad account**: the prototype assumes SGD and Asia/Singapore. Accounts billed in other currencies or time zones need conversion rules and labelling.
+- Should Google conversions be segmentable by **conversion action** (to show Leads / Purchases / Adds to cart separately, as the sheet suggests)?
+- Should CRM-attributed columns appear at Google keyword level (needs click-ID matching)?
+
+### Dev toolbar states
+- **Viewing as Agency Admin / Client User** (shared). **Ad-only (no CRM)** / **CRM connected**: CRM columns and the Leads & Revenue section. **No ad accounts linked**: empty state. **Single platform (Google only)**: workspaces with both platforms show only the Google Ads view.
+`;
+}
 Object.assign(screenSpecs, {
   'agency-dashboard': {
     title: '1. Agency Dashboard (My Workspace)',
@@ -4729,7 +5495,7 @@ Read-only SEO Cloud results inside the client workspace, next to ad performance,
     title: '1. Workspace Dashboard › Ad Performance',
     status: 'In Review',
     author: 'Hannah',
-    updatedAt: '21/10/2026',
+    updatedAt: '22/10/2026',
     notes: `
 ### Screen Purpose & Objectives
 Client-facing workspace dashboard giving a simplified, unified view of Meta and Google Ads performance. Since 22/10/2026 the dashboard has two tabs below the welcome header and Products & Connections panel: **Ad Performance** (this spec) and **SEO Performance** (\`client-dashboard-seo\`). It aims to remove the client's need to log in to the native ad platforms, and it doubles as an inspection view for agency administrators. Layout follows the Figma "Dashboard - Platform / Campaign / Ad Group / Ads" frames.
@@ -4738,6 +5504,10 @@ Client-facing workspace dashboard giving a simplified, unified view of Meta and 
 - **Top-Level KPI Cards**: Total Ad Spend (with budget used and a progress bar), Impressions (unique users), Clicks (CTR and average CPC), Platform Conversions (% from Google Ads) and Cost per Conversion (per-platform split). Each card has an ⓘ definition.
   - Exact KPIs are placeholders pending feedback from performance marketing and account management.
   - The budget shown is the workspace monthly budget pro-rated to the selected range.
+- **Views (22/10/2026)**: under the page tabs, a second-level segmented control **All Platforms | Google Ads | Meta Ads**, each with its platform logo. This spec is **All Platforms** (consolidated); the platform views are \`client-dashboard-ads-google\` and \`client-dashboard-ads-meta\`.
+  - All Platforms appears only when the workspace has both Google and Meta linked, or more than one ad account. A platform view appears only when that platform is linked.
+  - With one platform linked, only that platform's view shows (a single tab, with "Only Google Ads is linked to this workspace"). With none, the "No ad accounts linked" empty state replaces everything.
+  - The view is in the route (\`view: 'all' | 'google' | 'meta'\`) and the last one used is remembered when switching workspace; a remembered view the new workspace does not have falls back to its first available view.
 - **Tabs**: Ad Performance | SEO Performance (page tabs with icons). The active tab is in the route (\`tab: 'ads' | 'seo'\`) and is remembered when switching workspace; a remembered SEO tab falls back to Ad Performance in a workspace without SEO Cloud. Without SEO Cloud the SEO tab is greyed out, with a "Connect SEO Cloud" link to Integrations.
 - **Global Event-Based Date Filter**: Filters all dashboard data by the exact date the action (e.g. click or conversion) happened within the selected timeframe, independent of events higher up the funnel.
   - **Prototype note:** the date filter scales mock data to the selected range, and the Daily Performance chart plots one point per day of the range. It does **not** yet filter by event date.
@@ -4753,8 +5523,8 @@ Client-facing workspace dashboard giving a simplified, unified view of Meta and 
   - **Drill-down**: clicking a row, or "View …" in the ⋮ menu, opens the next level with a "Filtered for X ✕" badge. Clearing the badge returns to Platform.
   - **Columns**: Name (parent shown above), Ad Format (+N overflow), Status, then the platform metrics from the *Google & Meta Ads Metrics* sheet (Metrics (Dev Notes), green rows), in sheet order: Spend (Cost), Impressions, Reach, CPM, Frequency, Clicks, CTR, CPC, Conversions, Conversion Rate, Cost Per Conversion (kept from V1), Cost Per Lead, Cost Per Purchase, ROAS, Conversion Value, Engagement Rate, Engagement, Cost Per Engagement. In CRM mode, CRM Leads, CRM CPL, CRM Revenue and CRM ROAS follow ("CRM" prefix to separate CRM-attributed ROAS from platform-reported ROAS). Header tooltips show the sheet's definitions. Every column is sortable, including Status (Active → Attention Required → Paused) and Ad Format (first format).
   - **Column picker** (columns icon next to the filter): show or hide columns, grouped as Overview (Ad Format, Status, Spend), Impressions (Impressions, Reach, CPM, Frequency), Clicks, Conversions, Engagement and CRM (CRM mode only), with Show all / Hide all per group and Show all columns. The badge counts hidden columns. Name and Action are always shown.
-  - **Default columns** (relevant to every client): Status, Spend, Impressions, Clicks, CTR, CPC, Conversions, Conversion Rate, Cost Per Conversion, plus the CRM columns in CRM mode. Hidden by default (one click away in the picker, or **Reset to default**): Ad Format, Reach, CPM, Frequency, Cost Per Lead, Cost Per Purchase, ROAS, Conversion Value and the Engagement group, which only matter for some clients (e-commerce, awareness or social engagement campaigns).
-  - **Column groups**: the same groups appear as coloured, collapsible bands above the column headers. Collapsing a group leaves its summary column: Overview → Spend, Impressions → Impressions, Clicks → CTR, Conversions → Conversions, Engagement → Engagement Rate, CRM → CRM ROAS (or the group's first visible column if that one is hidden). "Collapse all / Expand all" sits above the name column. All groups start expanded; each viewer's choice is remembered. The choice is remembered per viewer in the browser (prototype: localStorage; product: save per user).
+  - **Default columns (22/10/2026 table principle: all columns, collapsed)**: every column is shown; every metric group starts **collapsed** to its summary column, and Overview (Ad Format, Status, Spend) stays expanded. Default view: Name, Ad Format, Status, Spend, Impressions, CTR, Conversions, Engagement Rate, CRM ROAS (CRM mode), Action. Expanding a group shows the rest of its columns. **Reset to default** restores this. (Before 22/10/2026, 11 columns started hidden; the storage keys were bumped so every viewer gets the new default once.)
+  - **Column groups**: the same groups appear as coloured, collapsible bands above the column headers. Collapsing a group leaves its summary column: Overview → Spend, Impressions → Impressions, Clicks → CTR, Conversions → Conversions, Engagement → Engagement Rate, CRM → CRM ROAS (or the group's first visible column if that one is hidden). "Collapse all / Expand all" sits above the name column. Each viewer's choice is remembered in the browser (prototype: localStorage; product: save per user).
   - **API fields** (from the sheet, for development):
     - Cost — Meta \`spend\`; Google \`metrics.cost_micros\`
     - Impressions — Meta \`impressions\`; Google \`metrics.impressions\`
@@ -4797,6 +5567,74 @@ Client-facing workspace dashboard giving a simplified, unified view of Meta and 
 - **Ad-only (no CRM)**: deactivates every CRM for this workspace, which also hides the Leads nav item.
 - **CRM connected**: makes CRM - lite connected and active, and every other CRM inactive.
 - **No ad accounts linked**: simulates the empty state without changing ad-account data.
+- **Single platform (Google only)**: hides Meta for a workspace with both platforms, so only the Google Ads view shows (no All Platforms). Shared with the platform views.
+`
+  },
+  'client-dashboard-ads-google': {
+    title: '1c. Workspace Dashboard › Ad Performance › Google Ads',
+    status: 'Draft',
+    author: 'Hannah',
+    updatedAt: '22/10/2026',
+    notes: dashPfSpecCommon('Google Ads') + `
+### Google Ads specifics
+- **KPI row** (native names, ⓘ = sheet definition): Cost (share of workspace ad spend when both platforms are linked) · Impressions (Avg. CPM) · Clicks (CTR, Avg. CPC) · Conversions (Conv. rate) · Cost / conv. (All conv.) · Conv. value / cost (Conv. value) · Search impr. share (Lost IS (budget); "—" and "No Search campaigns" without Search campaigns).
+- **Levels**: Campaigns | Ad groups | Ads | Keywords. Clicking a campaign opens its ad groups; clicking an ad group opens its ads; the ⋮ menu of a Search ad group (or campaign) also offers **View keywords (N)**.
+  - **Keywords** exist only under Search campaigns: 3–6 per ad group, each with Match type (Exact shown as [keyword], Phrase as "keyword", Broad plain), Quality Score 1–10 (coloured dot: 7+ green, 5–6 orange, below 5 red) and Max. CPC. Keyword metrics split their ad group's totals exactly; impression share varies per keyword.
+- **Columns** (native names; levels in brackets where a column does not exist at every level):
+  - **Attributes**: Status (Enabled / Limited / Paused), Campaign type (Search / Display / Video / Performance Max, from the campaign) [campaigns], Bid strategy type [campaigns], Budget (daily) [campaigns], Ad group type [ad groups; Performance Max uses asset groups], Ad type, Final URL (placeholder example.com URLs) [ads], Match type, Quality Score, Max. CPC [keywords].
+  - **Performance**: Impr., Clicks, CTR, Avg. CPC, Cost, Avg. CPM, Interactions, Engagement rate, Avg. CPE.
+  - **Conversions**: Conversions, Conv. rate, Cost / conv., All conv., Conv. value, Conv. value / cost.
+  - **Competitive metrics** [campaigns, ad groups, keywords; not ads, as in Google Ads]: Search impr. share, Search top IS, Search abs. top IS, Search lost IS (rank), Search lost IS (budget) [not keywords]. Search campaigns only (10–90% in the mock); other rows show "—".
+  - **Reach metrics** [not keywords]: Unique reach, Avg. impr. freq. / user.
+  - **Video** [not keywords]: Video views (ThruView views in the sheet), Video played to 25% / 50% / 75% / 100% (percentages). Video ads only; other rows "—".
+  - **Store visits** [not keywords]: Store visits (Shop Visits in the sheet). Sparse: most rows are 0.
+  - **CRM** (CRM mode, not keywords): CRM Leads, CRM CPL, CRM Revenue, CRM ROAS.
+- **Collapsed defaults (primary field)**: Attributes → Status (expanded by default), Performance → Cost, Conversions → Cost / conv., Competitive metrics → Search impr. share, Reach metrics → Unique reach, Video → Video views, Store visits → Store visits, CRM → CRM ROAS.
+- **Filter**: Status (Enabled / Limited / Paused) and Campaign type. Ad groups, ads and keywords filter by their campaign's type.
+- **Google-only metrics** (N/A for Meta in the sheet): All conv., Search impr. share, Search top IS, Search abs. top IS, Search lost IS (rank), Search lost IS (budget), Shop visits (Store visits), ThruView views (Video views).
+- **Not separate columns in Google**: the sheet's Leads, Purchases, Adds to cart and Initiate checkout map to Google's Conversions *for that conversion action*. They need a "Conversion action" segment, not extra columns (open question below). Cost per lead / cost per purchase likewise come from Cost / conv.
+- **Interaction rate** is not shown: in this data model it equals Engagement rate (the sheet maps Engagement → Interactions and Engagement rate → metrics.engagement_rate). Add it if the performance team wants both.
+
+### API fields (Metrics (Dev Notes) tab, Google)
+- Cost \`metrics.cost_micros\` · Impr. \`metrics.impressions\` · Unique reach \`metrics.unique_users\` · Avg. CPM \`metrics.average_cpm\` · Avg. impr. freq. / user \`metrics.average_impression_frequency_per_user\`
+- Clicks \`metrics.clicks\` · CTR \`metrics.ctr\` · Avg. CPC \`metrics.average_cpc\`
+- Conversions \`metrics.conversions\` (also Leads / Purchases / Adds to cart / Checkouts when set up as those actions) · Conv. rate \`metrics.conversions_from_interactions_rate\` · Cost / conv. \`metrics.cost_per_conversion\` · Conv. value \`metrics.conversions_value\` · Conv. value / cost \`metrics.conversions_value_per_cost\`
+- Engagement rate \`metrics.engagement_rate\` · Interactions \`metrics.interactions\` · Avg. CPE \`metrics.average_cpe\`
+- No API field in the sheet yet: All conv., the five impression-share metrics, Store visits, Video views, Video played to 25–100%. [PLACEHOLDER] for development to fill in (e.g. \`metrics.all_conversions\`, \`metrics.search_impression_share\` — to confirm).
+`
+  },
+  'client-dashboard-ads-meta': {
+    title: '1d. Workspace Dashboard › Ad Performance › Meta Ads',
+    status: 'Draft',
+    author: 'Hannah',
+    updatedAt: '22/10/2026',
+    notes: dashPfSpecCommon('Meta Ads') + `
+### Meta Ads specifics
+- **KPI row** (native names, ⓘ = sheet definition): Amount spent (share of workspace ad spend) · Reach (Frequency) · Impressions (CPM) · Link clicks (CTR (link), CPC (link)) · Results (Result rate) · Cost per result (Cost per lead) · Purchase ROAS (purchase value).
+- **Levels**: Campaigns | Ad sets | Ads. Meta ad sets are the hierarchy's ad groups. Clicking a campaign opens its ad sets; clicking an ad set opens its ads.
+- **Columns** (native names):
+  - **Settings**: Delivery (Active / Learning / Learning limited / Paused), Objective (Leads / Sales / Traffic / Awareness / Engagement, from the campaign) [campaigns], Budget (daily or lifetime; "Using ad set budget" / "Using campaign budget" when the budget sits at the other level) [campaigns, ad sets], Optimisation goal [ad sets], Ad format (Single image / Single video / Carousel) [ads], Attribution setting ("7-day click, 1-day view").
+  - **Performance**: Results, Result rate, Cost per result, Amount spent, Reach, Impressions, Frequency, CPM (cost per 1,000 impressions).
+  - **Clicks**: Link clicks, CTR (link click-through rate), CPC (cost per link click), Clicks (all), CTR (all), CPC (all), Landing page views, Cost per landing page view.
+  - **Engagement**: Post engagement, Cost per post engagement, Engagement rate, Post shares, Post saves, Instagram follows, Instagram profile visits.
+  - **Messaging**: Messaging conversations started, Cost per messaging conversation started (only some ads have messaging; others 0 / "—").
+  - **Video**: ThruPlays (15-second ThruPlays in the sheet), Video plays at 25% / 50% / 75% / 100% (counts). Video ads only.
+  - **Conversions**: Leads, Cost per lead, Purchases, Cost per purchase, Purchases conversion value, Purchase ROAS (return on ad spend), Adds to cart, Checkouts initiated.
+  - **CRM** (CRM mode): CRM Leads, CRM CPL, CRM Revenue, CRM ROAS.
+- **Collapsed defaults (primary field)**: Settings → Delivery (expanded by default), Performance → Cost per result, Clicks → CTR (link), Engagement → Post engagement, Messaging → Messaging conversations started, Video → ThruPlays, Conversions → **Leads**, CRM → CRM ROAS.
+  - Why Leads rather than Purchase ROAS: most workspaces run lead objectives and the Hub's CRM mode is lead-based; Purchase ROAS only means something with purchase tracking (it is one click away).
+- **Filter**: Delivery and Objective. Ad sets and ads filter by their campaign's objective.
+- **Meta-only metrics** (N/A for Google in the sheet): Clicks (all), CTR (all), CPC (all), Landing page views, Cost per landing page view, Messaging conversations started, Cost per messaging conversation started, 15-second ThruPlays, Post shares, Post saves, Instagram follows, Instagram profile visits.
+- **Results**: in Meta, Results count each ad set's optimisation event. The prototype uses the same conversion count as the consolidated table (so the totals agree). Confirm which event "Results" should use per objective.
+
+### API fields (Metrics (Dev Notes) tab, Meta)
+- Amount spent \`spend\` · Impressions \`impressions\` · Reach \`reach\` · CPM \`cpm\` · Frequency \`frequency\`
+- Link clicks \`inline_link_clicks\` · CTR (link) \`inline_link_click_ctr\` · CPC (link) \`cost_per_inline_link_click\`
+- Results / Leads \`actions\` · Result rate \`actions / inline_link_clicks\` · Cost per lead / Cost per purchase \`cost_per_action_type\` · Purchase ROAS \`purchase_roas\` · Purchases conversion value \`action_values\`
+- Adds to cart \`actions\` (action_type = 'add_to_cart') · Checkouts initiated \`actions\` (action_type = 'initiate_checkout')
+- Post engagement \`actions\` (action_type = 'post_engagement') · Engagement rate \`actions / impressions\` (post_engagement) · Cost per post engagement \`cost_per_action_type\` (post_engagement)
+- No API field in the sheet yet: Clicks (all), CTR (all), CPC (all), Landing page views, Cost per landing page view, Purchases, Messaging, ThruPlays, Video plays, Post shares / saves, Instagram follows / profile visits. [PLACEHOLDER] for development to fill in.
+- Definitions not in the sheet (prototype wording, to confirm): Messaging conversations started, Cost per messaging conversation started, Post shares, Post saves, Instagram follows, Instagram profile visits, Video plays at 25–100%.
 `
   }
 });
@@ -7140,7 +7978,7 @@ Directory for creating and locating client organisations (workspaces). Ported fr
 When an account converts in the agency CRM, Galaxis creates the client workspace automatically:
 1. **Workspace created**, marked "From CRM" (badge on the card).
 2. **Services & budgets synced** from the CRM (shown read-only in Organisation › Business Information › Services & Contract).
-3. **Agency assignees added** through the role mapping in agency Integrations. The CRM's named user is used when they hold the mapped Galaxis role and team; otherwise the agency member with that role and team and the fewest workspaces is picked. Assignment writes to each member's assigned workspaces, so the workspace appears in their switcher.
+3. **Agency assignees added** through the default CRM role mapping (no editing UI since 22/10/2026). The CRM's named user is used when they hold the mapped Galaxis role and team; otherwise the agency member with that role and team and the fewest workspaces is picked. Assignment writes to each member's assigned workspaces, so the workspace appears in their switcher.
 4. **SEO Cloud project linked** (only when SEO is a live service). The project starts as *Pending setup* until keywords are set up in SEO Cloud.
 5. **Client contacts awaiting approval.** CRM contacts are added as members with status *Awaiting approval*. They are not invited and don't use a seat. The account manager approves them (all at once or one by one) or removes them; approved contacts become *Pending Invite*. The first primary contact becomes the workspace Primary Contact.
 6. **Ad accounts linked** — a manual step: "Link in Integrations" opens agency Integrations.
@@ -7799,7 +8637,6 @@ function integRenderAgency() {
       <div class="integ-sub">Agency-level connections Galaxis uses to discover client ad accounts and to set up workspaces from the agency CRM.</div>
       <div class="integ-grid-3">${Object.keys(masterTokens).map(integTokenCard).join('')}${integCrmCard()}</div>
     </section>
-    <section class="integ-section card" id="integ-crm-map">${integCrmMapHTML()}</section>
     <section class="integ-section card" id="integ-unlinked">${integUnlinkedHTML()}</section>
     <section class="integ-section card" id="integ-queue">${integQueueHTML()}</section>
     <section class="integ-section card">
@@ -7864,40 +8701,6 @@ function integCrmReconnect() {
     showToast('Agency CRM reconnected. New conversions will create workspaces again.', 'plug');
   }, 900);
 }
-function integRenderCrmMap() { renderRegion('integ-crm-map', integCrmMapHTML()); }
-function integCrmMapHTML() {
-  const agencyRoles = roles.filter(r => r.org === 'agency' && !r.locked);
-  const agencyTeams = teams.filter(t => t.org === 'agency' && t.status === 'active');
-  const rows = crmRoleMap.map((r, i) => {
-    const who = crmCandidates(r.crmRole);
-    return `<tr><td class="t-bold">${esc(r.crmRole)}</td>
-      <td><select class="select integ-map-select" aria-label="Galaxis role for ${esc(r.crmRole)}" onchange="integCrmMapSet(${i}, 'roleId', this.value)">
-        <option value="" ${r.roleId ? '' : 'selected'}>Do not assign</option>${agencyRoles.map(x => `<option value="${x.id}" ${x.id === r.roleId ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></td>
-      <td><select class="select integ-map-select" aria-label="Team for ${esc(r.crmRole)}" onchange="integCrmMapSet(${i}, 'teamId', this.value)" ${r.roleId ? '' : 'disabled'}>
-        <option value="" ${r.teamId ? '' : 'selected'}>Any team</option>${agencyTeams.map(t => `<option value="${t.id}" ${t.id === r.teamId ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></td>
-      <td>${!r.roleId ? '<span class="t-muted">Not assigned</span>' : who.length ? `<span class="integ-map-who">${esc(who.map(m => m.name).join(', '))}</span>` : '<span class="integ-pill-warn"><i data-lucide="triangle-alert"></i>No matching user</span>'}</td></tr>`;
-  }).join('');
-  return `<div class="card-header"><div><h2 class="h-section">Agency CRM — role mapping & auto set-up</h2>
-      <div class="card-sub">When an account converts in the agency CRM, Galaxis creates the client workspace, copies its services and budgets, assigns agency members by role and adds the client contacts.</div></div></div>
-    <div class="table-wrap"><table class="table integ-table">
-      <thead><tr><th>CRM role</th><th>Galaxis role</th><th>Team</th><th>Galaxis users who match</th></tr></thead><tbody>${rows}</tbody></table></div>
-    <div class="t-caption t-muted integ-map-note">The CRM’s named user is assigned when they hold the mapped role and team. Otherwise the matching member with the fewest client workspaces is picked. Owners and Agency Admins already see every workspace.</div>
-    <div class="integ-crm-toggle"><div><div class="t-bold">Send client invites only after account-manager approval</div>
-        <div class="field-hint">On: client contacts from the CRM wait as “Awaiting approval” until the account manager approves them in the set-up checklist. Off: they are invited as soon as the workspace is created.</div></div>
-      <label class="toggle"><input type="checkbox" ${crmSettings.approvalRequired ? 'checked' : ''} onchange="integCrmApproval(this.checked)" aria-label="Send client invites only after account-manager approval"><span></span></label></div>`;
-}
-function integCrmMapSet(i, key, val) {
-  const r = crmRoleMap[i];
-  r[key] = val;
-  if (key === 'roleId' && !val) r.teamId = '';
-  integRenderCrmMap();
-  showToast(`Role mapping saved for ${r.crmRole}. Applies to the next CRM conversion.`, 'check-circle');
-}
-function integCrmApproval(on) {
-  crmSettings.approvalRequired = on;
-  showToast(on ? 'Client invites will wait for account-manager approval' : 'Client invites will be sent automatically on conversion', on ? 'shield-check' : 'send');
-}
-
 // Simulated OAuth: resets the token to valid with a new expiry (Google 1 year, Meta 60 days).
 function integReauth(k) {
   const t = masterTokens[k];
@@ -8149,12 +8952,7 @@ Agency-level integrations page ("My Workspace"). Bridges the external ad platfor
   - Shows status (Connected / Disconnected), "{N} accounts synced" and the last sync time.
   - **Re-sync** runs a sync (simulated) and refreshes the count and time. When disconnected the button becomes **Reconnect**.
   - Disconnected shows a red banner at the top of the page ("Agency CRM disconnected") with Reconnect. While disconnected, converted CRM accounts don't create workspaces.
-- **Role mapping & auto set-up card** below the connections:
-  - Table: CRM role → Galaxis role (select, or "Do not assign") → Team (select, or "Any team") → the Galaxis users who currently match.
-  - Defaults: Account Manager → Account Manager; SEO Specialist → SEO Lead, SEO Research team; Project Lead → Project Lead; Ads Specialist → Account Manager, Marketing team.
-  - Resolution: the CRM's named user is assigned when they hold the mapped role and team; otherwise the matching member with the fewest client workspaces. A role with no matching user is flagged here and in the set-up checklist.
-  - Changes apply to the next conversion and don't re-assign existing workspaces.
-  - Toggle **"Send client invites only after account-manager approval"** — on by default (Hannah's decision). Off sends invites straight away.
+- **Role mapping**: the CRM role → Galaxis role/team mapping card was removed from this page on 22/10/2026. Auto set-up uses the default mapping (Account Manager → Account Manager; SEO Specialist → SEO Lead, SEO Research team; Project Lead → Project Lead; Ads Specialist → Account Manager, Marketing team), and client invites always wait for account-manager approval. Where the mapping is managed (here, Team & Access, or the CRM) is an open question.
 - What auto set-up does is specified on Team & Access › Client Organisation.
 
 ### Client workspaces without linked ad accounts (V1, In Review)
@@ -8802,7 +9600,7 @@ Ported from V2's Lead Intelligence profile: one lead's details, conversations, a
 // Every global here is prefixed `crm`. Contract used by the dashboard: crmPendingSetups(), crmOpenSetup(wsId), crmSimulateConversion().
 // All companies, people and emails below are fictional placeholders.
 
-// ---------- Role mapping (edited in agency Integrations) ----------
+// ---------- Role mapping (defaults; no editing UI since 22/10/2026 — where it is managed is an open question) ----------
 // Each CRM role maps to a Galaxis agency role and, optionally, a team. On conversion the CRM's named user is used when
 // they hold the mapped role (and team); otherwise the least-loaded agency member with that role and team is picked.
 // roleId '' means "do not assign".
@@ -8896,7 +9694,7 @@ function crmSetupSteps(wsId) {
   const missing = s.assignees.filter(a => !a.memberId);
   steps.push({ id: 'assignees', label: 'Agency assignees added', state: missing.length ? 'pending' : 'done',
     detail: assigned.map(a => `${memberById(a.memberId).name} (${a.crmRole})`).join(', ') || 'No agency members assigned.',
-    warn: missing.length ? `No Galaxis user matches ${missing.map(a => a.crmRole).join(', ')}. Assign one manually or update the role mapping.` : '' });
+    warn: missing.length ? `No Galaxis user matches ${missing.map(a => a.crmRole).join(', ')}. Assign one manually.` : '' });
   if (acc.services.some(x => x.type === 'SEO')) {
     const e = wsProducts(wsId)['seo-cloud'];
     steps.push({ id: 'seo', label: 'SEO Cloud project linked', state: seoProjects[wsId] ? 'done' : 'pending',
@@ -9091,7 +9889,7 @@ function crmSetupHTML(wsId) {
         <div class="row crm-setup-meta"><span class="crm-badge"><i data-lucide="sparkles"></i>From CRM</span><span class="t-caption t-muted">${esc(acc.crmId)} · Account manager ${esc(am?.name || 'not mapped')}</span></div></div></div>
     <div class="crm-progress-row"><span class="t-bold">Set-up checklist</span><span class="t-caption t-secondary">${p.done} of ${p.total} steps</span></div>
     <div class="progress crm-progress" role="progressbar" aria-valuenow="${p.done}" aria-valuemin="0" aria-valuemax="${p.total}"><span style="width:${pct}%"></span></div>
-    <p class="t-caption t-muted crm-setup-note">Galaxis created this workspace automatically when the account converted in the agency CRM. ${crmSettings.approvalRequired ? 'Client invites wait for the account manager’s approval.' : 'Client invites were sent automatically (approval is turned off in Integrations).'}</p>
+    <p class="t-caption t-muted crm-setup-note">Galaxis created this workspace automatically when the account converted in the agency CRM. ${crmSettings.approvalRequired ? 'Client invites wait for the account manager’s approval.' : 'Client invites were sent automatically.'}</p>
     <ol class="crm-steps">${items}</ol>`;
 }
 function crmContactList(wsId) {

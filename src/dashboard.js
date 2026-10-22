@@ -557,7 +557,7 @@ function dashManagedRows() {
       adSvcs: services.filter(x => CRM_AD_SERVICES.includes(x.type)), seoSvcs: services.filter(x => x.type === 'SEO'),
       pacing: dashPacing(w.id, t.spend, days), industry: w.industry, am: memberById(crmAccounts[w.id]?.accountManager || '')?.name || null,
       seo: seoConnected(w.id) ? seoStats(w.id, days) : null,
-      q: { cpm: linked ? dashQuality(t.cpm, port.cpm) : '', cpc: linked ? dashQuality(t.cpc, port.cpc) : '', cpa: linked ? dashQuality(t.cpa, port.cpa) : '' }
+      q: { cpm: linked ? dashQuality(t.cpm, port.cpm) : '', cpc: linked ? dashQuality(t.cpc, port.cpc) : '', cpa: linked ? dashQuality(t.cpa, port.cpa) : '', pRoas: linked ? dashQuality(t.pRoas, port.pRoas, true) : '' }
     };
   });
 }
@@ -567,9 +567,11 @@ const DASH_MG_COLS = [
   { key: 'platforms', group: 'ads', label: 'Ad Platforms' },
   { key: 'spend', group: 'ads', label: 'Combined Spend' },
   { key: 'pacing', group: 'ads', label: 'Budget Pacing', tip: 'Ad spend against the media budget in the Agency CRM for the selected dates. Ahead of pace above 115%, Under spend below 80%, otherwise On track (same rule as the CRM).' },
+  { key: 'conversions', group: 'ads', label: 'Conversions', tip: 'Platform-reported conversions for the selected dates.' },
+  { key: 'cpa', group: 'ads', label: 'Cost Per Conversion' },
+  { key: 'pRoas', group: 'ads', label: 'ROAS', tip: 'Platform-reported purchase value ÷ spend. Mainly meaningful for clients that track purchase value (e-commerce).' },
   { key: 'cpm', group: 'ads', label: 'CPM' },
   { key: 'cpc', group: 'ads', label: 'CPC' },
-  { key: 'cpa', group: 'ads', label: 'Cost Per Conversion' },
   { key: 'adsDays', group: 'ads', label: 'Contract Days Left', tip: 'Days left on the Agency CRM contract for the live ad services (Google Ads, Facebook Ads, SEM). Shown per platform when they run on different contracts. Amber at 60 days or fewer, red at 30 or fewer.' },
   { key: 'seoStatus', group: 'seo', label: 'SEO Status', tip: 'SEO Cloud project status: On track at or above the top-10 target, Off track less than 5 points below, Critical 5 or more points below.' },
   { key: 'top10', group: 'seo', label: 'Top 10 %', tip: 'Share of tracked keywords ranking in the top 10 today, against the contracted target.' },
@@ -583,7 +585,9 @@ registerColumnPicker('managed', {
   collapsible: true,
   note: 'Client and Action are always shown',
   onChange: 'dashRefreshManaged',
-  storageKey: 'galaxis-demo:managed-columns-hidden'
+  // CPM and CPC explain why cost per conversion moved; they start hidden (still in the client dashboard).
+  defaultHidden: ['cpm', 'cpc'],
+  storageKey: 'galaxis-demo:managed-columns-hidden-v2'
 });
 
 function dashManagedCard() {
@@ -640,6 +644,7 @@ function dashManagedBody() {
   const miss = v => v === null || v === undefined ? (asc ? Infinity : -Infinity) : v;
   rows = applySort(rows, 'dash-managed', {
     name: r => r.w.name.toLowerCase(), platforms: r => r.plats.length,
+    conversions: r => num(r.t.conversions), pRoas: r => num(r.t.pRoas),
     spend: r => num(r.t.spend), cpm: r => num(r.t.cpm), cpc: r => num(r.t.cpc), cpa: r => num(r.t.cpa),
     seoStatus: r => miss(r.seo ? seoRank[r.seo.status.key] : null), top10: r => miss(r.seo ? r.seo.top10Pct : null),
     avgPos: r => miss(r.seo ? r.seo.avgPos : null), adsDays: r => miss(dashMinDays(r.adSvcs)), seoDays: r => miss(dashMinDays(r.seoSvcs)),
@@ -659,6 +664,8 @@ function dashManagedBody() {
       case 'platforms': return `<div class="dash-plat-stack">${r.plats.map(p => platformBadge(p)).join('') || '<span class="t-muted">No platform linked</span>'}</div>`;
       case 'spend': return r.linked ? fmtMoney(r.t.spend) : dash;
       case 'cpm': case 'cpc': case 'cpa': return money(r, k);
+      case 'conversions': return r.linked ? fmtNum(r.t.conversions) : dash;
+      case 'pRoas': return r.linked && r.t.pRoas ? dashDot(`${r.t.pRoas.toFixed(2)}x`, r.q.pRoas) : dash;
       case 'seoStatus': return r.seo ? `<span class="pill pill-sm ${r.seo.status.pill}">${esc(r.seo.status.label)}</span>` : dash;
       case 'top10': return r.seo ? `<b class="${DASH_SEO_TEXT[r.seo.status.key]}">${dashPctTxt(r.seo.top10Pct)}</b><span class="t-muted"> / ${dashPctTxt(r.seo.target)}</span>` : dash;
       case 'avgPos': return r.seo && r.seo.avgPos !== null ? dashNum1(r.seo.avgPos) : dash;
@@ -927,7 +934,8 @@ registerColumnPicker('seo-keywords', {
   groups: [['details', 'Keyword details'], ['rank', 'Rankings']],
   note: 'Keyword and the latest day are always shown',
   onChange: 'dashSeoRefreshTable',
-  storageKey: 'galaxis-demo:seo-keyword-columns-hidden'
+  defaultHidden: ['urls', 'intent'],
+  storageKey: 'galaxis-demo:seo-keyword-columns-hidden-v2'
 });
 
 function dashSeoKwCard() {
@@ -1386,7 +1394,10 @@ registerColumnPicker('campaigns', {
   collapsible: true,
   note: 'Name and Action are always shown',
   onChange: 'dashRefreshCampaignTable',
-  storageKey: 'galaxis-demo:campaign-columns-hidden'
+  // Default view: the columns that matter for every client (spend, reach of the ads, clicks and conversion cost).
+  // Specialist columns (purchase / e-commerce, engagement, frequency, CPM) start hidden and are one click away.
+  defaultHidden: ['format', 'reach', 'cpm', 'freq', 'cpLead', 'cpp', 'pRoas', 'convValue', 'engRate', 'engagements', 'cpe'],
+  storageKey: 'galaxis-demo:campaign-columns-hidden-v2'
 });
 
 function dashCampaignBody() {
@@ -1902,14 +1913,15 @@ Central command dashboard for agency administrators managing many client ad acco
   - **SEO Critical** (High) and **SEO Off Track** (Medium): an SEO Cloud project below target, e.g. "50% of keywords in top 10 vs 55% target (5 pts below)" → View SEO (opens that workspace's dashboard on the SEO Performance tab).
   - **CRM Set-up** (Medium): an Agency CRM auto set-up with client invites awaiting approval, "N client invites awaiting approval" → Review set-up (the CRM module's set-up checklist; falls back to Team & Access › Client Organisation). Shown only when the CRM module is loaded.
   - The banner adds "N SEO projects below target" when any project is Off track or Critical.
-- **Managed Accounts table** (the V1 Client Workspace Directory, with Figma columns): Client (with industry and account manager underneath), then Ads: Ad Platforms, Combined Spend, Budget Pacing, CPM, CPC, Cost Per Conversion, Contract Days Left; SEO: SEO Status, Top 10 %, Avg Position, Contract Days Left; then Action. Account columns (Status, Primary Contact, Last Activity) and the separate CRM columns (Live Services, Monthly Budget) were removed on 22/10/2026 to keep the table focused on performance; contract days now sit inside the Ads and SEO groups.
+- **Managed Accounts table** (the V1 Client Workspace Directory, with Figma columns): Client (with industry and account manager underneath), then Ads: Ad Platforms, Combined Spend, Budget Pacing, Conversions, Cost Per Conversion, ROAS, CPM, CPC, Contract Days Left; SEO: SEO Status, Top 10 %, Avg Position, Contract Days Left; then Action. Account columns (Status, Primary Contact, Last Activity) and the separate CRM columns (Live Services, Monthly Budget) were removed on 22/10/2026 to keep the table focused on performance; contract days now sit inside the Ads and SEO groups.
   - **SEO columns**: SEO Status pill ("—" when the workspace is not on SEO Cloud); Top 10 % as "current / target", coloured by status; Avg Position (mean position of keywords ranking in the top 100).
   - **From the Agency CRM**:
     - **Client sub-line**: industry and account manager.
     - **Budget Pacing** (Ads): ad spend for the selected dates against the CRM media budget for the same days (monthly media budget × days ÷ 30). Same rule as the CRM: Ahead of pace above 115% (red), Under spend below 80% (orange), otherwise On track (green). The tooltip shows spend and budget.
     - **Contract Days Left** (Ads and SEO): each service runs on its own CRM contract, so a client can have concurrent contracts. Ads shows one figure when the ad services share a contract, otherwise one per platform (e.g. "Google 18d · Meta 72d"). Amber at 60 days or fewer, red at 30 or fewer; the tooltip lists contract numbers and end dates.
   - **Column groups**: columns sit under coloured, collapsible group bands, in the order Ads · SEO. Collapsing a group leaves its summary column (Combined Spend, SEO Status), still sortable; the band shows how many columns are hidden. "Collapse all / Expand all" sits above the Client column. All groups start expanded; each viewer's choice is remembered (prototype: localStorage).
-  - **Column picker**: show or hide columns within those groups. A group with every column hidden disappears. Client and Action are always shown. Remembered per viewer (prototype: localStorage).
+  - **Default columns**: everything except CPM and CPC, which explain why cost per conversion moved rather than whether the client is doing well (they stay in the client dashboard). ROAS is platform-reported purchase value ÷ spend, mainly meaningful for e-commerce clients.
+  - **Column picker**: show or hide columns within those groups, **Reset to default**, or Show all. A group with every column hidden disappears. Client and Action are always shown. Remembered per viewer (prototype: localStorage).
   - The ⋮ menu adds "View SEO performance" for workspaces on SEO Cloud.
   - Coloured dots on CPM / CPC / Cost per Conversion compare each workspace with the portfolio average. Green (Excellent) is at least 10% better; orange (Average) is within -10% to +15%; red (Bad) is more than 15% worse. This replaces V1's heat cells.
   - Search by client name.
@@ -1953,7 +1965,7 @@ Read-only SEO Cloud results inside the client workspace, next to ad performance,
 - **Keyword table** (read-only):
   - Header: Keywords, View mode Group | List; toolbar with search (keyword or group), filter (Search Intent, Difficulty, Keyword Group) and the column picker; "Total Keywords: N" (of the total when filtered) above the table.
   - **Group mode**: collapsible group header rows, "Best / Top Brand (21)" and "Updated on {date}", with Expand all / Collapse all.
-  - **Columns**: Keyword (country chip "SG" + term), Ranking URL (link icon + count), Volume, Search Intent (round C / L / I / N chips; tooltip names the intent: Commercial, Local, Informational, Navigational), Difficulty (Easy / Moderate / Hard dot), History (sparkline over the date range, inverted y-axis), Baseline (position when added; "–" if it was not in the top 100), then one column per day for the last 7 days ("OCT-16"), with the position or "–".
+  - **Columns**: Keyword (country chip "SG" + term), Ranking URL (link icon + count), Volume, Search Intent (round C / L / I / N chips; tooltip names the intent: Commercial, Local, Informational, Navigational), Difficulty (Easy / Moderate / Hard dot), History (sparkline over the date range, inverted y-axis), Baseline (position when added; "–" if it was not in the top 100), then one column per day for the last 7 days ("OCT-16"), with the position or "–". Ranking URL and Search Intent start hidden (column picker, or Reset to default).
   - **Day cell colour**: green when better than the baseline, red when worse. With no baseline, the cell is compared with the previous day.
   - Sortable: Keyword, Volume, Difficulty, Baseline and the latest day. Unranked keywords sort last in both directions. In Group mode, rows are sorted within each group.
   - 25 keywords per page by default (Showing Per Page also offers 10 / 20 / 50).
@@ -2002,6 +2014,7 @@ Client-facing workspace dashboard giving a simplified, unified view of Meta and 
   - **Drill-down**: clicking a row, or "View …" in the ⋮ menu, opens the next level with a "Filtered for X ✕" badge. Clearing the badge returns to Platform.
   - **Columns**: Name (parent shown above), Ad Format (+N overflow), Status, then the platform metrics from the *Google & Meta Ads Metrics* sheet (Metrics (Dev Notes), green rows), in sheet order: Spend (Cost), Impressions, Reach, CPM, Frequency, Clicks, CTR, CPC, Conversions, Conversion Rate, Cost Per Conversion (kept from V1), Cost Per Lead, Cost Per Purchase, ROAS, Conversion Value, Engagement Rate, Engagement, Cost Per Engagement. In CRM mode, CRM Leads, CRM CPL, CRM Revenue and CRM ROAS follow ("CRM" prefix to separate CRM-attributed ROAS from platform-reported ROAS). Header tooltips show the sheet's definitions. Every column is sortable, including Status (Active → Attention Required → Paused) and Ad Format (first format).
   - **Column picker** (columns icon next to the filter): show or hide columns, grouped as Details (Ad Format, Status), Delivery, Clicks, Conversions, Engagement and CRM (CRM mode only), with Show all / Hide all per group and Show all columns. The badge counts hidden columns. Name and Action are always shown.
+  - **Default columns** (relevant to every client): Status, Spend, Impressions, Clicks, CTR, CPC, Conversions, Conversion Rate, Cost Per Conversion, plus the CRM columns in CRM mode. Hidden by default (one click away in the picker, or **Reset to default**): Ad Format, Reach, CPM, Frequency, Cost Per Lead, Cost Per Purchase, ROAS, Conversion Value and the Engagement group, which only matter for some clients (e-commerce, awareness or social engagement campaigns).
   - **Column groups**: the same groups appear as coloured, collapsible bands above the column headers. Collapsing a group leaves its summary column: Details → Status, Delivery → Spend, Clicks → CTR, Conversions → Conversions, Engagement → Engagement Rate, CRM → CRM ROAS (or the group's first visible column if that one is hidden). "Collapse all / Expand all" sits above the name column. All groups start expanded; each viewer's choice is remembered. The choice is remembered per viewer in the browser (prototype: localStorage; product: save per user).
   - **API fields** (from the sheet, for development):
     - Cost — Meta \`spend\`; Google \`metrics.cost_micros\`

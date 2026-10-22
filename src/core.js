@@ -490,7 +490,8 @@ function applyDateFilter(scope, onApply) {
 //   collapsible: true,                          // optional: column groups get a band row and can collapse to their summary column
 //   note: 'Name and Action are always shown',
 //   onChange: 'dashRefreshCampaignTable',      // global fn re-rendering the table
-//   storageKey: 'galaxis-demo:…'               // optional; hidden columns are a per-viewer convenience
+//   storageKey: 'galaxis-demo:…',              // optional; hidden columns are a per-viewer convenience
+//   defaultHidden: ['cpm', …]                  // optional; columns hidden until the viewer changes them (Reset to default restores)
 // })
 const columnPickers = {};
 function registerColumnPicker(id, def) {
@@ -525,7 +526,9 @@ function colPickerInner(id) {
   }).join('');
   return `<div class="colpick-head"><div class="h-card">Columns</div><div class="card-sub">${shown} of ${cols.length} shown${d.note ? ` · ${esc(d.note)}` : ''}</div></div>
     ${groups}
-    <div class="filter-actions"><button type="button" class="btn btn-outline btn-sm" onclick="colShowAll('${id}')" ${shown === cols.length ? 'disabled' : ''}>Show all columns</button></div>`;
+    <div class="filter-actions">
+      ${d.defaultHidden ? `<button type="button" class="btn btn-ghost btn-sm" onclick="colResetDefault('${id}')" ${colIsDefault(id) ? 'disabled' : ''}>Reset to default</button>` : ''}
+      <button type="button" class="btn btn-outline btn-sm" onclick="colShowAll('${id}')" ${shown === cols.length ? 'disabled' : ''}>Show all columns</button></div>`;
 }
 function colSet(id, key, on) {
   const d = columnPickers[id];
@@ -542,6 +545,12 @@ function colSetGroup(id, group, on) {
   colChanged(id);
 }
 function colShowAll(id) { columnPickers[id].hidden = []; colChanged(id); }
+function colResetDefault(id) { columnPickers[id].hidden = [...(columnPickers[id].defaultHidden || [])]; colChanged(id); }
+function colIsDefault(id) {
+  const d = columnPickers[id];
+  const a = [...d.hidden].sort().join(), b = [...(d.defaultHidden || [])].sort().join();
+  return a === b;
+}
 function colChanged(id) {
   const d = columnPickers[id];
   try { localStorage.setItem(d.storageKey, JSON.stringify(d.hidden)); } catch (e) { /* storage unavailable: keep in memory */ }

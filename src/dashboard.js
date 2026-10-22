@@ -417,7 +417,6 @@ function dashRenderAgency() {
       <div><h2 class="h-welcome">Welcome Back, ${esc(dashFirstName())}</h2><p class="dash-welcome-sub">Keep track of project progress and manage your account all in one place.</p></div>
       ${dateFilterHTML('agency', 'dashRerender')}
     </div>
-    ${dashBanner()}
     <div class="dash-top">
       ${dashDonutCard()}
       ${dashSpendCard(port)}
@@ -425,28 +424,6 @@ function dashRenderAgency() {
     </div>
     <div class="card dash-att-card" id="dash-attention">${dashAttentionCard()}</div>
     <div class="card" id="dash-managed">${dashManagedCard()}</div>`;
-}
-
-function dashBanner() {
-  if (state.flags.dashAlertsOff) return '';
-  const list = dashAgencyWorkspaces();
-  const missing = list.filter(w => !wsAdAccounts(w.id).length).length;
-  const impacting = list.filter(w => w.status === 'attention').length;
-  if (!missing && !impacting && !dashAttentionItems().length) return '';
-  const seoBehind = seoPortfolio(list).rows.filter(x => x.stats.status.key !== 'on').length;
-  return `<div class="banner banner-warning dash-banner">
-    <i data-lucide="triangle-alert"></i>
-    <div><div class="banner-title">Attention Required</div><div class="banner-text">${missing} account${missing === 1 ? '' : 's'} missing platform links, ${impacting} impacting overall performance${seoBehind ? `, ${seoBehind} SEO project${seoBehind === 1 ? '' : 's'} below target` : ''}.</div></div>
-    <button type="button" class="banner-action" onclick="dashReviewAccounts()">Review Accounts</button>
-  </div>`;
-}
-function dashReviewAccounts() {
-  const el = document.getElementById('dash-attention');
-  if (!el) return;
-  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  el.classList.remove('dash-flash');
-  void el.offsetWidth;
-  el.classList.add('dash-flash');
 }
 
 function dashDonutCard() {
@@ -1897,7 +1874,7 @@ Central command dashboard for agency administrators managing many client ad acco
 - **Workspace Switcher**: The workspace dropdown in the top bar switches between the agency view ("My Workspace") and individual client workspaces. There is no separate My/Agency toggle.
 - **Date Filter (Past / Current / Date Range)**: Applies to every spend and cost metric on this page. Total Accounts Managed is not date-dependent.
   - **Prototype note:** the date filter scales mock 30-day data to the selected range. It does **not** yet filter by event date. Real behaviour must use the event date (click / conversion date), as in the client dashboard spec.
-- **Attention Required banner**: "N accounts missing platform links, M impacting overall performance." N = workspaces with no linked Google or Meta account; M = workspaces with status Attention Required. "Review Accounts" scrolls to the Attention list.
+- **No summary banner**: the Figma amber "Attention Required" banner was removed on 22/10/2026. Its fixed counts (missing platform links, impacting performance, SEO below target) disagreed with the Attention Required list, which counts every issue; the list (with its count in the title) is the single source of truth.
 - **Unified Portfolio KPIs (KPIs TBC)**: All figures are computed from per-workspace data, with no hard-coded totals.
   - **Total Accounts Managed**: donut by status (Active / New / Inactive / Attention Required).
   - **Portfolio Spend**: total, with a Google / Meta split.
@@ -1935,7 +1912,7 @@ Central command dashboard for agency administrators managing many client ad acco
 
 ### Open questions
 - **KPIs TBC**: the final portfolio KPI set still needs performance-marketing and account-management sign-off.
-- Should "missing platform links" also count workspaces linked to only one of Google / Meta?
+- Should "No Account Linked" also flag workspaces linked to only one of Google / Meta?
 - Performance-review triggers (CTR drop, budget pacing) are placeholders. Thresholds are TBC.
 - Is the keyword contract (X keywords, Y% top-10 target) owned by SEO Cloud or by the Agency CRM?
 - Should the average position count keywords outside the top 100 as position 100, instead of leaving them out?

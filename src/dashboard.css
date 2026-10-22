@@ -3,8 +3,6 @@
 /* ---------- Welcome header ---------- */
 .dash-welcome { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
 .dash-welcome-sub { margin: 10px 0 0; font-size: 16px; line-height: 20px; letter-spacing: .5px; color: var(--text); }
-.dash-banner { margin-bottom: 24px; }
-.dash-banner .banner-text { color: var(--warning); }
 
 /* ---------- Products & Connections panel (client) ---------- */
 /* One card, three sections of three rows; --hub-row fixes the row height so rows line up across sections. */
@@ -76,8 +74,6 @@
 .dash-att-desc { font-size: 12px; color: var(--text-muted); margin-top: 8px; letter-spacing: .25px; }
 .dash-prio { min-width: 52px; }
 .dash-att-cta { white-space: nowrap; }
-.dash-flash { animation: dashFlash 1.4s ease; }
-@keyframes dashFlash { 0%, 60% { box-shadow: 0 0 0 3px rgba(245, 158, 27, .45); } 100% { box-shadow: none; } }
 
 /* ---------- Filter dropdown (Figma "Managed / Attention Account Filter") ---------- */
 .dash-fp { width: 380px; padding: 20px 20px 16px; background: #FBFBFB; }

@@ -460,7 +460,8 @@ function applyDateFilter(scope, onApply) {
   if (onApply && window[onApply]) window[onApply]();
 }
 
-// ---------- Pinned action columns ----------
+// ---------- Pinned first and action columns ----------
+// The first column of every table is pinned by CSS; this marks action columns and the scroll state.
 // A table's last column is pinned when it is an action column: its header says Action/Actions or carries an
 // *action* class, or the header is blank/Remove/Manage and every body row's last cell holds a button or row menu.
 function markActionColumns(root = document) {
@@ -474,10 +475,12 @@ function markActionColumns(root = document) {
     markTableScroll(table.parentElement);
   });
 }
-// is-overflowing: columns are hidden horizontally; at-end: scrolled fully right, nothing left behind the action column.
+// is-overflowing: columns are hidden horizontally; at-end: scrolled fully right, nothing left behind the action column;
+// is-scrolled: scrolled away from the start, so columns are passing under the pinned first column.
 function markTableScroll(wrap) {
   wrap.classList.toggle('is-overflowing', wrap.scrollWidth > wrap.clientWidth + 1);
   wrap.classList.toggle('at-end', wrap.scrollLeft + wrap.clientWidth >= wrap.scrollWidth - 1);
+  wrap.classList.toggle('is-scrolled', wrap.scrollLeft > 1);
 }
 let actionColFrame;
 new MutationObserver(() => { cancelAnimationFrame(actionColFrame); actionColFrame = requestAnimationFrame(() => markActionColumns()); })

@@ -274,6 +274,17 @@ svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
 :where(.table-wrap.is-overflowing:not(.at-end)) .table.has-action-col thead tr > :last-child::before { background: linear-gradient(to right, rgba(236, 245, 255, 0), var(--tint)); }
 :where(.table-wrap.is-overflowing:not(.at-end)) .table.has-action-col tr.clickable:hover > :last-child::before { background: linear-gradient(to right, rgba(248, 251, 255, 0), #F8FBFF); }
 :where(.table.has-action-col) tr > :last-child.menu-open-cell { z-index: 60; }
+/* First column pinned to the left edge of every table. Once scrolled (.is-scrolled), a divider, shadow and
+   fade show that columns are passing underneath it. */
+:where(.table-wrap > .table) tr > :first-child:not([colspan]) { position: sticky; left: 0; z-index: 2; background: var(--surface); }
+:where(.table-wrap > .table) thead tr > :first-child:not([colspan]) { background: var(--tint); }
+:where(.table-wrap.is-scrolled) > .table tr > :first-child:not([colspan]) { box-shadow: 10px 0 12px -10px rgba(43, 43, 43, .28), inset -1px 0 0 var(--border); }
+:where(.table-wrap.is-scrolled) > .table tr > :first-child:not([colspan])::after {
+  content: ''; position: absolute; top: 0; bottom: 0; left: 100%; width: 48px; pointer-events: none;
+  background: linear-gradient(to left, rgba(255, 255, 255, 0), var(--surface));
+}
+:where(.table-wrap.is-scrolled) > .table thead tr > :first-child::after { background: linear-gradient(to left, rgba(236, 245, 255, 0), var(--tint)); }
+:where(.table-wrap.is-scrolled) > .table tr.clickable:hover > :first-child::after { background: linear-gradient(to left, rgba(248, 251, 255, 0), #F8FBFF); }
 .table-empty { text-align: center; padding: 40px 16px !important; color: var(--text-muted); }
 .table-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
 .table-toolbar .search { width: 260px; }

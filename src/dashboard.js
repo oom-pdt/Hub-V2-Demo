@@ -733,7 +733,9 @@ function dashClientKpis(ws, m) {
   const convSub = g ? `<b>${convShare}%</b> from Google Ads` : '<b>100%</b> from Meta Ads';
   const cpaSub = g && mt ? `Google <b>${fmtMoney(g.cpa, 2)}</b> • Meta <b>${fmtMoney(mt.cpa, 2)}</b>` : `Across ${g ? 'Google' : 'Meta'} Ads`;
   const warn = used >= 100 ? 'dash-bad' : used >= 85 ? 'dash-warn' : '';
-  return `<div class="grid-5 dash-kpis">
+  const plats = dashPlatforms(ws.id).map(pl => PLATFORM_NAME[pl]).join(' and ');
+  return `${dashSectionHead('Ad Performance', `Platform-reported results from ${plats} Ads for the selected dates.`)}
+  <div class="grid-5 dash-kpis">
     ${dashKpi('Total Ad Spend', 'Total advertising spend reported by connected ad platforms.', fmtMoney(t.spend),
       `of <b>${fmtMoney(budget)}</b> budget, <b class="${warn}">${used}%</b> used`,
       `<div class="progress dash-budget"><span class="${warn}" style="width:${Math.min(100, used)}%"></span></div>`)}
@@ -742,6 +744,11 @@ function dashClientKpis(ws, m) {
     ${dashKpi('Platform Conversions', 'Platform-reported conversion actions.', fmtNum(t.conversions), convSub)}
     ${dashKpi('Cost per Conversion', 'Total ad spend divided by platform-reported conversions.', t.conversions ? fmtMoney(t.cpa, 2) : '—', cpaSub)}
   </div>`;
+}
+
+// Section header above a KPI row: title + one-line description, optional controls on the right.
+function dashSectionHead(title, sub, right = '') {
+  return `<div class="dash-section-head"><div><h2 class="h-card">${esc(title)}</h2><div class="card-sub">${esc(sub)}</div></div>${right}</div>`;
 }
 
 // CRM mode (V2): extra lead / revenue KPIs with attribution model. Ad-only: locked cards + upsell.
@@ -758,6 +765,7 @@ function dashCrmSection(m, crm) {
   if (!crm) {
     const locked = (title, tip) => `<div class="kpi-card kpi-locked"><div class="kpi-title">${esc(title)} ${infoTip(tip)}<i data-lucide="lock" class="dash-lock"></i></div><div class="kpi-value">—</div><div class="kpi-sub">Requires CRM</div></div>`;
     return `<div class="dash-crm">
+      ${dashSectionHead('Leads & Revenue', 'Leads, closed revenue and ROAS from your CRM, credited to the ads that drove them.')}
       <div class="banner banner-info dash-crm-banner">
         <i data-lucide="lock"></i>
         <div><div class="banner-title">Connect a CRM to unlock leads, revenue and ROAS</div><div class="banner-text">Ad platform metrics above work without a CRM. Lead and revenue attribution needs one connected CRM.</div></div>
@@ -768,13 +776,10 @@ function dashCrmSection(m, crm) {
   }
   const model = state.ui.dashModel;
   return `<div class="dash-crm">
-    <div class="dash-crm-head">
-      <div class="row"><h2 class="h-card">Leads &amp; Revenue</h2><span class="chip">Attributed via ${esc(crm.name)}</span></div>
-      <label class="dash-model"><span>Attribution model</span>
+    ${dashSectionHead('Leads & Revenue', `Leads and closed revenue from ${crm.name}, credited to your ads by the selected attribution model.`, `<label class="dash-model"><span>Attribution model</span>
         <select class="select" onchange="dashSetModel(this.value)" aria-label="Attribution model">${DASH_MODELS.map(([v, l]) => `<option value="${v}" ${v === model ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>
         ${infoTip('Multi-Touch gives 40% of the credit to the first touch, 40% to the last touch and splits 20% across the touches in between. First-Touch and Last-Touch give all the credit to one touch.')}
-      </label>
-    </div>
+      </label>`)}
     <div class="grid-5 dash-kpis">
       ${dashKpi('Attributed Leads', tips.leads, fmtNum(t.leads), t.conversions ? `<b>${fmtPct(t.leads / t.conversions * 100, 0)}</b> of platform conversions` : 'From Google and Meta ads')}
       ${dashKpi('Cost per Lead', tips.cpl, t.leads ? fmtMoney(t.cpl, 2) : '—', t.conversions ? `vs <b>${fmtMoney(t.cpa, 2)}</b> per conversion` : 'Spend ÷ attributed leads')}
@@ -1296,6 +1301,7 @@ Client-facing workspace dashboard giving a simplified, unified view of Meta and 
   - **Prototype note:** the date filter scales mock data to the selected range, and the Daily Performance chart plots one point per day of the range. It does **not** yet filter by event date.
 - **CRM mode (from V2)**: shown when the workspace has a connected, active CRM.
   - **Products & Connections panel** (top of the page, from the V2 client home): collapsible card with three columns. one card with three sections in V2 order, three fixed rows each, all rows the same height. OOm Products: CRM - lite, Aurix and SEO Cloud, with outstanding-work badges and Open links (CRM opens Leads), or Connect / Enable / Fix when not live. Quick Links: View Leads, Manage Integrations and Organisation Settings. Connections: CRM, Automated Chat and Call Tracking, one product each (one-per-lane rule), with a status pill and Manage / Fix now / Connect, plus View all. Items needing attention also show as pills in the header, so they stay visible when collapsed. Built from the same data as Integrations.
+  - Each KPI row has a section header (title + one-line description): **Ad Performance** for the platform metrics, **Leads & Revenue** for the CRM metrics (with the attribution model on the right).
   - A second row of 5 KPI cards, matching the ad-platform row: Attributed Leads (+ share of platform conversions), Cost per Lead (+ cost per conversion for comparison), Converted Leads (+ conversion rate), Attributed Revenue (+ average deal value) and ROAS (+ ad spend).
   - The table gains Leads, CPL, Revenue and ROAS columns.
   - The **attribution model** selector offers Multi-Touch (40/20/40), First-Touch and Last-Touch. Each model credits leads and revenue differently, so the figures change with the model.

@@ -499,8 +499,8 @@ function dashProductsCard() {
   const n = (v, txt) => `<b class="t-error">${v}</b> ${txt}`;
   const list = [
     { key: 'ads', name: 'Ads Performance', icon: dashServiceIcon('ads', 36), line: ahead || under ? [ahead && n(ahead, `Account${ahead === 1 ? '' : 's'} nearing spend limits`), under && n(under, 'Underperforming')].filter(Boolean).join(' • ') : ok, open: 'dashFocusGroup(\'ads\')', ext: false },
-    { key: 'aurix', name: 'Aurix', icon: dashServiceIcon('aurix', 36), line: aurixGap ? n(aurixGap, `Account${aurixGap === 1 ? '' : 's'} currently not linked`) : ok, open: "showToast('Opening Aurix…', 'external-link')", ext: true },
-    { key: 'seo', name: 'SEO Cloud', icon: dashServiceIcon('seo', 36), line: seoCrit || seoOff ? [seoCrit && n(seoCrit, 'Critical'), seoOff && `<b class="t-warning">${seoOff}</b> Off track`].filter(Boolean).join(' • ') : ok, open: "showToast('Opening SEO Cloud…', 'external-link')", ext: true }
+    { key: 'aurix', name: 'Aurix', icon: dashServiceIcon('aurix', 36), line: aurixGap ? n(aurixGap, `Account${aurixGap === 1 ? '' : 's'} currently not linked`) : ok, open: "openProductApp('aurix')", ext: true },
+    { key: 'seo', name: 'SEO Cloud', icon: dashServiceIcon('seo', 36), line: seoCrit || seoOff ? [seoCrit && n(seoCrit, 'Critical'), seoOff && `<b class="t-warning">${seoOff}</b> Off track`].filter(Boolean).join(' • ') : ok, open: "openProductApp('seo-cloud')", ext: true }
   ];
   return `<div class="card dash-products">
     <div class="row-between dash-products-head"><h2 class="h-section">Your Products</h2><span class="t-caption t-muted">${list.length} Connected Products</span></div>
@@ -526,7 +526,7 @@ const DASH_SERVICE_META = {
   ads: { label: 'Ads Performance', bg: '#FBD3F2', fg: '#C2419C', icon: 'chart-column' },
   seo: { label: 'SEO Cloud', pid: 'seo-cloud' },
   aurix: { label: 'Aurix', pid: 'aurix' },
-  crm: { label: 'CRM - lite', pid: 'crm-lite' },
+  crm: { label: 'Galaxis CRM', pid: 'crm-lite' },
   content: { label: 'Content Marketing', bg: '#FFF4E3', fg: '#C47E16', icon: 'pen-line' },
   social: { label: 'Social Media', bg: '#E6F6F6', fg: '#1A6A6D', icon: 'share-2' }
 };
@@ -594,7 +594,7 @@ function dashManagedRows() {
     const services = crmLiveServices(w.id);
     const issues = allIssues.filter(i => i.wsId === w.id);
     const types = services.map(x => x.type);
-    // Services the client uses: Ads Performance, SEO Cloud, Aurix, CRM - lite (+N other CRM services).
+    // Services the client uses: Ads Performance, SEO Cloud, Aurix, Galaxis CRM (+N other CRM services).
     const svcKeys = [
       types.some(t => CRM_AD_SERVICES.includes(t)) && 'ads',
       (types.includes('SEO') || seoConnected(w.id)) && 'seo',
@@ -618,7 +618,7 @@ function dashManagedRows() {
 // Default view (new design): every column, with the Ads and SEO groups collapsed to their key KPI (Ads: Cost Per
 // Conversion, SEO: Top 10 %). Expanding a group shows the rest of its columns.
 const DASH_MG_COLS = [
-  { key: 'services', group: 'overview', label: 'Services', tip: 'Every service this client uses: Ads Performance, SEO Cloud, Aurix, CRM - lite, Content Marketing, Social Media. Hover to name them.' },
+  { key: 'services', group: 'overview', label: 'Services', tip: 'Every service this client uses: Ads Performance, SEO Cloud, Aurix, Galaxis CRM, Content Marketing, Social Media. Hover to name them.' },
   { key: 'health', group: 'overview', label: 'Account Health', tip: 'From the open issues: Attention Required when any issue is High priority, Off Track when there are other open issues, otherwise On Track.' },
   { key: 'issues', group: 'overview', label: 'Issues Count', tip: 'Open issues for this client (ads, SEO, Aurix, contracts, integrations). Select to see them.' },
   { key: 'platforms', group: 'ads', label: 'Ad Platforms' },
@@ -924,9 +924,7 @@ function dashSeoStrip(s) {
     ${agency ? `<button type="button" class="btn btn-primary btn-sm" onclick="dashSeoOpenCloud('manage')">Manage in SEO Cloud<i data-lucide="external-link"></i></button>` : ''}
   </div>`;
 }
-function dashSeoOpenCloud(mode) {
-  showToast(mode === 'manage' ? 'Opening the keyword manager in SEO Cloud…' : 'Opening this project in SEO Cloud…', 'external-link');
-}
+function dashSeoOpenCloud() { openProductApp('seo-cloud'); }
 
 // 2. Position Filter cards (clickable filters for the keyword table)
 function dashSeoBuckets(s) {
@@ -1199,12 +1197,8 @@ function dashEntryStatus(e) {
   return ['green', e.routedVia ? `Via ${productById(e.routedVia)?.name || 'CRM'}` : 'Connected'];
 }
 
-// Opening an OOm product: CRMs open Leads inside Galaxis; others hand off to the product (toast in the demo).
-function dashOpenProduct(pid) {
-  const p = productById(pid);
-  if (p.category === 'CRM' && activeCrm(state.ctx)?.id === pid) { navigate('leads'); return; }
-  showToast(`Opening ${p.name}…`, 'external-link');
-}
+// Opening an OOm product: its web app in a new tab (Galaxis CRM, Aurix, SEO Cloud; see products[].url).
+function dashOpenProduct(pid) { openProductApp(pid); }
 function dashIntegAction(pid, mode) {
   if (typeof integOpenProduct === 'function') integOpenProduct(pid, mode);
   else navigate('integrations');
@@ -1260,7 +1254,7 @@ function dashHubPanel(ws) {
     const p = productById(pid);
     const e = entries[pid];
     const alert = live(e) ? dashProductAlerts(ws.id, pid) : null;
-    const action = live(e) ? link('Open', `dashOpenProduct('${pid}')`, p.category === 'CRM' ? 'arrow-right' : 'external-link')
+    const action = live(e) ? link('Open', `dashOpenProduct('${pid}')`, 'external-link')
       : link(!e ? 'Connect' : needsFix(e) ? 'Fix' : 'Enable', `dashIntegAction('${pid}', '${needsFix(e) ? 'config' : 'about'}')`);
     return `<div class="dash-hub-row">
       ${productLogo(pid, 30)}
@@ -2734,7 +2728,7 @@ Central command dashboard for agency administrators managing many client workspa
   - **Contract Ending** (Medium): any service contract ending within 30 days.
   - **Aurix Not Linked** (Aurix, Low). **Integration Error** (High, or Medium when pending). **CRM Set-up** (Medium: client invites awaiting approval).
 - **Managed Accounts table**:
-  - **Default columns** (the new design, plus each service's key KPI): Client (industry · account manager underneath), **Services** (overlapping product marks: Ads Performance, SEO Cloud, Aurix, CRM - lite, +N other CRM services), **Account Health**, **Issues Count**, **Ads: Cost Per Conversion** (the key ads KPI), **SEO: Top 10 %** (current / target, the key SEO KPI), **Primary Contact**, **Last Activity**, Action.
+  - **Default columns** (the new design, plus each service's key KPI): Client (industry · account manager underneath), **Services** (overlapping product marks: Ads Performance, SEO Cloud, Aurix, Galaxis CRM, +N other CRM services), **Account Health**, **Issues Count**, **Ads: Cost Per Conversion** (the key ads KPI), **SEO: Top 10 %** (current / target, the key SEO KPI), **Primary Contact**, **Last Activity**, Action.
   - **Account Health**: Attention Required (red) when any open issue is High priority, Off Track (orange) when there are other open issues, On Track (green) with none.
   - **Issues Count**: "N Items"; selecting it opens a drawer listing that client's issues with their CTAs.
   - **More columns, hidden by default** (column picker, or Ads Performance › Open): Ads: Ad Platforms, Combined Spend, Budget Pacing, Conversions, ROAS, CPM, CPC, Contract Days Left. SEO: SEO Status, Avg Position, Contract Days Left. Definitions:
@@ -2823,7 +2817,7 @@ Client-facing workspace dashboard giving a simplified, unified view of Meta and 
 - **Global Event-Based Date Filter**: Filters all dashboard data by the exact date the action (e.g. click or conversion) happened within the selected timeframe, independent of events higher up the funnel.
   - **Prototype note:** the date filter scales mock data to the selected range, and the Daily Performance chart plots one point per day of the range. It does **not** yet filter by event date.
 - **CRM mode (from V2)**: shown when the workspace has a connected, active CRM.
-  - **Products & Connections panel** (top of the page, from the V2 client home): collapsible card with three columns. one card with three sections in V2 order, three fixed rows each, all rows the same height. OOm Products: CRM - lite, Aurix and SEO Cloud, with outstanding-work badges and Open links (CRM opens Leads), or Connect / Enable / Fix when not live. Quick Links: View Leads, Manage Integrations and Organisation Settings. Connections: CRM, Automated Chat and Call Tracking, one product each (one-per-lane rule), with a status pill and Manage / Fix now / Connect, plus View all. Items needing attention also show as pills in the header, so they stay visible when collapsed. Built from the same data as Integrations.
+  - **Products & Connections panel** (top of the page, from the V2 client home): collapsible card with three columns. one card with three sections in V2 order, three fixed rows each, all rows the same height. OOm Products: Galaxis CRM, Aurix and SEO Cloud, with outstanding-work badges and Open links that open each product's web app in a new tab (Galaxis CRM: https://crm.oomdigital.com/, Aurix: https://app.aurix.com.sg/dashboard, SEO Cloud: https://oomdigital.com/dashboard), or Connect / Enable / Fix when not live. Quick Links: View Leads, Manage Integrations and Organisation Settings. Connections: CRM, Automated Chat and Call Tracking, one product each (one-per-lane rule), with a status pill and Manage / Fix now / Connect, plus View all. Items needing attention also show as pills in the header, so they stay visible when collapsed. Built from the same data as Integrations.
   - Each KPI row has a section header (title + one-line description): **Ad Performance** for the platform metrics, **Leads & Revenue** for the CRM metrics (with the attribution model on the right).
   - A second row of 5 KPI cards, matching the ad-platform row: Attributed Leads (+ share of platform conversions), Cost per Lead (+ cost per conversion for comparison), Converted Leads (+ conversion rate), Attributed Revenue (+ average deal value) and ROAS (+ ad spend).
   - The table gains Leads, CPL, Revenue and ROAS columns.
@@ -2876,7 +2870,7 @@ Client-facing workspace dashboard giving a simplified, unified view of Meta and 
 ### Dev toolbar states
 - **Viewing as Agency Admin / Client User** (shared).
 - **Ad-only (no CRM)**: deactivates every CRM for this workspace, which also hides the Leads nav item.
-- **CRM connected**: makes CRM - lite connected and active, and every other CRM inactive.
+- **CRM connected**: makes Galaxis CRM connected and active, and every other CRM inactive.
 - **No ad accounts linked**: simulates the empty state without changing ad-account data.
 - **Single platform (Google only)**: hides Meta for a workspace with both platforms, so only the Google Ads view shows (no All Platforms). Shared with the platform views.
 `

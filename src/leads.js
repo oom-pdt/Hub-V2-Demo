@@ -57,7 +57,7 @@ function leadsFor(wsId) {
 function leadById(id) { return state.ctx ? leadsFor(state.ctx).find(l => l.id === id) : null; }
 
 // ---------- Authority: who owns lead data ----------
-// 'mirror' = third-party CRM is the system of record (read-only here); 'full' = Galaxis CRM (CRM-lite / Institute CRM).
+// 'mirror' = third-party CRM is the system of record (read-only here); 'full' = Galaxis CRM (Galaxis CRM / Institute CRM).
 function leadAuthority() {
   if (state.flags.leadAuthority) return state.flags.leadAuthority;
   const crm = activeCrm(state.ctx);
@@ -465,7 +465,7 @@ registerScreen('lead', {
   render: leadProfileRender
 });
 
-// Dev jumps need a workspace with an active CRM: use the current one if it has a CRM, otherwise Visual Studio (CRM-lite).
+// Dev jumps need a workspace with an active CRM: use the current one if it has a CRM, otherwise Visual Studio (Galaxis CRM).
 function leadDevCtx() { const c = devClientCtx(); return activeCrm(c) ? c : 'ws-visual'; }
 registerDevScreen('Client workspace', 'client-leads', 'Leads', () => { state.ctx = leadDevCtx(); navigate('leads'); });
 registerDevScreen('Client workspace', 'client-lead-profile', 'Lead Profile', () => {
@@ -498,7 +498,7 @@ Ported from V2. Lists leads synchronised from the workspace's active CRM and con
 
 ## Authority banner
 - Third-party CRM (HubSpot, Salesforce, Zoho, Dynamics): **"Managed in {CRM} — Read-only mirror"**. No add or edit controls.
-- Galaxis CRM (CRM-lite, Institute CRM): **"Galaxis CRM active — full edit"**. Add Lead and Edit status are available.
+- OOm CRM (Galaxis CRM, Institute CRM): **"Galaxis CRM active — full edit"**. Add Lead and Edit status are available.
 - Dev toggles override the authority for the demo: Auto / Read-only mirror / Galaxis CRM (full edit).
 
 ## Table

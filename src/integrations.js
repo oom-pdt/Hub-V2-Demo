@@ -216,7 +216,7 @@ function integAvailCard(p) {
 // "Open" — OOm products launch the product; third-party products show their details.
 function integOpen(pid) {
   const p = productById(pid);
-  if (integIsOom(p)) showToast(`Opening ${p.name}…`, 'square-arrow-out-up-right');
+  if (integIsOom(p)) openProductApp(pid);
   else integOpenDrawer(pid, 'about');
 }
 
@@ -1016,7 +1016,7 @@ The workspace's integrations hub, built from the Figma "Integrations" frames wit
 
 ### Open questions
 - **Disable vs Disconnect retention:** Disable keeps credentials and mappings and pauses sync. Disconnect drops credentials. Do we keep synced leads after Disconnect, for how long, and does it differ by product?
-- Does the one-CRM rule apply across OOm CRMs (CRM-lite, Institute CRM) and third-party CRMs alike, or can an OOm CRM run alongside a third-party one?
+- Does the one-CRM rule apply across OOm CRMs (Galaxis CRM, Institute CRM) and third-party CRMs alike, or can an OOm CRM run alongside a third-party one?
 - Should client users be able to connect or disconnect products, or only Agency Admins / client Super Admins?
 - Routing choice: should Galaxis detect existing CRM ↔ messaging links automatically instead of asking?
 - Backfill limit of 2,000 records for Lifetime: confirm with engineering, and whether it differs by plan.

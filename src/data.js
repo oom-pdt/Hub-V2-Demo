@@ -76,13 +76,14 @@ const masterTokens = {
 // ---------- Products / integrations catalogue ----------
 // category: CRM | CCM | CDP | Marketing. provider: oom (internal OOm product) | third (external).
 // flow: internal | oauth | api. CRM category obeys the "only one CRM active" rule.
+// url: the OOm product's web app, opened in a new tab from every "Open" (Galaxis CRM, Aurix, SEO Cloud).
 const products = [
-  { id: 'crm-lite',   name: 'CRM - lite',  category: 'CRM', provider: 'oom',   flow: 'internal', color: '#5B4BE0', initials: 'G',
+  { id: 'crm-lite',   name: 'Galaxis CRM',  category: 'CRM', provider: 'oom',   flow: 'internal', color: '#5B4BE0', initials: 'G', url: 'https://crm.oomdigital.com/',
     description: 'Track and manage leads generated through chatbot interactions.',
     dataShared: 'Customer profile, Leads, Activities',
     syncs: ['Customer information', 'Leads', 'Activities', 'Deals and closed revenue'],
     requirements: ['Galaxis workspace admin access'] },
-  { id: 'aurix',      name: 'Aurix',       category: 'CCM', provider: 'oom',   flow: 'internal', color: '#5B4BE0', initials: 'A',
+  { id: 'aurix',      name: 'Aurix',       category: 'CCM', provider: 'oom',   flow: 'internal', color: '#5B4BE0', initials: 'A', url: 'https://app.aurix.com.sg/dashboard',
     description: 'Manage your chat enquiries that come in from your chatbot interactions.',
     dataShared: 'Customer profile, Leads, Activities',
     syncs: ['Chat conversations', 'Lead intent scores', 'Contact details'],
@@ -92,7 +93,7 @@ const products = [
     dataShared: 'Customer profile, Events',
     syncs: ['Customer profiles', 'Events', 'Segments'],
     requirements: ['CDP subscription'] },
-  { id: 'seo-cloud',  name: 'SEO Cloud',   category: 'Marketing', provider: 'oom', flow: 'internal', color: '#2CB1B6', initials: 'S',
+  { id: 'seo-cloud',  name: 'SEO Cloud',   category: 'Marketing', provider: 'oom', flow: 'internal', color: '#2CB1B6', initials: 'S', url: 'https://oomdigital.com/dashboard',
     description: 'Track keyword rankings, approvals and site health.',
     dataShared: 'Keywords, Rankings, Approvals',
     syncs: ['Keyword rankings', 'Content approvals'],
@@ -194,7 +195,7 @@ const members = [
   { id: 'm-a1', org: 'agency', name: 'Jungkook Jeon', email: 'jk@example.com',          teamId: 't-a-mgmt', roleId: 'r-a-owner',   status: 'active',  products: ['aurix', 'seo-cloud', 'crm-lite'], lastActive: '15min ago', lastProduct: 'Aurix', workspaces: ['*'] },
   { id: 'm-a2', org: 'agency', name: 'Mary Lim',      email: 'mary.lim@example.com',    teamId: 't-a-seo',  roleId: 'r-a-seolead', status: 'active',  products: ['seo-cloud'], lastActive: '2min ago', lastProduct: 'SEO Cloud', workspaces: ['ws-visual', 'ws-technova', 'ws-kinspired'] },
   { id: 'm-a3', org: 'agency', name: 'Joseph Tan',    email: 'joseph.tan@example.com',  teamId: 't-a-mkt',  roleId: 'r-a-am',      status: 'active',  products: ['aurix'], lastActive: 'Yesterday', lastProduct: 'Aurix', workspaces: ['ws-visual', 'ws-innowave'] },
-  { id: 'm-a4', org: 'agency', name: 'Serah Chua',    email: 'serah.chua@example.com',  teamId: 't-a-proj', roleId: 'r-a-pl',      status: 'active',  products: ['aurix', 'seo-cloud', 'crm-lite'], lastActive: '1hr ago', lastProduct: 'CRM - lite', workspaces: ['ws-visual', 'ws-nexgen', 'ws-bright'] },
+  { id: 'm-a4', org: 'agency', name: 'Serah Chua',    email: 'serah.chua@example.com',  teamId: 't-a-proj', roleId: 'r-a-pl',      status: 'active',  products: ['aurix', 'seo-cloud', 'crm-lite'], lastActive: '1hr ago', lastProduct: 'Galaxis CRM', workspaces: ['ws-visual', 'ws-nexgen', 'ws-bright'] },
   { id: 'm-a5', org: 'agency', name: 'Melson Ng',     email: 'melson.ng@example.com',   teamId: 't-a-sales', roleId: 'r-a-am',     status: 'active',  products: ['aurix', 'seo-cloud'], lastActive: '3hr ago', lastProduct: 'SEO Cloud', workspaces: ['ws-technova'] },
   { id: 'm-a6', org: 'agency', name: 'Ada Anand',     email: 'ada.anand@example.com',   teamId: 't-a-mgmt', roleId: 'r-a-admin',   status: 'active',  products: ['aurix', 'seo-cloud'], lastActive: '10min ago', lastProduct: 'Aurix', workspaces: ['*'] },
   { id: 'm-a7', org: 'agency', name: 'Pending User',  email: 'new.analyst@example.com', teamId: 't-a-mkt',  roleId: 'r-a-analyst', status: 'pending', products: [], lastActive: null, lastProduct: null, workspaces: [] },
@@ -210,7 +211,7 @@ const members = [
   { id: 'm-v8', org: 'ws-visual', name: 'Fatimah Noor', email: 'fatimah.noor@example.com', teamId: 't-v-dhat',  roleId: 'r-c-sales',  status: 'active',   products: ['aurix'], lastActive: '12min ago', lastProduct: 'Aurix' },
   { id: 'm-v9', org: 'ws-visual', name: 'Kumar Singh',  email: 'kumar.singh@example.com',  teamId: 't-v-bp',    roleId: 'r-c-sales',  status: 'inactive', products: ['aurix'], lastActive: '12 Aug 2026', lastProduct: 'Aurix' },
   // A few other clients so per-workspace lists differ
-  { id: 'm-t1', org: 'ws-technova', name: 'Sarah Jenkins', email: 'sarah.j@example.com', teamId: null, roleId: 'r-c-super', status: 'active', products: ['crm-lite'], lastActive: '1hr ago', lastProduct: 'CRM - lite', isPrimary: true },
+  { id: 'm-t1', org: 'ws-technova', name: 'Sarah Jenkins', email: 'sarah.j@example.com', teamId: null, roleId: 'r-c-super', status: 'active', products: ['crm-lite'], lastActive: '1hr ago', lastProduct: 'Galaxis CRM', isPrimary: true },
   { id: 'm-t2', org: 'ws-technova', name: 'David Lim',     email: 'david.lim@example.com', teamId: null, roleId: 'r-c-exec', status: 'active', products: [], lastActive: 'Yesterday', lastProduct: null },
   { id: 'm-i1', org: 'ws-innowave', name: 'Priya Nair',    email: 'priya.nair@example.com', teamId: null, roleId: 'r-c-super', status: 'active', products: [], lastActive: '3 days ago', lastProduct: null, isPrimary: true }
 ];

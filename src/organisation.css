@@ -1,9 +1,7 @@
 /* organisation module styles — component-specific only; shared components live in design.css */
 
 .org-header-card { padding: 28px 32px; }
-.org-header-card .org-logo { background: var(--surface); border: 1px solid var(--border-light); }
-.org-header-card .org-logo:not(.org-logo-img) { background: var(--tint); border: 0; }
-.org-logo-img img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: var(--r-md); }
+.org-header-card .org-logo { background: var(--tint); border: 0; }
 .org-header-card .org-name { font-size: 28px; line-height: 32px; }
 .org-header-card .org-meta { margin-top: 14px; color: var(--text); }
 .org-header-card .org-meta svg.lucide { width: 14px; height: 14px; }
@@ -49,33 +47,10 @@
 .org-link svg.lucide { width: 14px; height: 14px; }
 
 /* Logo cards */
-.org-logo-grid { gap: 18px; margin-top: 16px; }
-.org-logo-card { border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; background: var(--surface); }
-.org-logo-preview { height: 124px; display: grid; place-items: center; background: #F9F9F9; border-bottom: 1px solid var(--border-light); }
-.org-logo-preview.dark { background: #1F2326; }
-.org-logo-preview img { max-width: 60%; max-height: 84px; object-fit: contain; }
-.org-logo-preview-lg { height: 320px; border-radius: var(--r-md); border: 1px solid var(--border-light); }
-.org-logo-preview-lg img { max-height: 240px; }
-.org-logo-info { padding: 14px 12px; display: flex; flex-direction: column; gap: 10px; }
-.org-logo-caption { margin-bottom: 2px; }
 
 /* Colour swatches */
-.org-swatch-grid { gap: 18px; margin-top: 16px; }
-.org-swatch { border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; }
-.org-swatch-fill { height: 76px; border-bottom: 1px solid var(--border-light); }
-.org-swatch-info { padding: 14px 12px; display: flex; flex-direction: column; gap: 8px; }
-.org-swatch-hex { border-top: 1px solid var(--border-light); padding-top: 10px; margin-top: 4px; display: flex; align-items: center; gap: 8px; }
-.org-hex-btn { width: 100%; display: flex; justify-content: space-between; align-items: center; border: 0; background: none; padding: 2px 0; font-size: 11px; letter-spacing: .5px; color: var(--text); }
-.org-hex-btn svg.lucide { width: 12px; height: 12px; color: var(--text-muted); }
-.org-hex-btn:hover, .org-hex-btn:hover svg.lucide { color: var(--primary); }
-.org-swatch-hex input[type=color] { width: 32px; height: 32px; padding: 0; border: 1px solid var(--border); border-radius: var(--r-sm); background: none; cursor: pointer; flex-shrink: 0; }
-.org-hex-input { height: 32px; font-size: 12px; text-transform: uppercase; }
 
 /* Typography */
-.org-type-card { border: 1px solid var(--border); border-radius: var(--r-md); padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
-.org-type-sample { font-size: 14px; line-height: 20px; }
-.org-type-heading { font-size: 16px; font-weight: 700; }
-.org-font-select { display: inline-block; width: auto; height: 30px; font-size: 12px; margin-right: 4px; }
 
 /* Brand assets */
 .org-asset-grid { gap: 18px; margin-top: 16px; }
@@ -83,7 +58,6 @@
 .org-asset-icon { width: 32px; height: 32px; border-radius: var(--r-sm); background: var(--tint); color: var(--primary); display: grid; place-items: center; flex-shrink: 0; }
 
 @media (max-width: 1100px) {
-  .org-swatch-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 960px) {
   .org-plan-grid { grid-template-columns: 1fr; gap: 16px; }

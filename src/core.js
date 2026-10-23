@@ -61,6 +61,12 @@ function crmLiveServices(wsId) {
   return (crmAccounts[wsId]?.services || []).filter(x => (!x.start || x.start <= today) && (!x.end || x.end >= today))
     .map(x => ({ ...x, daysLeft: x.end ? Math.round((new Date(x.end + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000) : null }));
 }
+// Open an OOm product's web app in a new tab (product.url), or say it isn't available in the demo.
+function openProductApp(pid) {
+  const p = productById(pid);
+  if (p?.url) window.open(p.url, '_blank', 'noopener,noreferrer');
+  else showToast(`Opening ${p ? p.name : 'the product'}…`, 'external-link');
+}
 function wsAdAccounts(wsId) { return adAccounts.filter(a => a.workspaceId === wsId); }
 function wsPlatforms(wsId) { return ['google', 'meta'].filter(p => wsAdAccounts(wsId).some(a => a.platform === p)); }
 

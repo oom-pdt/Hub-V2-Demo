@@ -14,7 +14,6 @@ const ORG_PLANS = [
   { id: 'business', name: 'Business', seats: 20, desc: 'For growing teams using several Galaxis products.' },
   { id: 'enterprise', name: 'Enterprise', seats: 50, desc: 'For large organisations with advanced access controls.' }
 ];
-const ORG_FONTS = ['Radio Canada Big', 'Arimo', 'Lato', 'Futura', 'Helvetica', 'Georgia'];
 const ORG_DEMO_TODAY = '2026-10-21';
 
 state.ui.orgEdit = state.ui.orgEdit || {};   // { business, billing, logo, colours, type, assets }
@@ -25,7 +24,6 @@ state.ui.orgErrors = {};
 // ---------- Data accessors ----------
 function orgTab() { return ORG_TABS.some(t => t.id === state.params.tab) ? state.params.tab : 'business'; }
 function orgEntity(orgId = currentOrgId()) { return orgId === 'agency' ? AGENCY_ORG : wsById(orgId); }
-function orgHash(s) { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; }
 function orgPad2(n) { return String(n).padStart(2, '0'); }
 
 // Business profile: creates a placeholder entry for client workspaces on first use.
@@ -114,29 +112,10 @@ function orgSeatsUsed(orgId) {
 
 // ---------- Brand data (generated from the org name) ----------
 const orgBrandStore = {};
-function orgHslHex(h, s, l) {
-  s /= 100; l /= 100;
-  const k = n => (n + h / 30) % 12, a = s * Math.min(l, 1 - l);
-  const f = n => Math.round(255 * (l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1))))).toString(16).padStart(2, '0');
-  return `#${f(0)}${f(8)}${f(4)}`.toUpperCase();
-}
+// Brand assets per organisation (placeholder files).
 function orgBrand(orgId = currentOrgId()) {
   if (orgBrandStore[orgId]) return orgBrandStore[orgId];
-  const name = orgEntity(orgId).name;
-  const h = orgHash(name);
-  // Keep generated primaries dark enough for white text (skip the yellow/lime band).
-  let hue = h % 360;
-  if (hue >= 40 && hue < 100) hue = (hue + 120) % 360;
-  const fontPair = [['Radio Canada Big', 'Arimo'], ['Lato', 'Futura'], ['Georgia', 'Helvetica'], ['Futura', 'Lato']][h % 4];
   orgBrandStore[orgId] = {
-    logos: { full: null, reversed: null, favicon: null },
-    colours: [
-      { key: 'primary', name: 'Primary', role: 'Buttons, Key Function', hex: orgId === 'agency' ? '#398FF7' : orgHslHex(hue, 72, 46) },
-      { key: 'secondary', name: 'Secondary', role: 'Secondary Function', hex: orgHslHex((hue + 150) % 360, 50, 50) },
-      { key: 'black', name: 'Core Black', role: 'Content, Text', hex: '#2B2B2B' },
-      { key: 'white', name: 'Sand White', role: 'Backgrounds', hex: '#FFFDF5' }
-    ],
-    fonts: { heading: fontPair[0], body: fontPair[1] },
     assets: [
       { id: 'guidelines', name: 'Brand Guidelines', kind: 'ZIP', icon: 'folder', size: 'Placeholder file' },
       { id: 'docs', name: 'Documentation', kind: 'Doc', icon: 'file-text', size: 'Placeholder file' },
@@ -145,29 +124,8 @@ function orgBrand(orgId = currentOrgId()) {
   };
   return orgBrandStore[orgId];
 }
-function orgColour(orgId, key) { return orgBrand(orgId).colours.find(c => c.key === key).hex; }
 
-// Default logo marks: an initials tile in the brand colours, exported as SVG.
-function orgLogoSvg(orgId, slot) {
-  const name = orgEntity(orgId).name;
-  const ini = esc(initials(name));
-  const p = orgColour(orgId, 'primary'), s = orgColour(orgId, 'secondary');
-  const font = 'font-family="Arial, Helvetica, sans-serif" font-weight="700" text-anchor="middle" dominant-baseline="central"';
-  if (slot === 'reversed') return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512"><rect x="40" y="40" width="432" height="432" rx="96" fill="none" stroke="#FFFFFF" stroke-width="24"/><circle cx="392" cy="120" r="40" fill="#FFFFFF"/><text x="256" y="268" ${font} font-size="190" fill="#FFFFFF">${ini}</text></svg>`;
-  if (slot === 'favicon') return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512"><rect width="512" height="512" rx="128" fill="${p}"/><text x="256" y="268" ${font} font-size="300" fill="#FFFFFF">${ini.slice(0, 1)}</text></svg>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512"><rect x="40" y="40" width="432" height="432" rx="96" fill="${p}"/><circle cx="392" cy="120" r="56" fill="${s}"/><text x="256" y="268" ${font} font-size="190" fill="#FFFFFF">${ini}</text></svg>`;
-}
-function orgLogoSrc(orgId, slot) {
-  const up = orgBrand(orgId).logos[slot];
-  return up ? up.dataUrl : `data:image/svg+xml;charset=utf-8,${encodeURIComponent(orgLogoSvg(orgId, slot))}`;
-}
-const ORG_LOGO_SLOTS = [
-  { id: 'full', label: 'Full Colour' },
-  { id: 'reversed', label: 'Reversed (white)' },
-  { id: 'favicon', label: 'Favicon' }
-];
-
-// ---------- Downloads & clipboard ----------
+// ---------- Downloads ----------
 function orgDownloadBlob(filename, content, type = 'text/plain;charset=utf-8') {
   const blob = content instanceof Blob ? content : new Blob([content], { type });
   const url = URL.createObjectURL(blob);
@@ -177,11 +135,6 @@ function orgDownloadBlob(filename, content, type = 'text/plain;charset=utf-8') {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 function orgSlug(s) { return String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
-function orgCopy(text) {
-  const done = () => showToast(`Copied ${text}`, 'clipboard-check');
-  if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text, done));
-  else fallbackCopy(text, done);
-}
 
 // ---------- Edit state ----------
 function orgSyncEditScope() {
@@ -216,8 +169,7 @@ function orgHeaderCard() {
   const id = currentOrgId();
   const ent = orgEntity(id);
   const p = orgProfile(id);
-  const up = orgBrand(id).logos.full;
-  const logo = up ? `<div class="org-logo org-logo-img"><img src="${up.dataUrl}" alt="${esc(ent.name)} logo"></div>` : `<div class="org-logo" aria-hidden="true">${esc(initials(ent.name))}</div>`;
+  const logo = `<div class="org-logo" aria-hidden="true">${esc(initials(ent.name))}</div>`;
   return `<section class="card org-card org-header-card">
     ${logo}
     <div class="grow">
@@ -633,78 +585,17 @@ function orgRemoveCard(cardId) {
 }
 
 // ---------- Brand Identity ----------
+// Brand Identity: only Brand Assets (Logo, Colour Palette and Typography were removed on 23/10/2026).
 function orgBrandHTML() {
-  const id = currentOrgId();
-  const br = orgBrand(id);
+  const br = orgBrand(currentOrgId());
   const ed = state.ui.orgEdit;
-  const logos = ORG_LOGO_SLOTS.map(s => {
-    const up = br.logos[s.id];
-    const caption = up ? `${up.format} • ${up.dims}` : 'SVG • 512x512';
-    return `<div class="org-logo-card">
-      <div class="org-logo-preview ${s.id === 'reversed' ? 'dark' : ''}"><img src="${orgLogoSrc(id, s.id)}" alt="${esc(s.label)} logo"></div>
-      <div class="org-logo-info">
-        <div class="t-bold t-caption">${esc(s.label)}</div>
-        <div class="t-caption t-muted org-logo-caption">${esc(caption)}${up ? '' : ' · Default'}</div>
-        <div class="row" style="gap:12px">
-          <button type="button" class="org-link" onclick="orgViewLogo('${s.id}')">View</button>
-          <button type="button" class="org-link" onclick="orgDownloadLogo('${s.id}')">Download</button>
-          ${ed.logo ? `<button type="button" class="org-link" onclick="document.getElementById('org-logo-input-${s.id}').click()">${up ? 'Replace' : 'Upload'}</button>
-            ${up ? `<button type="button" class="org-link t-error" onclick="orgResetLogo('${s.id}')">Reset</button>` : ''}
-            <input type="file" id="org-logo-input-${s.id}" accept="image/png,image/jpeg,image/svg+xml,image/webp" hidden onchange="orgLogoPicked('${s.id}', this)">` : ''}
-        </div>
-      </div>
-    </div>`;
-  }).join('');
-
-  const swatches = br.colours.map(c => `<div class="org-swatch">
-      <div class="org-swatch-fill" style="background:${esc(c.hex)}"></div>
-      <div class="org-swatch-info">
-        <div class="t-bold t-caption">${esc(c.name)}</div>
-        <div class="t-caption t-muted">${esc(c.role)}</div>
-        <div class="org-swatch-hex">
-          ${ed.colours ? `<input type="color" id="org-col-pick-${c.key}" value="${esc(c.hex.toLowerCase())}" oninput="document.getElementById('org-col-${c.key}').value = this.value.toUpperCase()" aria-label="${esc(c.name)} colour">
-            <input class="input org-hex-input" id="org-col-${c.key}" value="${esc(c.hex)}" maxlength="7" oninput="if (/^#[0-9a-f]{6}$/i.test(this.value)) document.getElementById('org-col-pick-${c.key}').value = this.value.toLowerCase()">`
-            : `<button type="button" class="org-hex-btn" onclick="orgCopy('${q(c.hex)}')" title="Copy ${esc(c.hex)}"><span>${esc(c.hex)}</span><i data-lucide="copy"></i></button>`}
-        </div>
-      </div>
-    </div>`).join('');
-
-  const fontSel = (id, val) => `<select class="select org-font-select" id="${id}">${ORG_FONTS.map(f => `<option ${f === val ? 'selected' : ''}>${esc(f)}</option>`).join('')}</select>`;
-  const typography = `
-    <div class="org-type-card">
-      <div class="t-caption t-muted">Heading</div>
-      <div class="org-type-sample org-type-heading" style="font-family:'${esc(br.fonts.heading)}', var(--font-head)">The quick brown fox jumps over the lazy dog.</div>
-      <div class="t-caption t-secondary">${ed.type ? fontSel('org-font-heading', br.fonts.heading) : esc(br.fonts.heading)} - used for heading and section titles</div>
-    </div>
-    <div class="org-type-card">
-      <div class="t-caption t-muted">Body &amp; Button</div>
-      <div class="org-type-sample" style="font-family:'${esc(br.fonts.body)}', var(--font-body)">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</div>
-      <div class="t-caption t-secondary">${ed.type ? fontSel('org-font-body', br.fonts.body) : esc(br.fonts.body)} - used for paragraph, labels, and buttons</div>
-    </div>`;
-
   const assets = br.assets.map(a => `<div class="org-asset">
       <span class="org-asset-icon"><i data-lucide="${a.icon}"></i></span>
       <span class="grow"><div class="t-bold t-caption">${esc(a.name)}</div><div class="t-caption t-muted">${esc(a.kind)} • ${esc(a.size)}</div></span>
       <button type="button" class="org-link" onclick="orgDownloadAsset('${q(a.id)}')">Download</button>
       ${ed.assets ? `<button type="button" class="kebab" aria-label="Remove ${esc(a.name)}" onclick="orgRemoveAsset('${q(a.id)}')"><i data-lucide="trash-2"></i></button>` : ''}
     </div>`).join('');
-
-  const saveRow = (fn, section) => `<div class="org-form-actions"><button type="button" class="btn btn-outline" onclick="orgSetEdit('${section}', false)">Cancel</button><button type="button" class="btn btn-primary" onclick="${fn}()">Save Changes</button></div>`;
   return `
-    <section class="card org-section">${orgCardHead('Logo', 'Approved logo marks for use across products and marketing.', orgEditBtn('logo', 'logos'))}
-      ${ed.logo ? '<div class="field-hint" style="margin:-8px 0 14px">PNG, JPG, SVG or WebP, up to 2 MB. Uploaded files stay in this browser tab only.</div>' : ''}
-      <div class="grid-3 org-logo-grid">${logos}</div>
-      ${ed.logo ? '<div class="org-form-actions"><button type="button" class="btn btn-primary" onclick="orgSetEdit(\'logo\', false)">Done</button></div>' : ''}
-    </section>
-    <section class="card org-section">${orgCardHead('Colour Palette', 'Core palette applied across UI, docs, and marketing assets.', orgEditBtn('colours', 'colour palette'))}
-      <div class="grid-4 org-swatch-grid">${swatches}</div>
-      <div class="field-error" id="org-colour-error"></div>
-      ${ed.colours ? saveRow('orgSaveColours', 'colours') : ''}
-    </section>
-    <section class="card org-section">${orgCardHead('Typography', 'Fonts and how they’re used across headings and body copy.', orgEditBtn('type', 'typography'))}
-      <div class="stack-sm">${typography}</div>
-      ${ed.type ? saveRow('orgSaveFonts', 'type') : ''}
-    </section>
     <section class="card org-section">${orgCardHead('Brand Assets', 'Downloadable resources for teams and agency partners.', orgEditBtn('assets', 'brand assets'))}
       <div class="grid-3 org-asset-grid">${assets || '<div class="t-muted t-caption">No brand assets yet.</div>'}</div>
       ${ed.assets ? `<div class="org-form-actions"><input type="file" id="org-asset-input" hidden onchange="orgAssetPicked(this)">
@@ -713,82 +604,7 @@ function orgBrandHTML() {
     </section>`;
 }
 
-function orgViewLogo(slot) {
-  const id = currentOrgId();
-  const s = ORG_LOGO_SLOTS.find(x => x.id === slot);
-  const up = orgBrand(id).logos[slot];
-  openModal({
-    title: `${s.label} logo`, desc: up ? `${up.name} · ${up.format} • ${up.dims}` : 'Default mark generated from the organisation name · SVG • 512x512', size: 'lg',
-    body: `<div class="org-logo-preview org-logo-preview-lg ${slot === 'reversed' ? 'dark' : ''}"><img src="${orgLogoSrc(id, slot)}" alt="${esc(s.label)} logo preview"></div>`,
-    actions: [{ label: 'Close', kind: 'outline' }, { label: 'Download', icon: 'download', onClick: () => orgDownloadLogo(slot) }]
-  });
-}
-function orgDownloadLogo(slot) {
-  const id = currentOrgId();
-  const name = orgSlug(orgEntity(id).name);
-  const up = orgBrand(id).logos[slot];
-  if (up) {
-    const a = document.createElement('a');
-    a.href = up.dataUrl; a.download = up.name || `${name}-${slot}`; document.body.appendChild(a); a.click(); a.remove();
-  } else orgDownloadBlob(`${name}-logo-${slot}.svg`, orgLogoSvg(id, slot), 'image/svg+xml');
-  showToast(`Downloaded ${ORG_LOGO_SLOTS.find(x => x.id === slot).label} logo`, 'download');
-}
-function orgLogoPicked(slot, input) {
-  const file = input.files && input.files[0];
-  if (!file) return;
-  const ok = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp'];
-  if (!ok.includes(file.type)) { showToast('Use a PNG, JPG, SVG or WebP file', 'triangle-alert'); input.value = ''; return; }
-  if (file.size > 2 * 1024 * 1024) { showToast('Logo files must be 2 MB or smaller', 'triangle-alert'); input.value = ''; return; }
-  const orgId = currentOrgId();
-  const reader = new FileReader();
-  reader.onload = () => {
-    const dataUrl = reader.result;
-    const format = { 'image/png': 'PNG', 'image/jpeg': 'JPG', 'image/svg+xml': 'SVG', 'image/webp': 'WEBP' }[file.type];
-    const done = dims => {
-      orgBrand(orgId).logos[slot] = { dataUrl, name: file.name, format, dims };
-      rerender();
-      showToast(`${ORG_LOGO_SLOTS.find(x => x.id === slot).label} logo updated`, 'image');
-    };
-    const img = new Image();
-    img.onload = () => done(img.naturalWidth ? `${img.naturalWidth}x${img.naturalHeight}` : 'Vector');
-    img.onerror = () => done('Unknown size');
-    img.src = dataUrl;
-  };
-  reader.onerror = () => showToast('Could not read that file', 'triangle-alert');
-  reader.readAsDataURL(file);
-}
-function orgResetLogo(slot) {
-  orgBrand().logos[slot] = null;
-  rerender();
-  showToast('Logo reset to the default mark');
-}
 
-function orgSaveColours() {
-  const br = orgBrand();
-  const vals = {};
-  const bad = [];
-  br.colours.forEach(c => {
-    const v = orgVal(`org-col-${c.key}`).toUpperCase();
-    if (!/^#[0-9A-F]{6}$/.test(v)) bad.push(c.name);
-    vals[c.key] = v;
-  });
-  if (bad.length) {
-    document.getElementById('org-colour-error').textContent = `Enter a 6-digit hex value (e.g. #23C5EB) for: ${bad.join(', ')}.`;
-    bad.forEach(n => document.getElementById(`org-col-${br.colours.find(c => c.name === n).key}`).classList.add('invalid'));
-    return;
-  }
-  br.colours.forEach(c => { c.hex = vals[c.key]; });
-  state.ui.orgEdit.colours = false;
-  rerender();
-  showToast('Colour palette saved');
-}
-function orgSaveFonts() {
-  const br = orgBrand();
-  br.fonts = { heading: orgVal('org-font-heading'), body: orgVal('org-font-body') };
-  state.ui.orgEdit.type = false;
-  rerender();
-  showToast('Typography saved');
-}
 
 function orgDownloadAsset(assetId) {
   const id = currentOrgId();
@@ -798,18 +614,11 @@ function orgDownloadAsset(assetId) {
     const link = document.createElement('a');
     link.href = a.dataUrl; link.download = a.fileName; document.body.appendChild(link); link.click(); link.remove();
   } else {
-    const br = orgBrand(id);
     const text = [
       `PLACEHOLDER DOCUMENT — ${a.name.toUpperCase()} (${a.kind})`,
       `Organisation: ${orgEntity(id).name}`,
       '',
       'This file stands in for the real brand asset, which has not been supplied yet.',
-      '',
-      'Colour palette:',
-      ...br.colours.map(c => `  ${c.name.padEnd(12)} ${c.hex}  (${c.role})`),
-      '',
-      `Heading font: ${br.fonts.heading}`,
-      `Body font:    ${br.fonts.body}`,
       '',
       'Generated by the Galaxis Hub demo prototype.'
     ].join('\n');
@@ -878,7 +687,7 @@ const ORG_DEV_EDIT = { business: ['business'], billing: ['billing'], brand: ['lo
 // ---------- Specs ----------
 (function orgSpecs() {
   const common = `## Header card (all tabs)
-- Logo (uploaded Full Colour logo, or an initials tile), organisation name, status dot (Active / Inactive / Archived).
+- Initials tile, organisation name, status dot (Active / Inactive / Archived).
 - Country, industry, website and general email with icons, then the description.
 - Agency context shows the agency (\`AGENCY_ORG\`); a client workspace shows that workspace.`;
   const business = ctx => `## Purpose
@@ -954,20 +763,8 @@ The organisation's approved brand kit. Figma frame \`6240:9519\`. Each organisat
 
 ${common}
 
-## Logo
-- Three cards: Full Colour, Reversed (white on dark), Favicon, each with format/size caption and **View / Download**.
-- View opens a modal preview; Download exports the default mark as SVG, or the uploaded file.
-- ✎ edit mode adds **Upload / Replace / Reset** per card: PNG, JPG, SVG or WebP up to 2 MB, read in the browser and kept in memory only.
-- The uploaded Full Colour logo replaces the initials tile in the header card.
-
-## Colour Palette
-- Primary / Secondary / Core Black / Sand White with role caption and hex.
-- Clicking a hex copies it to the clipboard.
-- ✎ edit mode shows a colour picker and hex input per swatch; hex must be 6 digits. Default logos use the new Primary / Secondary.
-
-## Typography
-- Heading and Body & Button samples rendered in the chosen font, with the font name and usage.
-- ✎ edit mode lets you pick each font from a list.
+## Scope
+- Brand Identity shows **Brand Assets only**. The Logo, Colour Palette and Typography sections from the Figma frame were removed on 23/10/2026; the header card shows the organisation's initials tile.
 
 ## Brand Assets
 - Brand Guidelines (ZIP), Documentation (Doc), Slides — each **Download** saves a labelled placeholder text file.
@@ -975,7 +772,6 @@ ${common}
 
 ## Open questions
 - Where are brand files stored in production, and what are the size and type limits?
-- Should a brand change (e.g. primary colour) flow into client-facing reports?
 - Who approves brand changes in a client workspace?`;
   const meta = { status: 'Draft', author: 'Hannah', updatedAt: '21/10/2026' };
   Object.assign(screenSpecs, {

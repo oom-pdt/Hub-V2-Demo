@@ -96,10 +96,27 @@ function leadAuthorityBanner() {
     <button type="button" class="banner-action" onclick="showToast('Opening ${q(crm)}…', 'external-link')">Open ${esc(crm)} ↗</button></div>`;
 }
 
+// ---------- Contact privacy ----------
+// Agency viewers (agency admins inside a client workspace) see emails and phone numbers masked, so client contact
+// details are never on screen during showcases. Fixed-length masks, so the real length is not revealed either.
+function leadMasked() { return viewerIsAgency(); }
+function leadEmail(l) {
+  if (!leadMasked()) return l.email;
+  const [user, domain = ''] = l.email.split('@');
+  const tld = domain.includes('.') ? domain.slice(domain.lastIndexOf('.')) : '';
+  return `${user[0] || ''}•••••@${domain[0] || ''}•••••${tld}`;
+}
+function leadPhone(l) {
+  if (!leadMasked() || !l.phone || l.phone === '—') return l.phone;
+  const cc = (l.phone.match(/^\+\d{1,3}/) || [''])[0];
+  return `${cc ? cc + ' ' : ''}•••• ••${l.phone.replace(/\D/g, '').slice(-2)}`;
+}
+
 // ---------- Leads list ----------
 function leadFiltered() {
   const term = state.ui.leadSearch.trim().toLowerCase();
-  return leadsFor(state.ctx).filter(l => !term || l.name.toLowerCase().includes(term) || l.email.includes(term) || l.source.toLowerCase().includes(term));
+  // Masked viewers can't search by email (matches would reveal it).
+  return leadsFor(state.ctx).filter(l => !term || l.name.toLowerCase().includes(term) || (!leadMasked() && l.email.includes(term)) || l.source.toLowerCase().includes(term));
 }
 
 function leadsRender() {
@@ -109,12 +126,12 @@ function leadsRender() {
     ${leadAuthorityBanner()}
     <section class="card">
       <div class="card-header">
-        <div><h2 class="h-card lead-card-title">All Leads</h2><div class="card-sub">${total} leads synchronised from ${esc(leadCrmName())}, Google Ads, Meta and connected chat and call products.</div></div>
+        <div><h2 class="h-card lead-card-title">All Leads</h2><div class="card-sub">${total} leads synchronised from ${esc(leadCrmName())}, Google Ads, Meta and connected chat and call products.${leadMasked() ? '<span class="lead-privacy"><i data-lucide="eye-off"></i>Emails and phone numbers are hidden for agency users</span>' : ''}</div></div>
         ${leadCanEdit() ? '<button type="button" class="btn btn-primary" onclick="leadOpenAdd()"><i data-lucide="plus"></i>Add Lead</button>' : ''}
       </div>
       <div class="table-toolbar lead-toolbar">
         <div id="lead-filter-region">${leadFilterHTML()}</div>
-        <div class="search lead-search"><input class="input" id="lead-search" placeholder="Search name, email or source" value="${esc(state.ui.leadSearch)}" oninput="leadOnSearch(this.value)" aria-label="Search leads"><i data-lucide="search"></i></div>
+        <div class="search lead-search"><input class="input" id="lead-search" placeholder="${leadMasked() ? 'Search name or source' : 'Search name, email or source'}" value="${esc(state.ui.leadSearch)}" oninput="leadOnSearch(this.value)" aria-label="Search leads"><i data-lucide="search"></i></div>
       </div>
       <div id="lead-table-region">${leadTableHTML()}</div>
     </section>
@@ -145,8 +162,8 @@ function leadTableHTML() {
   const term = state.ui.leadSearch.trim();
   const emptyMsg = term ? `No leads found matching “${term}”${status !== 'All' ? ` with status ${status}` : ''}.` : `No ${status === 'All' ? '' : `${status.toLowerCase()} `}leads yet.`;
   const rows = page.map(l => `<tr class="clickable" onclick="leadOpen('${q(l.id)}')">
-      <td><div class="t-bold">${esc(l.name)}</div><div class="cell-sub">${esc(l.email)}</div></td>
-      <td>${esc(l.phone)}</td>
+      <td><div class="t-bold">${esc(l.name)}</div><div class="cell-sub">${esc(leadEmail(l))}</div></td>
+      <td class="dash-nowrap">${esc(leadPhone(l))}</td>
       <td>${esc(l.source)}</td>
       <td>${esc(l.owner)}</td>
       <td>${leadPill(l.status)}</td>
@@ -405,8 +422,8 @@ function leadProfileRender() {
         <section class="card">
           <h3 class="h-card">Lead Details</h3>
           <div class="lead-dl">
-            ${row('Email', esc(l.email))}
-            ${row('Phone', esc(l.phone))}
+            ${row('Email', esc(leadEmail(l)))}
+            ${row('Phone', esc(leadPhone(l)))}
             ${row('Owner', esc(l.owner))}
             ${row('Lifetime Value', `<strong class="t-primary">${fmtMoney(l.ltv)}</strong>`)}
             ${row('Status', leadPill(l.status))}
@@ -505,7 +522,8 @@ Ported from V2. Lists leads synchronised from the workspace's active CRM and con
 - Dev toggles override the authority for the demo: Auto / Read-only mirror / Galaxis CRM (full edit).
 
 ## Table
-- Search by name, email or source.
+- Search by name, email or source (agency users: name or source only).
+- **Contact privacy (23/10/2026)**: agency users (agency admins viewing a client workspace) see **emails and phone numbers masked** in the table and on the lead profile, so client contact details never appear during showcases or screen shares: \`j•••••@e•••••.com\`, \`+65 •••• ••01\` (fixed-length masks; first letters, country code and last two digits kept so rows can still be told apart). A note under the card title says so, and searching by email is turned off for them. Client users see full details. Product: enforce this server-side (the API returns masked values to agency roles), not only in the UI.
 - Status filter (All / New / Qualified / Converted / Lost, with counts that follow the search): **Galaxis CRM (full edit) only**. Read-only mirrors don't have it: each third-party CRM has its own stage fields and values, and the mirror is a searchable list, not a working pipeline. The Status column still shows the status synced from the CRM.
 - Columns: Name & Email, Phone, Source, Owner, Status (Converted green, Qualified blue, New grey, Lost red), Created, Lifetime Value.
 - All columns sort; default is newest first. 15 per page (V2), with 10 / 20 / 50 also available.

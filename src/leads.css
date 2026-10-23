@@ -57,3 +57,5 @@
   .lead-layout { grid-template-columns: 1fr; }
   .lead-conv-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+.lead-privacy { display: flex; align-items: center; gap: 6px; margin-top: 6px; color: var(--text-secondary); }
+.lead-privacy svg.lucide { width: 13px; height: 13px; }

@@ -1258,8 +1258,8 @@ function dashSeoBody() {
 
 // ---------- Products panel (client dashboard) ----------
 // Products & Connections (Figma 6371:9127, 23/10/2026): one panel of the products this workspace uses, four cards
-// per row. Each card: logo, name, Open (external-link icon) and Manage (settings icon, added: not in the Figma),
-// status, connected-on date and a short description. Built from workspaceProducts / adAccounts, so it matches Integrations.
+// per row, styled like the Integrations cards. Each card: logo, name, sub-line (lane, or the Google / Meta pills for
+// Ads Performance), Open (external-link icon) and Manage (settings icon; not in the Figma), status, connected-on date, description. Built from workspaceProducts / adAccounts, so it matches Integrations.
 
 // Status of one entry: [dot colour, label]. Matches integStatusDots().
 function dashEntryStatus(e) {
@@ -1287,18 +1287,6 @@ function dashOpenAds() {
 const DASH_HUB_OOM = ['crm-lite', 'aurix', 'seo-cloud'];
 function dashHubProductIds() { return [...new Set([...DASH_HUB_OOM, ...Object.values(PRODUCT_LANES).flatMap(l => l.ids())])]; }
 
-// Square product marks as in the Figma cards. Other products use their brand colour and initials.
-const DASH_HUB_MARK = {
-  'crm-lite': { bg: '#EEF5C6', fg: '#8FA531', icon: 'box' },
-  'aurix': { bg: 'linear-gradient(135deg, #5B2EE0, #B23AF2)', fg: '#fff', text: 'a' },
-  'seo-cloud': { bg: '#3D1FD6', fg: '#fff', text: 'SEO<small>Cloud</small>' },
-  ads: { bg: '#F7C6F2', fg: '#C2419C', icon: 'chart-column' }
-};
-function dashHubMark(key) {
-  const m = DASH_HUB_MARK[key];
-  if (!m) { const p = productById(key); return `<span class="dash-hub-mark" style="background:${p.color};color:#fff">${esc(p.initials)}</span>`; }
-  return `<span class="dash-hub-mark${m.text ? ' dash-hub-mark-text' : ''}" style="background:${m.bg};color:${m.fg}">${m.icon ? `<i data-lucide="${m.icon}"></i>` : m.text}</span>`;
-}
 // Connected-on date. [PLACEHOLDER] mock: the entry's connectedAt, else a fixed date per workspace and product.
 function dashHubSince(wsId, key, e) {
   if (e?.connectedAt) return e.connectedAt;
@@ -1313,18 +1301,19 @@ function dashHubPanel(ws) {
   const entries = wsProducts(ws.id);
   const live = e => !!e && e.status === 'connected' && e.active;
   const needsFix = e => !!e && (e.status === 'error' || e.status === 'pending');
-  const card = ({ key, name, e, open, openTitle, manage, desc }) => {
+  // Same parts as the Integrations cards: round product logo, card title, sub-line, status dot.
+  const card = ({ key, name, logo, sub, e, open, openTitle, manage, desc }) => {
     const [color, label] = dashEntryStatus(e);
     return `<div class="dash-hub-card">
       <div class="dash-hub-card-top">
-        ${dashHubMark(key)}
-        <span class="dash-hub-name">${esc(name)}</span>
+        ${logo}
+        <div class="grow"><div class="h-card dash-hub-name">${esc(name)}</div><div class="dash-hub-sub">${sub}</div></div>
         <span class="dash-hub-card-actions">
           <button type="button" class="kebab dash-hub-icon-btn" onclick="${open}" title="${esc(openTitle)}" aria-label="${esc(openTitle)}"><i data-lucide="square-arrow-out-up-right"></i></button>
           <button type="button" class="kebab dash-hub-icon-btn" onclick="${manage}" title="Manage ${esc(name)}" aria-label="Manage ${esc(name)}"><i data-lucide="settings"></i></button>
         </span>
       </div>
-      <div class="dash-hub-status dash-hub-status-${color}"><span class="dot"></span>${esc(label)}${needsFix(e) ? `<button type="button" class="t-link dash-hub-fix" onclick="${manage.replace("'about'", "'config'")}">Fix now</button>` : ''}</div>
+      <div class="dot-label dash-hub-status dash-hub-status-${color}"><span class="dot dot-${color}${color === 'grey' ? '' : '-strong'}"></span>${esc(label)}${needsFix(e) ? `<button type="button" class="t-link dash-hub-fix" onclick="${manage.replace("'about'", "'config'")}">Fix now</button>` : ''}</div>
       <div class="dash-hub-meta">${color === 'green' ? 'Connected' : 'Added'} on: ${esc(fmtDate(dashHubSince(ws.id, key, e)))}</div>
       <div class="dash-hub-desc">${desc}</div>
     </div>`;
@@ -1333,15 +1322,16 @@ function dashHubPanel(ws) {
   // Products in use (OOm products, then one per lane), except disabled ones; Ads Performance last, as in the Figma.
   const cards = dashHubProductIds().filter(pid => entries[pid] && entries[pid].status !== 'disabled').map(pid => {
     const p = productById(pid), e = entries[pid];
-    return card({ key: pid, name: p.name, e, open: live(e) ? `dashOpenProduct('${pid}')` : `dashIntegAction('${pid}', '${needsFix(e) ? 'config' : 'about'}')`,
+    const lane = productLane(pid);
+    return card({ key: pid, name: p.name, logo: productLogo(pid, 32), sub: esc(lane ? PRODUCT_LANES[lane].label : pid === 'seo-cloud' ? 'SEO' : p.category), e, open: live(e) ? `dashOpenProduct('${pid}')` : `dashIntegAction('${pid}', '${needsFix(e) ? 'config' : 'about'}')`,
       openTitle: live(e) ? `Open ${p.name}` : `Set up ${p.name}`, manage: `dashIntegAction('${pid}', 'about')`, desc: esc(DASH_HUB_DESC[pid] || p.description || '') });
   });
-  // Ads Performance names the linked platforms: Google Ads, Meta Ads or both.
+  // Ads Performance: the linked platforms (Google Ads, Meta Ads or both) as pills under the name.
   const plats = dashPlatforms(ws.id);
   if (plats.length) {
-    const desc = `<span class="dash-hub-plats">${plats.map(p => `<span class="dash-hub-plat">${platformLogo(p)}${esc(DASH_VIEW_LABEL[p])}</span>`).join('')}</span>`;
-    cards.push(card({ key: 'ads', name: 'Ads Performance', e: { status: 'connected', active: true }, open: 'dashOpenAds()', openTitle: 'View Ad Performance',
-      manage: "navigate('integrations')", desc }));
+    const sub = `<span class="dash-hub-plats">${plats.map(p => `<span class="chip dash-hub-plat">${platformLogo(p)}${esc(DASH_VIEW_LABEL[p])}</span>`).join('')}</span>`;
+    cards.push(card({ key: 'ads', name: 'Ads Performance', logo: dashServiceIcon('ads', 32), sub, e: { status: 'connected', active: true }, open: 'dashOpenAds()', openTitle: 'View Ad Performance',
+      manage: "navigate('integrations')", desc: 'Google and Meta ad results for this workspace, in one view.' }));
   }
   const connected = dashHubProductIds().filter(pid => live(entries[pid])).length + (plats.length ? 1 : 0);
 
@@ -2856,8 +2846,8 @@ Client-facing workspace dashboard giving a simplified, unified view of Meta and 
   - **Prototype note:** the date filter scales mock data to the selected range, and the Daily Performance chart plots one point per day of the range. It does **not** yet filter by event date.
 - **CRM mode (from V2)**: shown when the workspace has a connected, active CRM.
   - **Products & Connections** (top of the page; Figma 6371:9127, 23/10/2026): one card of the products this workspace uses, **four cards per row** (two below 1280 px, one below 720 px). Replaces the earlier three-section panel (OOm Products / Quick Links / Connections). Header: "Products & Connections", "Active products connected to {workspace}", and "**N** Connected Products" on the right.
-    - **Each card**: square product mark, name, an **external-link icon** (Open) and a **settings icon** (Manage; not in the Figma yet, added 23/10/2026), then status (green dot "Connected"; red Error / amber Pending setup with **Fix now**), "Connected on: {date}" ("Added on" when not live; [PLACEHOLDER] mock dates until the integration records them), and a short description.
-    - **Products in use**: OOm products (Galaxis CRM, Aurix, SEO Cloud), then the one product per lane (CRM, Automated Chat, Call Tracking; one-per-lane rule). Disabled products are left out. **Ads Performance** comes last, as in the Figma, and its description names the linked platforms with their logos: Google Ads, Meta Ads, or both.
+    - **Each card** (same parts as the Integrations cards: round product logo, card title, grey sub-line, status dot): name with its lane underneath (CRM / Automated Chat / Call Tracking / SEO), an **external-link icon** (Open) and a **settings icon** (Manage; not in the Figma yet, added 23/10/2026), then status (green dot "Connected"; red Error / amber Pending setup with **Fix now**), "Connected on: {date}" ("Added on" when not live; [PLACEHOLDER] mock dates until the integration records them), and a short description.
+    - **Products in use**: OOm products (Galaxis CRM, Aurix, SEO Cloud), then the one product per lane (CRM, Automated Chat, Call Tracking; one-per-lane rule). Disabled products are left out. **Ads Performance** comes last, as in the Figma, with the linked platforms as **pills under its name** (Google Ads, Meta Ads, or both, each with its logo).
     - **Open** opens the product's web app in a new tab (Galaxis CRM: https://crm.oomdigital.com/, Aurix: https://app.aurix.com.sg/dashboard, SEO Cloud: https://oomdigital.com/dashboard; third-party products: their own app). For Ads Performance it goes to the Ad Performance tab. **Manage** opens the product's settings drawer in Integrations (Ads Performance: Integrations, where ad accounts are linked).
     - Not in the Figma, so dropped: the collapse toggle, header alert pills and outstanding-work badges (Aurix escalations, SEO Cloud approvals). Built from the same data as Integrations.
   - Each KPI row has a section header (title + one-line description): **Ad Performance** for the platform metrics, **Leads & Revenue** for the CRM metrics (with the attribution model on the right).

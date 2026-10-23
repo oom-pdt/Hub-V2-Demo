@@ -305,9 +305,10 @@ svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
 
 /* ---------- Collapsible column groups (colGroupHeaderRow in core.js) ---------- */
 /* Tones: neutral (account / details), ads + ads2 (alternating ad groups), seo, crm. */
-/* One colour for every group band (tone classes are kept on cells but no longer change the colour). */
-.table { --colgrp-bg: var(--tint); --colgrp-fg: var(--link); --colgrp-line: var(--border-light); }
-.table .colgrp-start { border-left: 1px solid var(--colgrp-line); }
+/* One colour for every group band, deeper than the column-header tint so the two rows read apart; tone classes
+   are kept on cells but no longer change the colour. Group dividers: 2px, a soft mid blue. */
+.table { --colgrp-bg: #D2E5FD; --colgrp-fg: #0356B8; --colgrp-line: #A8CDFB; }
+.table .colgrp-start { border-left: 2px solid var(--colgrp-line); }
 .table thead tr.colgrp-row > th { padding: 0; height: 30px; border-bottom: 1px solid var(--surface); }
 .table thead tr.colgrp-row > th.colgrp-band { background: var(--colgrp-bg); }
 .table thead tr.colgrp-row > th.colgrp-blank { background: var(--surface); }

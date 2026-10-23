@@ -18,7 +18,7 @@ function renderShell() {
 
 function renderSidebar() {
   const nav = NAV_ITEMS.filter(n => !n.show || n.show()).map(n => `
-    <button type="button" class="nav-item ${state.page === n.page || (n.page === 'leads' && state.page === 'lead') ? 'active' : ''}" onclick="navigate('${n.page}')" title="${esc(n.label)}">
+    <button type="button" class="nav-item ${state.page === n.page || (n.page === 'leads' && state.page === 'lead') || (n.page === 'integrations' && state.page === 'integration-setup') ? 'active' : ''}" onclick="navigate('${n.page}')" title="${esc(n.label)}">
       <i data-lucide="${n.icon}"></i><span>${esc(n.label)}</span>
     </button>`).join('');
   document.getElementById('sidebar').innerHTML = `

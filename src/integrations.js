@@ -103,6 +103,16 @@ registerScreen('integrations', {
   render: () => isAgency() ? integRenderAgency() : integRenderClient(),
   afterRender: () => {}
 });
+// Connection set-up: a dedicated client screen with breadcrumbed steps (replaces the config slide-over).
+registerScreen('integration-setup', {
+  contexts: ['client'],
+  key: () => 'client-integration-setup',
+  title: () => `${integEntry(integCfg().pid) ? 'Configure' : 'Connect'} ${productById(integCfg().pid).name}`,
+  desc: () => 'Set up the connection step by step. Nothing changes in your workspace until you finish.',
+  render: integSetupRender
+});
+// Dev jump: Delacon (API product, so every step incl. Webhook) in the current client workspace.
+registerDevScreen('Client workspace', 'client-integration-setup', 'Integration set-up', () => { state.ctx = devClientCtx(); integOpenSetup('delacon'); });
 
 // ================= CLIENT WORKSPACE =================
 function integRenderClient() {
@@ -170,7 +180,7 @@ function integActiveCard(p) {
   const crm = e.routedVia ? productById(e.routedVia) : null;
   const items = [
     { label: 'View details', icon: 'info', onClick: `integOpenDrawer('${p.id}','about')` },
-    { label: 'Configure', icon: 'settings-2', onClick: `integOpenDrawer('${p.id}','config')` },
+    { label: 'Configure', icon: 'settings-2', onClick: `integOpenSetup('${p.id}')` },
     e.status === 'disabled' ? { label: 'Enable', icon: 'play', onClick: `integActivate('${p.id}')` } : { label: 'Disable', icon: 'pause', onClick: `integDisable('${p.id}')` },
     'sep',
     { label: 'Disconnect', icon: 'unplug', danger: true, onClick: `integDisconnect('${p.id}')` }
@@ -179,7 +189,7 @@ function integActiveCard(p) {
     <div class="integ-alert integ-alert-${e.status === 'error' ? 'error' : 'warning'}">
       <i data-lucide="${e.status === 'error' ? 'circle-alert' : 'clock-alert'}"></i>
       <div class="grow"><div class="t-bold">${e.status === 'error' ? 'Connection error' : 'Setup incomplete'}</div><div class="t-caption">${esc(e.error || 'Finish setting up this product to start syncing.')}</div></div>
-      <button type="button" class="btn btn-sm ${e.status === 'error' ? 'btn-danger' : 'integ-btn-warning'}" onclick="integOpenDrawer('${p.id}','config')">${e.status === 'error' ? 'Fix Now' : 'Resume Setup'}</button>
+      <button type="button" class="btn btn-sm ${e.status === 'error' ? 'btn-danger' : 'integ-btn-warning'}" onclick="integOpenSetup('${p.id}')">${e.status === 'error' ? 'Fix Now' : 'Resume Setup'}</button>
     </div>` : '';
   const action = e.status === 'disabled'
     ? `<button type="button" class="btn btn-outline" onclick="integActivate('${p.id}')"><i data-lucide="play"></i>Enable</button>`
@@ -248,7 +258,7 @@ function integBeginConnect(pid) {
     showToast(old ? `${p.name} connected. ${old.name} was disconnected.` : `${p.name} connected and active`);
     return;
   }
-  integOpenDrawer(pid, 'config');
+  integOpenSetup(pid);
 }
 
 // Remove a product's entry; products routed through a CRM lose their path.
@@ -319,7 +329,7 @@ function integDisconnect(pid) {
     onConfirm: () => {
       integRemove(pid, 'disconnected');
       closeDrawer();
-      render();
+      if (state.page === 'integration-setup') { state.ui.integCfg = null; navigate('integrations'); } else render();
       showToast(`${p.name} disconnected`, 'unplug');
     }
   });
@@ -359,32 +369,23 @@ function integRouteYes(pid) {
 }
 function integRouteNo(pid) {
   closeModal();
-  integOpenDrawer(pid, 'config');
+  integOpenSetup(pid);
 }
 
-// ---------- Slide-over: about + config ----------
+// ---------- About slide-over + connection set-up screen ----------
+// About stays a slide-over (product details before connecting). Connecting or configuring a product opens the
+// dedicated set-up screen ('integration-setup') with breadcrumbed steps. Nothing is saved until the last step.
 // Global entry point for other modules: integOpenProduct('sleekflow', 'config') from anywhere in a client workspace.
 function integOpenProduct(pid, mode = 'about', wsId) {
   if (wsId && wsId !== state.ctx) state.ctx = wsId;
+  if (mode === 'config') { integOpenSetup(pid); return; }
   if (state.page !== 'integrations') navigate('integrations');
   integOpenDrawer(pid, mode);
 }
 
 function integOpenDrawer(pid, mode = 'about') {
-  const p = productById(pid);
-  const e = integEntry(pid);
-  if (mode === 'config') {
-    const g = integGuides[pid] || {};
-    state.ui.integCfg = {
-      pid,
-      authed: !!e && e.status === 'connected' && !e.routedVia,
-      verified: false, webhookTested: false, showKey: false,
-      key: e && p.flow === 'api' && !e.routedVia ? 'sk_test_PLACEHOLDER' : '',
-      backfill: (e && e.backfill) || 'lifetime',
-      mapping: (e && e.mapping) || Object.fromEntries((g.mappings || []).map(([s, t]) => [s, t]))
-    };
-  }
-  openDrawer(`<div id="integ-drawer">${mode === 'config' ? integConfigHTML() : integAboutHTML(pid)}</div>`, integDrawerFooter(pid, mode));
+  if (mode === 'config') { integOpenSetup(pid); return; }
+  openDrawer(`<div id="integ-drawer">${integAboutHTML(pid)}</div>`, integDrawerFooter(pid));
 }
 
 function integDrawerHead(p) {
@@ -401,90 +402,188 @@ function integAboutHTML(pid) {
     <h4>Before you connect</h4><p class="integ-drawer-p">You can connect multiple products, but only one CRM, one chat platform and one call tracker can be connected at a time. Connecting another one replaces the current one.</p>`;
 }
 
-function integDrawerFooter(pid, mode) {
-  const e = integEntry(pid);
-  if (mode === 'about') {
-    if (!e) return `<button type="button" class="btn btn-primary" onclick="integConnect('${pid}')">Connect</button>`;
-    return `<button type="button" class="btn btn-primary" onclick="integOpenDrawer('${pid}','config')"><i data-lucide="settings-2"></i>Configure</button>`;
-  }
-  return `${e ? `<button type="button" class="btn btn-danger-outline integ-foot-left" onclick="integDisconnect('${pid}')">Disconnect</button>` : ''}
-    <button type="button" class="btn btn-outline" onclick="closeDrawer()">Cancel</button>
-    <button type="button" class="btn btn-primary" id="integ-save" onclick="integSaveConfig()">Save Configuration</button>`;
+function integDrawerFooter(pid) {
+  if (!integEntry(pid)) return `<button type="button" class="btn btn-primary" onclick="integConnect('${pid}')">Connect</button>`;
+  return `<button type="button" class="btn btn-primary" onclick="integOpenSetup('${pid}')"><i data-lucide="settings-2"></i>Configure</button>`;
 }
 
-function integRefreshConfig() { renderRegion('integ-drawer', integConfigHTML()); }
+// Steps by connection type: API products add the optional Webhook step.
+function integSetupSteps(p) {
+  const g = integGuides[p.id] || {};
+  return [
+    { key: 'connect', label: p.flow === 'internal' ? 'Connection' : 'Connect account' },
+    ...(p.flow === 'api' ? [{ key: 'webhook', label: 'Webhook' }] : []),
+    { key: 'mapping', label: g.mapTitle || 'Field mapping' },
+    { key: 'review', label: 'Review & sync' }
+  ];
+}
+function integCfgDraft(pid) {
+  const p = productById(pid);
+  const e = integEntry(pid);
+  const g = integGuides[pid] || {};
+  return {
+    pid, step: 0,
+    authed: !!e && e.status === 'connected' && !e.routedVia,
+    verified: !!e && e.status === 'connected' && !e.routedVia && p.flow === 'api', webhookTested: false, showKey: false,
+    key: e && p.flow === 'api' && !e.routedVia ? 'sk_test_PLACEHOLDER' : '',
+    backfill: (e && e.backfill) || 'lifetime',
+    mapping: (e && e.mapping) || Object.fromEntries((g.mappings || []).map(([s, t]) => [s, t]))
+  };
+}
+function integOpenSetup(pid) {
+  closeDrawer();
+  state.ui.integCfg = integCfgDraft(pid);
+  navigate('integration-setup', { pid });
+}
+function integCfg() {
+  const pid = state.params.pid || 'delacon';
+  if (!state.ui.integCfg || state.ui.integCfg.pid !== pid) state.ui.integCfg = integCfgDraft(pid);
+  return state.ui.integCfg;
+}
+function integSetupExit() { state.ui.integCfg = null; navigate('integrations'); }
+// Editing an existing, working connection: every step can be opened directly.
+function integSetupEditing(c) { const e = integEntry(c.pid); return !!e && e.status === 'connected' && !e.routedVia; }
+function integConnOk(c) {
+  const p = productById(c.pid);
+  return p.flow === 'internal' || (p.flow === 'oauth' ? c.authed : c.verified);
+}
+
+function integSetupRender() {
+  const c = integCfg();
+  const p = productById(c.pid);
+  const e = integEntry(c.pid);
+  const steps = integSetupSteps(p);
+  const editing = integSetupEditing(c);
+  const reach = i => editing || i <= c.step || (i === c.step + 1 && integSetupValid(c, false));
+  const stepper = steps.map((s, i) => {
+    const cls = i === c.step ? 'is-current' : i < c.step ? 'is-done' : '';
+    return `<li class="${cls}"><button type="button" onclick="integSetupGo(${i})" ${reach(i) ? '' : 'disabled'} ${i === c.step ? 'aria-current="step"' : ''}>
+      <span class="integ-stepper-num">${i < c.step ? '<i data-lucide="check"></i>' : i + 1}</span>${esc(s.label)}</button></li>`;
+  }).join('<li class="integ-stepper-sep" aria-hidden="true"><i data-lucide="chevron-right"></i></li>');
+  const last = c.step === steps.length - 1;
+  return `<div class="integ-setup">
+    <nav class="integ-crumbs" aria-label="Breadcrumb">
+      <button type="button" class="t-link" onclick="integSetupExit()">Integrations</button><i data-lucide="chevron-right"></i>
+      <span>${esc(p.name)}</span><i data-lucide="chevron-right"></i><span class="integ-crumb-current">${editing || e ? 'Configure' : 'Connect'}</span>
+    </nav>
+    <section class="card integ-setup-head">${integDrawerHead(p)}<span class="integ-tag">${integFlowLabel(p)}</span></section>
+    <ol class="integ-stepper" aria-label="Set-up steps">${stepper}</ol>
+    <section class="card integ-setup-body">
+      <div class="integ-setup-step t-caption t-muted">Step ${c.step + 1} of ${steps.length}</div>
+      ${integSetupStepHTML(c, steps[c.step].key)}
+    </section>
+    <div class="integ-setup-foot">
+      ${e ? `<button type="button" class="btn btn-danger-outline" onclick="integDisconnect('${c.pid}')">Disconnect</button>` : ''}
+      <span class="grow"></span>
+      <button type="button" class="btn btn-ghost" onclick="integSetupExit()">Cancel</button>
+      ${c.step ? '<button type="button" class="btn btn-outline" onclick="integSetupGo(state.ui.integCfg.step - 1)"><i data-lucide="arrow-left"></i>Back</button>' : ''}
+      ${last ? `<button type="button" class="btn btn-primary" id="integ-save" onclick="integSaveConfig()">${e ? 'Save Configuration' : 'Connect and start sync'}</button>`
+        : '<button type="button" class="btn btn-primary" onclick="integSetupNext()">Next<i data-lucide="arrow-right"></i></button>'}
+    </div>
+  </div>`;
+}
+
+// Only the connection step has a requirement: OAuth authorised, or the API key entered and verified.
+function integSetupValid(c, tell = true) {
+  const p = productById(c.pid);
+  if (integSetupSteps(p)[c.step].key !== 'connect' || integConnOk(c)) return true;
+  if (tell) {
+    if (p.flow === 'oauth') showToast(`Connect ${p.name} via OAuth to continue`, 'triangle-alert');
+    else if (!c.key.trim()) { showToast('Enter an API key to continue', 'key-round'); document.getElementById('integ-key')?.focus(); }
+    else showToast('Verify the connection to continue', 'triangle-alert');
+  }
+  return false;
+}
+function integSetupNext() {
+  const c = state.ui.integCfg;
+  if (!integSetupValid(c)) return;
+  integSetupGo(c.step + 1);
+}
+function integSetupGo(i) {
+  const c = state.ui.integCfg;
+  const n = integSetupSteps(productById(c.pid)).length;
+  if (i > c.step && !integSetupEditing(c) && !integSetupValid(c)) return;
+  c.step = Math.max(0, Math.min(n - 1, i));
+  rerender();
+  window.scrollTo(0, 0);
+}
+function integRefreshConfig() { if (state.page === 'integration-setup') rerender(); }
 
 function integSteps(steps, pid) {
   return `<ol class="integ-steps">${steps.map(s => `<li><span>${s.replace(/\{URL\}/g, esc(integWebhookUrl(pid)))}</span></li>`).join('')}</ol>`;
 }
 
-function integConfigHTML() {
-  const c = state.ui.integCfg;
+function integSetupStepHTML(c, key) {
   const p = productById(c.pid);
   const e = integEntry(c.pid);
   const g = integGuides[c.pid] || {};
-  const routedCrm = e && e.routedVia ? productById(e.routedVia) : null;
-  const ok = p.flow === 'internal' || c.authed || c.verified || (e && e.status === 'connected');
-  const statusTag = `<span class="integ-tag ${ok && !(e && e.status === 'error') ? 'integ-tag-ok' : 'integ-tag-warn'}">${ok && !(e && e.status === 'error') ? 'Connected' : 'Action Required'}</span>`;
+  const head = (title, tag = '') => `<div class="integ-cfg-head"><h3 class="h-card">${esc(title)}</h3>${tag}</div>`;
 
-  let conn;
-  if (p.flow === 'internal') {
-    conn = `<div class="integ-managed"><i data-lucide="shield-check"></i><div><div class="t-bold">Managed by OOm — no credentials needed</div><div class="t-caption t-secondary">${esc(p.name)} is part of your OOm subscription. Galaxis connects to it automatically.</div></div></div>`;
-  } else if (p.flow === 'oauth') {
-    conn = `<div class="integ-input-row"><div class="grow"><div class="field-label">Connection</div>
-        <div class="t-caption ${c.authed ? 't-success' : 't-muted'}" id="integ-oauth-status">${c.authed ? `✓ Connected via OAuth · ${esc(p.name)}` : e && e.status === 'pending' ? 'OAuth authorisation incomplete' : 'Not connected'}</div></div>
-      <button type="button" class="btn btn-outline btn-sm" id="integ-oauth-btn" onclick="integOAuth()">${c.authed ? 'Re-authorise' : 'Connect via OAuth'}</button></div>`;
-  } else {
-    conn = `<div class="integ-guide"><div class="integ-guide-title">API set-up: connect account and import contacts</div>${integSteps(g.apiSteps || [], c.pid)}</div>
-      <div class="field"><label class="field-label" for="integ-key">${esc(g.keyLabel || 'API key / token')}<span class="req">*</span></label>
-        <div class="integ-input-row">
-          <div class="integ-key grow"><input id="integ-key" class="input mono" type="${c.showKey ? 'text' : 'password'}" placeholder="sk_test_PLACEHOLDER" value="${esc(c.key)}" oninput="state.ui.integCfg.key = this.value; state.ui.integCfg.verified = false" autocomplete="off">
-            <button type="button" class="integ-eye" onclick="state.ui.integCfg.showKey = !state.ui.integCfg.showKey; integRefreshConfig()" aria-label="${c.showKey ? 'Hide' : 'Show'} key"><i data-lucide="${c.showKey ? 'eye-off' : 'eye'}"></i></button></div>
-          <button type="button" class="btn btn-outline btn-sm" id="integ-verify-btn" onclick="integVerify()">${c.verified ? 'Re-test connection' : 'Verify connection'}</button>
-        </div>
-        <div class="t-caption ${c.verified ? 't-success' : 't-muted'}" id="integ-verify-status">${c.verified ? '✓ Connection verified and schema synchronised.' : 'Connection has not been verified yet.'}</div>
-      </div>`;
+  if (key === 'connect') {
+    const routedCrm = e && e.routedVia ? productById(e.routedVia) : null;
+    const ok = integConnOk(c) && !(e && e.status === 'error');
+    let conn;
+    if (p.flow === 'internal') {
+      conn = `<div class="integ-managed"><i data-lucide="shield-check"></i><div><div class="t-bold">Managed by OOm — no credentials needed</div><div class="t-caption t-secondary">${esc(p.name)} is part of your OOm subscription. Galaxis connects to it automatically.</div></div></div>`;
+    } else if (p.flow === 'oauth') {
+      conn = `<div class="integ-input-row"><div class="grow"><div class="field-label">Connection</div>
+          <div class="t-caption ${c.authed ? 't-success' : 't-muted'}" id="integ-oauth-status">${c.authed ? `✓ Connected via OAuth · ${esc(p.name)}` : e && e.status === 'pending' ? 'OAuth authorisation incomplete' : 'Not connected'}</div></div>
+        <button type="button" class="btn btn-outline btn-sm" id="integ-oauth-btn" onclick="integOAuth()">${c.authed ? 'Re-authorise' : 'Connect via OAuth'}</button></div>`;
+    } else {
+      conn = `<div class="integ-guide"><div class="integ-guide-title">API set-up: connect account and import contacts</div>${integSteps(g.apiSteps || [], c.pid)}</div>
+        <div class="field"><label class="field-label" for="integ-key">${esc(g.keyLabel || 'API key / token')}<span class="req">*</span></label>
+          <div class="integ-input-row">
+            <div class="integ-key grow"><input id="integ-key" class="input mono" type="${c.showKey ? 'text' : 'password'}" placeholder="sk_test_PLACEHOLDER" value="${esc(c.key)}" oninput="state.ui.integCfg.key = this.value; state.ui.integCfg.verified = false" autocomplete="off">
+              <button type="button" class="integ-eye" onclick="state.ui.integCfg.showKey = !state.ui.integCfg.showKey; integRefreshConfig()" aria-label="${c.showKey ? 'Hide' : 'Show'} key"><i data-lucide="${c.showKey ? 'eye-off' : 'eye'}"></i></button></div>
+            <button type="button" class="btn btn-outline btn-sm" id="integ-verify-btn" onclick="integVerify()">${c.verified ? 'Re-test connection' : 'Verify connection'}</button>
+          </div>
+          <div class="t-caption ${c.verified ? 't-success' : 't-muted'}" id="integ-verify-status">${c.verified ? '✓ Connection verified and schema synchronised.' : 'Connection has not been verified yet.'}</div>
+        </div>`;
+    }
+    return `${head(p.flow === 'internal' ? 'Connection' : `Connect your ${p.name} account`, `<span class="integ-tag ${ok ? 'integ-tag-ok' : 'integ-tag-warn'}">${ok ? 'Connected' : 'Action Required'}</span>`)}
+      <p class="integ-help">Galaxis uses this connection to import lead data and identify conversion events.</p>
+      ${e && e.error ? `<div class="integ-alert integ-alert-${e.status === 'error' ? 'error' : 'warning'}"><i data-lucide="circle-alert"></i><div class="t-caption">${esc(e.error)}</div></div>` : ''}
+      ${routedCrm ? `<div class="integ-managed"><i data-lucide="git-merge"></i><div><div class="t-bold">Routed via ${esc(routedCrm.name)}</div><div class="t-caption t-secondary">Galaxis receives ${esc(p.name)} activity through your ${esc(routedCrm.name)} connection. Finish these steps to connect ${esc(p.name)} directly instead.</div></div></div>` : ''}
+      ${conn}`;
   }
 
-  const webhook = p.flow === 'api' ? `
-    <section class="integ-cfg-section">
-      <div class="integ-cfg-head"><h4>Webhook</h4><span class="integ-tag">Optional · Real-Time Sync</span></div>
-      <p class="integ-help">${esc(g.webhookNote || 'Enable instant updates from the connected platform.')}</p>
+  if (key === 'webhook') {
+    return `${head('Webhook', '<span class="integ-tag">Optional · Real-Time Sync</span>')}
+      <p class="integ-help">${esc(g.webhookNote || 'Enable instant updates from the connected platform. You can skip this step and set it up later.')}</p>
       <div class="integ-guide"><div class="integ-guide-title">Webhook set-up: enable real-time sync</div>${integSteps(g.webhookSteps || [], c.pid)}</div>
       <div class="integ-webhook"><code id="integ-webhook-url">${esc(integWebhookUrl(c.pid))}</code><button type="button" class="btn btn-ghost btn-sm" onclick="integCopyWebhook(this)"><i data-lucide="copy"></i>Copy</button></div>
       <div class="row integ-mt"><button type="button" class="btn btn-outline btn-sm" id="integ-webhook-btn" onclick="integTestWebhook()">Test webhook signal</button>
-        <span class="t-caption ${c.webhookTested ? 't-success' : 't-muted'}" id="integ-webhook-status">${c.webhookTested ? '✓ Test callback received successfully' : 'Not tested yet'}</span></div>
-    </section>` : '';
+        <span class="t-caption ${c.webhookTested ? 't-success' : 't-muted'}" id="integ-webhook-status">${c.webhookTested ? '✓ Test callback received successfully' : 'Not tested yet'}</span></div>`;
+  }
 
-  const opts = g.options || INTEG_FIELDS;
-  const mapping = g.mappings ? `
-    <div class="integ-map">
-      <div class="integ-map-row integ-map-head"><div>${esc(g.sourceLabel || `${p.name} field`)}</div><div></div><div>${esc(g.targetLabel || 'Galaxis field')}</div></div>
-      ${g.mappings.map(([src], i) => `<div class="integ-map-row"><div class="integ-map-src">${esc(src)}</div><i data-lucide="arrow-right"></i>
-        <select class="select" aria-label="Map ${esc(src)}" onchange="state.ui.integCfg.mapping['${q(src)}'] = this.value">${opts.map(o => `<option ${o === c.mapping[src] ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select></div>`).join('')}
-    </div>` : `<p class="integ-help">${esc(g.noMapNote || 'No fields to map for this product.')}</p>`;
+  if (key === 'mapping') {
+    const opts = g.options || INTEG_FIELDS;
+    const mapping = g.mappings ? `
+      <div class="integ-map">
+        <div class="integ-map-row integ-map-head"><div>${esc(g.sourceLabel || `${p.name} field`)}</div><div></div><div>${esc(g.targetLabel || 'Galaxis field')}</div></div>
+        ${g.mappings.map(([src]) => `<div class="integ-map-row"><div class="integ-map-src">${esc(src)}</div><i data-lucide="arrow-right"></i>
+          <select class="select" aria-label="Map ${esc(src)}" onchange="state.ui.integCfg.mapping['${q(src)}'] = this.value">${opts.map(o => `<option ${o === c.mapping[src] ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select></div>`).join('')}
+      </div>` : `<p class="integ-help">${esc(g.noMapNote || 'No fields to map for this product.')}</p>`;
+    return `${head(g.mapTitle || 'Lead Field Mapping', g.mappings ? '<span class="integ-tag integ-tag-ok">Auto-mapped</span>' : '')}
+      <p class="integ-help">${esc(g.mapHelp || 'Review how source fields map into Galaxis. You can change them later without repeating the connection set-up.')}</p>
+      ${mapping}`;
+  }
 
-  return `${integDrawerHead(p)}
-    <div class="integ-cfg-title"><span class="h-card">Configure ${esc(p.name)}</span><span class="integ-tag">${integFlowLabel(p)}</span></div>
-    <section class="integ-cfg-section">
-      <div class="integ-cfg-head"><h4>Connection</h4>${statusTag}</div>
-      <p class="integ-help">Galaxis uses this connection to import lead data and identify conversion events.</p>
-      ${e && e.error ? `<div class="integ-alert integ-alert-${e.status === 'error' ? 'error' : 'warning'}"><i data-lucide="circle-alert"></i><div class="t-caption">${esc(e.error)}</div></div>` : ''}
-      ${routedCrm ? `<div class="integ-managed"><i data-lucide="git-merge"></i><div><div class="t-bold">Routed via ${esc(routedCrm.name)}</div><div class="t-caption t-secondary">Galaxis receives ${esc(p.name)} activity through your ${esc(routedCrm.name)} connection. Save the settings below to connect ${esc(p.name)} directly instead.</div></div></div>` : ''}
-      ${conn}
-    </section>
-    ${webhook}
-    <section class="integ-cfg-section">
-      <div class="integ-cfg-head"><h4>${esc(g.mapTitle || 'Lead Field Mapping')}</h4>${g.mappings ? '<span class="integ-tag integ-tag-ok">Auto-mapped</span>' : ''}</div>
-      <p class="integ-help">${esc(g.mapHelp || 'Review how source fields map into Galaxis. You can change them here without repeating the connection set-up.')}</p>
-      ${mapping}
-    </section>
-    <section class="integ-cfg-section">
-      <div class="integ-cfg-head"><h4>Historical Backfill</h4></div>
-      <p class="integ-help">Choose how much historical lead data Galaxis should import.</p>
-      <select class="select" aria-label="Historical backfill" onchange="state.ui.integCfg.backfill = this.value">${INTEG_BACKFILL.map(([v, l]) => `<option value="${v}" ${v === c.backfill ? 'selected' : ''}>${l}</option>`).join('')}</select>
-      <p class="t-caption t-muted integ-mt">Changes to mappings and sync options take effect after saving.</p>
-    </section>`;
+  // Review & sync: backfill choice, a summary of the earlier steps, and the one-per-lane replacement warning.
+  const old = laneOccupant(state.ctx, c.pid);
+  const mapped = g.mappings ? g.mappings.filter(([s]) => c.mapping[s] && c.mapping[s] !== 'Do not map').length : 0;
+  const row = (label, value, ok) => `<div class="integ-review-row"><span class="t-muted">${esc(label)}</span><span class="${ok === false ? 't-warning' : ''}">${value}</span></div>`;
+  return `${head('Review & sync')}
+    <p class="integ-help">Check the set-up, choose how much history to import, then ${e ? 'save' : 'connect'}.</p>
+    ${old ? `<div class="integ-alert integ-alert-warning"><i data-lucide="triangle-alert"></i><div class="t-caption">${esc(integReplaceText(c.pid, old))}</div></div>` : ''}
+    <div class="integ-review">
+      ${row('Connection', p.flow === 'internal' ? 'Managed by OOm' : p.flow === 'oauth' ? 'OAuth authorised' : 'API key verified')}
+      ${p.flow === 'api' ? row('Webhook', c.webhookTested ? 'Tested · real-time sync on' : 'Not set up · syncs on schedule', c.webhookTested) : ''}
+      ${row(g.mapTitle || 'Field mapping', g.mappings ? `${mapped} of ${g.mappings.length} fields mapped` : 'Nothing to map')}
+    </div>
+    <div class="field integ-mt"><label class="field-label" for="integ-backfill">Historical Backfill</label>
+      <select class="select" id="integ-backfill" onchange="state.ui.integCfg.backfill = this.value">${INTEG_BACKFILL.map(([v, l]) => `<option value="${v}" ${v === c.backfill ? 'selected' : ''}>${l}</option>`).join('')}</select>
+      <div class="t-caption t-muted integ-mt">Choose how much historical lead data Galaxis should import. Changes take effect after saving.</div></div>`;
 }
 
 function integBusy(btnId, label, ms, done) {
@@ -522,14 +621,13 @@ function integCopyWebhook(btn) {
 function integSaveConfig() {
   const c = state.ui.integCfg;
   const p = productById(c.pid);
-  if (p.flow === 'oauth' && !c.authed) { showToast(`Connect ${p.name} via OAuth before saving`, 'triangle-alert'); return; }
-  if (p.flow === 'api' && !c.key.trim()) { showToast('Enter an API key before saving', 'triangle-alert'); document.getElementById('integ-key')?.focus(); return; }
+  if (!integConnOk(c)) { c.step = 0; rerender(); integSetupValid(c); return; }
+  const existed = !!integEntry(c.pid);
   const { entry, replaced } = integCommit(c.pid, { extra: { backfill: c.backfill, mapping: { ...c.mapping } } });
   delete entry.routedVia;
   state.ui.integCfg = null;
-  closeDrawer();
-  render();
-  showToast(`Configuration saved for ${p.name}. Sync started.${replaced ? ` ${replaced.name} was disconnected.` : ''}`);
+  navigate('integrations');
+  showToast(`${existed ? `Configuration saved for ${p.name}` : `${p.name} connected`}. Sync started.${replaced ? ` ${replaced.name} was disconnected.` : ''}`);
 }
 
 // ---------- Ad platforms (V1 workspace linking, Figma card style) ----------
@@ -986,15 +1084,15 @@ The workspace's integrations hub, built from the Figma "Integrations" frames wit
   - Error and pending cards show an inline box with the reason and **Fix Now** / **Resume Setup**, which open the configuration view.
   - Products routed through a CRM show "Routed via {CRM}".
 - **Available Products**: category tabs with counts (All / CRM / CCM / CDP / Marketing). Each card has Learn More and **Connect**. The list ends with a Coming Soon card.
-- **Slide-over**
-  - About mode: About this integration, What can be synced?, Requirements, Before you connect.
-  - Config mode:
-    - Connection: OAuth, or API key with Verify.
-    - Webhook (API products, optional): steps, URL with Copy, and Test.
-    - Lead Field Mapping (auto-mapped, editable).
-    - Historical backfill: Lifetime (up to 2,000 records), 1 year, 90 days, 30 days.
-    - Footer: Disconnect and Save Configuration.
-  - OOm products need no credentials ("Managed by OOm").
+- **Details slide-over** (View details / Learn More): About this integration, What can be synced?, Requirements, Before you connect; footer **Connect** (or **Configure** when connected).
+- **Connection set-up screen (23/10/2026; replaces the config slide-over)**: Connect, Configure, Fix Now and Resume Setup open a dedicated page (\`client-integration-setup\`).
+  - Breadcrumb **Integrations › {Product} › Connect / Configure**; product header (logo, category, status, connection type).
+  - **Breadcrumbed steps**: Connect account › Webhook (API products only) › Field mapping › Review & sync. Done steps show a tick and can be reopened; the current step is highlighted; later steps unlock in order. When editing a working connection every step can be opened directly.
+    - **Connect account**: OAuth, or API key with the vendor's steps and **Verify connection** (required to continue). OOm products need no credentials ("Managed by OOm").
+    - **Webhook** (optional): steps, URL with Copy, and Test webhook signal.
+    - **Field mapping**: auto-mapped, editable (Slack: notification routing; SEO Cloud: nothing to map).
+    - **Review & sync**: summary of the steps, Historical backfill (Lifetime up to 2,000 records, 1 year, 90 days, 30 days), and the one-per-lane replacement warning when another product will be disconnected.
+  - Footer: Disconnect (existing connections), Cancel, Back, **Next** / **Connect and start sync** (or Save Configuration). Nothing is saved until the last step; Cancel or leaving the page changes nothing.
 - **Rules**
   - **One per lane.** A workspace can connect only one CRM, one chat platform (Aurix, SleekFlow, Wati) and one call tracker (Delacon). Connecting a second one asks "Replace {current}?"; on confirm and save, the new product is connected and the current one is disconnected (its synced data is kept). There is no connected-but-inactive state. This replaces the Figma "Connect This Product?" copy, which allowed several connected products with one active.
   - **Disable** pauses sync (status Disabled, inactive). **Disconnect** removes only that product (fixes V2's reset-everything bug). Neither deletes data that has already synced.

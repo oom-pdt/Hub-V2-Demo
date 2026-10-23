@@ -147,3 +147,34 @@
 /* Agency CRM master connection (crm.js) */
 .integ-crm-logo { background: var(--tint); color: var(--primary); }
 .integ-crm-logo svg.lucide { width: 18px; height: 18px; }
+
+/* ---------- Connection set-up screen (breadcrumbed steps) ---------- */
+.integ-setup { display: flex; flex-direction: column; gap: 20px; max-width: 920px; }
+.integ-crumbs { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); flex-wrap: wrap; }
+.integ-crumbs svg.lucide { width: 14px; height: 14px; }
+.integ-crumbs .t-link { font-size: 13px; }
+.integ-crumb-current { color: var(--text); font-weight: 700; }
+.integ-setup-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 20px 24px; }
+.integ-setup-head .integ-drawer-head { margin-bottom: 0; }
+.integ-stepper { display: flex; align-items: center; gap: 6px; margin: 0; padding: 0; list-style: none; flex-wrap: wrap; }
+.integ-stepper button { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px 0 6px; border-radius: var(--r-pill); border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.integ-stepper button:disabled { cursor: default; opacity: .7; }
+.integ-stepper-num { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--grey-light); color: var(--text-secondary); font-size: 12px; }
+.integ-stepper-num svg.lucide { width: 13px; height: 13px; stroke-width: 3; }
+.integ-stepper .is-current button { border-color: var(--primary); color: var(--primary); background: var(--tint); }
+.integ-stepper .is-current .integ-stepper-num { background: var(--primary); color: #fff; }
+.integ-stepper .is-done button { color: var(--text); }
+.integ-stepper .is-done .integ-stepper-num { background: var(--success-bg); color: var(--success); }
+.integ-stepper button:not(:disabled):hover { border-color: var(--primary); }
+.integ-stepper-sep { color: var(--text-muted); display: inline-grid; }
+.integ-stepper-sep svg.lucide { width: 16px; height: 16px; }
+.integ-setup-body { padding: 24px 28px 28px; }
+.integ-setup-body .integ-cfg-head { margin: 4px 0 6px; }
+.integ-setup-step { margin-bottom: 6px; }
+.integ-setup-body .integ-help { margin-bottom: 16px; }
+.integ-setup-body ol.integ-steps { padding-left: 0; }
+.integ-setup-foot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.integ-review { border: 1px solid var(--border-light); border-radius: var(--r-md); }
+.integ-review-row { display: flex; justify-content: space-between; gap: 16px; padding: 12px 14px; font-size: 13px; }
+.integ-review-row + .integ-review-row { border-top: 1px solid var(--border-light); }
+@media (max-width: 720px) { .integ-stepper-sep { display: none; } .integ-setup-body { padding: 20px; } }

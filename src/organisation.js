@@ -367,12 +367,20 @@ function orgServicesHTML() {
   const total = acc.services.filter(live).reduce((t, x) => t + x.monthlyBudget, 0);
   const am = memberById(acc.accountManager);
   const daysLeft = x => Math.round((new Date(x.end + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000);
+  // Live services on a contract with an unpaid invoice show Paused (unpaid amount as the reason) until it's paid.
+  const contracts = orgContracts(id);
+  const unpaid = no => { const c = contracts.find(k => k.contractNo === no); return c ? orgContractPayments(id, c).outstanding : 0; };
+  const statusPill = x => {
+    if (!live(x)) return x.start > today ? '<span class="pill pill-sm pill-blue">Upcoming</span>' : '<span class="pill pill-sm pill-grey">Ended</span>';
+    const u = unpaid(x.contractNo);
+    return u ? `<span class="pill pill-sm pill-orange" title="Paused: ${esc(fmtMoney(u, 2))} unpaid on contract ${esc(x.contractNo)}">Paused</span><div class="cell-sub dash-nowrap"><span class="t-warning">${fmtMoney(u, 2)} unpaid</span></div>` : '<span class="pill pill-sm pill-green">Live</span>';
+  };
   const rows = [...acc.services].sort((a, b) => (a.end || '').localeCompare(b.end || '')).map(x => {
     const d = x.end ? daysLeft(x) : null;
     const left = live(x) && d !== null ? `<span class="${d <= 30 ? 't-error' : d <= 60 ? 't-warning' : 't-secondary'} t-bold">${d} day${d === 1 ? '' : 's'}</span>` : '<span class="t-muted">—</span>';
     return `<tr><td class="t-bold">${esc(x.type)}${CRM_AD_SERVICES.includes(x.type) ? '<div class="cell-sub">Ad spend</div>' : ''}</td>
       <td>${esc(x.contractNo || '—')}</td><td class="num">${fmtMoney(x.monthlyBudget)}</td><td>${fmtDate(x.start)}</td><td>${fmtDate(x.end)}</td><td>${left}</td>
-      <td>${live(x) ? '<span class="pill pill-sm pill-green">Live</span>' : x.start > today ? '<span class="pill pill-sm pill-blue">Upcoming</span>' : '<span class="pill pill-sm pill-grey">Ended</span>'}</td></tr>`;
+      <td>${statusPill(x)}</td></tr>`;
   }).join('');
   return `<section class="card org-section">${head}
     <div class="org-svc-kpis">
@@ -400,7 +408,7 @@ function orgContractPaymentsHTML(id) {
     const invPct = c.value ? Math.min(100, p.invoiced / c.value * 100) : 0;
     const term = `${esc(CRM_PAY_TERM_LABEL[c.payTerm] || c.payTerm)}<div class="cell-sub">${c.payTerm === 'Customised' ? 'Non-standard terms, approved in the CRM · ' : ''}${c.schedule.length} instalment${c.schedule.length === 1 ? '' : 's'}${c.media ? ` · media ${c.mediaVia === 'OOm' ? 'billed monthly via OOm' : 'paid by client card (not billed)'}` : ''}</div>`;
     return `<tr>
-      <td class="t-bold dash-nowrap">${esc(c.contractNo)}<div class="cell-sub">${fmtDate(c.start)} – ${fmtDate(c.end)}</div></td>
+      <td class="t-bold dash-nowrap">${esc(c.contractNo)}${p.outstanding ? ' <span class="pill pill-sm pill-orange">Paused</span>' : ''}<div class="cell-sub">${fmtDate(c.start)} – ${fmtDate(c.end)}</div></td>
       <td><span class="chips org-inv-svcs">${c.services.map(x => `<span class="chip">${esc(x)}</span>`).join('')}</span></td>
       <td>${term}</td>
       <td class="num">${fmtMoney(c.value, 2)}${c.mediaTotal ? `<div class="cell-sub">Fees ${fmtMoney(c.feeTotal)} · media ${fmtMoney(c.mediaTotal)}</div>` : ''}</td>
@@ -780,6 +788,7 @@ ${ctx === 'client' ? `
 - Empty state when the workspace has no CRM record (created manually): "No CRM record linked".
 - Open questions: what happens when a service ends or the account churns; is the ad budget taken from the CRM or set per workspace; should client users see budgets at all?
 
+- **Paused for non-payment (23/10/2026)**: a live service whose contract has an unpaid invoice (pending or failed in Billing History) shows **Paused** (orange) with "$X unpaid" underneath, and the contract shows a Paused tag in Contracts & Payments. It returns to Live as soon as the invoice is paid (e.g. Retry payment). Display only in the prototype: whether pausing also stops delivery, and whether it should wait for the credit term (CRM default 14 days) before pausing, is for Finance to confirm.
 - **Contracts & Payments (23/10/2026)**: below the services, one row per contract: Contract (no. and dates), Services, **Billing schedule**, **Contract value**, **Paid to date** (amount, % of contract value, a bar showing paid in green and invoiced-but-unpaid in amber, and the unpaid amount) and **Next payment** (amount, date, instalment n of N; "Fully invoiced" when nothing is left to bill). A line above totals paid vs value across contracts.
   - **Billing schedules follow the Agency CRM revamp's payment terms**: 100% (one-time), Pre-Paid, 50-50%, 60-20-20%, 50-30-20% (upfront, then at one third and two thirds of the term), Monthly, Quarterly, Quarterly Pre-Paid, Bi-Annual, or a **Customised** schedule (non-standard terms, approved in the CRM). Instalment timing uses the CRM's rules.
   - **Ad contracts**: the agency fee bills by the contract's payment term; the media budget is billed monthly via OOm, or paid by the client's card and not billed by OOm (CRM "Pay via OOm" / "Pay via client card"), so it's excluded from the contract value.

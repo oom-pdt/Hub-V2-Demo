@@ -305,12 +305,9 @@ svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
 
 /* ---------- Collapsible column groups (colGroupHeaderRow in core.js) ---------- */
 /* Tones: neutral (account / details), ads + ads2 (alternating ad groups), seo, crm. */
-.colgrp-neutral { --colgrp-bg: #F2F2F2; --colgrp-fg: #656565; --colgrp-line: #C2C2C2; }
-.colgrp-ads     { --colgrp-bg: #E3EFFE; --colgrp-fg: #0366D8; --colgrp-line: #66ACFD; }
-.colgrp-ads2    { --colgrp-bg: #F1F7FF; --colgrp-fg: #2E72C6; --colgrp-line: #88BCFA; }
-.colgrp-seo     { --colgrp-bg: #E6F6F6; --colgrp-fg: #1A6A6D; --colgrp-line: #2CB1B6; }
-.colgrp-crm     { --colgrp-bg: #F0EEFC; --colgrp-fg: #3D35DD; --colgrp-line: #8B86EB; }
-.table .colgrp-start { border-left: 2px solid var(--colgrp-line); }
+/* One colour for every group band (tone classes are kept on cells but no longer change the colour). */
+.table { --colgrp-bg: var(--tint); --colgrp-fg: var(--link); --colgrp-line: var(--border-light); }
+.table .colgrp-start { border-left: 1px solid var(--colgrp-line); }
 .table thead tr.colgrp-row > th { padding: 0; height: 30px; border-bottom: 1px solid var(--surface); }
 .table thead tr.colgrp-row > th.colgrp-band { background: var(--colgrp-bg); }
 .table thead tr.colgrp-row > th.colgrp-blank { background: var(--surface); }

@@ -493,7 +493,7 @@ function applyDateFilter(scope, onApply) {
 // ---------- Column picker (show / hide table columns) ----------
 // registerColumnPicker('campaigns', {
 //   columns: () => [{ key, group, label }],   // toggleable columns (fixed columns are simply not listed)
-//   groups: [['delivery', 'Delivery', { summary: 'spend', tone: 'ads' }], …],  // order, labels; empty groups are skipped
+//   groups: [['delivery', 'Delivery', { summary: 'spend' }], …],  // order, labels; empty groups are skipped (tone is optional; bands share one colour)
 //   collapsible: true,                          // optional: column groups get a band row and can collapse to their summary column
 //   note: 'Name and Action are always shown',
 //   onChange: 'dashRefreshCampaignTable',      // global fn re-rendering the table

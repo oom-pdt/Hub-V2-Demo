@@ -149,7 +149,7 @@
 .integ-crm-logo svg.lucide { width: 18px; height: 18px; }
 
 /* ---------- Connection set-up screen (breadcrumbed steps) ---------- */
-.integ-setup { display: flex; flex-direction: column; gap: 20px; max-width: 920px; }
+.integ-setup { display: flex; flex-direction: column; gap: 24px; max-width: 960px; }
 .integ-crumbs { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); flex-wrap: wrap; }
 .integ-crumbs svg.lucide { width: 14px; height: 14px; }
 .integ-crumbs .t-link { font-size: 13px; }
@@ -168,14 +168,19 @@
 .integ-stepper button:not(:disabled):hover { border-color: var(--primary); }
 .integ-stepper-sep { color: var(--text-muted); display: inline-grid; }
 .integ-stepper-sep svg.lucide { width: 16px; height: 16px; }
-.integ-setup-body { padding: 24px 28px 28px; }
-.integ-setup-body .integ-cfg-head { margin: 4px 0 6px; }
-.integ-setup-step { margin-bottom: 6px; }
-.integ-setup-body .integ-help { margin-bottom: 16px; }
-.integ-setup-body ol.integ-steps { padding-left: 0; }
-.integ-setup-foot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.integ-review { border: 1px solid var(--border-light); border-radius: var(--r-md); }
-.integ-review-row { display: flex; justify-content: space-between; gap: 16px; padding: 12px 14px; font-size: 13px; }
+.integ-setup-body { padding: 28px 32px 32px; }
+.integ-setup-step { margin-bottom: 8px; }
+.integ-setup-body .integ-cfg-head { margin: 0 0 8px; }
+.integ-setup-body .integ-help { font-size: 13px; line-height: 19px; margin: 0 0 24px; }
+.integ-setup-body .integ-alert { margin: 0 0 20px; padding: 12px 14px; line-height: 18px; }
+.integ-setup-body .integ-guide { margin-bottom: 24px; padding: 16px 18px; }
+.integ-setup-body .integ-managed { margin-bottom: 20px; padding: 14px 16px; }
+.integ-setup-body .field { gap: 10px; }
+.integ-setup-body .integ-mt { margin-top: 14px; }
+.integ-setup-body ol.integ-steps { padding-left: 0; gap: 10px; }
+.integ-setup-foot { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding-top: 4px; }
+.integ-review { border: 1px solid var(--border-light); border-radius: var(--r-md); margin-bottom: 28px; }
+.integ-review-row { display: flex; justify-content: space-between; gap: 16px; padding: 16px 18px; font-size: 13px; }
 .integ-review-row + .integ-review-row { border-top: 1px solid var(--border-light); }
 @media (max-width: 720px) { .integ-stepper-sep { display: none; } .integ-setup-body { padding: 20px; } }
 /* Field mapping: Galaxis field ← vendor field, with a sample value */

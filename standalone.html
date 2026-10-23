@@ -5928,6 +5928,42 @@ function orgStatus(orgId) {
 }
 
 // ---------- Billing data (placeholders) ----------
+// Billing is per contract: a contract covers one or more services, a client can have several contracts running at
+// once, and each service has at most one active contract at a time (no overlapping contracts for a service).
+// Contracts come from the agency CRM services (grouped by contract number).
+function orgContracts(orgId) {
+  const acc = crmAccounts[orgId];
+  if (!acc) return [];
+  const by = {};
+  acc.services.forEach(x => {
+    const k = x.contractNo || `${x.type}-${x.start}`;
+    (by[k] = by[k] || { contractNo: x.contractNo || '—', start: x.start, end: x.end, services: [], monthly: 0 });
+    by[k].services.push(x.type);
+    by[k].monthly += x.monthlyBudget || 0;
+  });
+  return Object.values(by);
+}
+// One invoice per contract per month, from the contract start up to today. [PLACEHOLDER] amounts: the contract's
+// monthly value in the CRM (which for ad services is the media budget; whether media spend is invoiced is TBC).
+function orgContractInvoices(contracts, seed) {
+  const list = [];
+  contracts.forEach((c, ci) => {
+    const start = new Date(c.start + 'T00:00:00');
+    const months = Math.max(1, Math.round((new Date(c.end + 'T00:00:00') - start) / (86400000 * 30.44)));
+    for (let n = 0; n < months; n++) {
+      const d = new Date(start); d.setMonth(d.getMonth() + n);
+      if (toDateInput(d) > ORG_DEMO_TODAY) break;
+      list.push({ id: `INV-${c.contractNo}-${String(n + 1).padStart(2, '0')}`, date: toDateInput(d), amount: c.monthly, contractNo: c.contractNo, services: c.services,
+        desc: `${c.services.join(' + ')} · instalment ${n + 1} of ${months}`, n });
+    }
+  });
+  // Demo variety: the newest invoice of some contracts is pending; one older invoice failed for some clients.
+  contracts.forEach((c, ci) => {
+    const own = list.filter(i => i.contractNo === c.contractNo).sort((a, b) => b.date.localeCompare(a.date));
+    own.forEach((i, k) => { i.status = k === 0 && (seed + ci) % 2 ? 'pending' : (k === 2 && ci === 0 && seed % 3 === 0) ? 'failed' : 'paid'; });
+  });
+  return list.map(({ n, ...i }) => i);
+}
 const orgBillingStore = {};
 function orgBilling(orgId = currentOrgId()) {
   if (orgBillingStore[orgId]) return orgBillingStore[orgId];
@@ -5939,18 +5975,22 @@ function orgBilling(orgId = currentOrgId()) {
   const created = new Date((ent.createdAt || '2026-01-15') + 'T00:00:00');
   const next = new Date(created); next.setFullYear(2026);
   if (toDateInput(next) <= ORG_DEMO_TODAY) next.setFullYear(2027);
-  const invoices = [];
-  const base = 600 + Math.round(r() * 18) * 100;
-  for (let i = 0; i < 14; i++) {
-    const d = new Date(2026, 9 - i, Math.min(28, created.getDate() || 1));
-    const status = i === 0 && seed % 2 ? 'pending' : (i === 3 && seed % 3 === 0) ? 'failed' : 'paid';
-    invoices.push({
-      id: `INV-${d.getFullYear()}-${String(140 - i).padStart(3, '0')}`,
-      date: toDateInput(d),
-      amount: base + (i % 4 === 0 ? 288 : 0) + 0.0,
-      status,
-      desc: i % 4 === 0 ? 'Business plan instalment + additional seats' : 'Business plan instalment'
-    });
+  const contracts = orgId === 'agency' ? [] : orgContracts(orgId);
+  const invoices = contracts.length ? orgContractInvoices(contracts, seed) : [];
+  if (!contracts.length) {
+    // Agency workspace, or a client without an agency CRM record: the Galaxis plan instalments.
+    const base = 600 + Math.round(r() * 18) * 100;
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(2026, 9 - i, Math.min(28, created.getDate() || 1));
+      const status = i === 0 && seed % 2 ? 'pending' : (i === 3 && seed % 3 === 0) ? 'failed' : 'paid';
+      invoices.push({
+        id: `INV-${d.getFullYear()}-${String(140 - i).padStart(3, '0')}`,
+        date: toDateInput(d),
+        amount: base + (i % 4 === 0 ? 288 : 0) + 0.0,
+        status, contractNo: null, services: ['Galaxis Hub plan'],
+        desc: i % 4 === 0 ? 'Business plan instalment + additional seats' : 'Business plan instalment'
+      });
+    }
   }
   const pc = orgContact(orgId);
   orgBillingStore[orgId] = {
@@ -6193,7 +6233,7 @@ function orgServicesHTML() {
   const id = currentOrgId();
   const acc = crmAccounts[id];
   const crmLink = viewerIsAgency() && acc ? `<button type="button" class="org-link" onclick="showToast('Opening ${q(acc.crmId)} in the agency CRM (demo)', 'external-link')">View in CRM<i data-lucide="arrow-up-right"></i></button>` : '';
-  const head = orgCardHead('Services & Contract', 'Services, contracts and monthly budgets from the agency CRM. Each service runs on its own contract. Read-only.', crmLink);
+  const head = orgCardHead('Services & Contract', 'Services, contracts and monthly budgets from the agency CRM. A contract can cover one or more services; each service has one active contract at a time. Read-only.', crmLink);
   if (!acc) {
     return `<section class="card org-section">${head}${emptyState('file-x', 'No CRM record linked', 'This workspace was created manually. Services and budgets appear here once the account is linked in the agency CRM.')}</section>`;
   }
@@ -6307,16 +6347,18 @@ function orgPayDot(s) { const [l, d, c] = ORG_PAY_STATUS[s]; return `<span class
 function orgInvoiceTableHTML() {
   const b = orgBilling();
   const order = { paid: 0, pending: 1, failed: 2 };
-  const list = applySort(b.invoices, 'org-invoices', { id: i => i.id, date: i => i.date, amount: i => i.amount, status: i => order[i.status] }, { col: 'date', dir: 'desc' });
+  const list = applySort(b.invoices, 'org-invoices', { id: i => i.id, contract: i => i.contractNo || '', service: i => i.services.join(', '), date: i => i.date, amount: i => i.amount, status: i => order[i.status] }, { col: 'date', dir: 'desc' });
+  // Service: every service on the invoice's contract (never "+N").
+  const svc = i => `<span class="chips org-inv-svcs">${i.services.map(x => `<span class="chip">${esc(x)}</span>`).join('')}</span>`;
   const rows = paginate(list, 'org-invoices', 10).map(i => `<tr>
-    <td>${esc(i.id)}</td><td>${esc(fmtDate(i.date))}</td><td>${fmtMoney(i.amount, 2)}</td><td>${orgPayDot(i.status)}</td>
+    <td>${esc(i.id)}</td><td>${esc(i.contractNo || '—')}</td><td>${svc(i)}</td><td>${esc(fmtDate(i.date))}</td><td>${fmtMoney(i.amount, 2)}</td><td>${orgPayDot(i.status)}</td>
     <td><div class="row" style="gap:16px">
       <button type="button" class="org-link org-dl" onclick="orgDownloadInvoice('${q(i.id)}')"><i data-lucide="download"></i>Download</button>
       ${i.status === 'failed' ? `<button type="button" class="org-link" onclick="orgRetryInvoice('${q(i.id)}')"><i data-lucide="rotate-cw"></i>Retry payment</button>` : ''}
     </div></td></tr>`).join('');
   return `<div class="table-wrap"><table class="table">
-    <thead><tr><th>${sortHeader('org-invoices', 'id', 'Invoice', 'orgRefreshInvoices')}</th><th>${sortHeader('org-invoices', 'date', 'Date', 'orgRefreshInvoices')}</th><th>${sortHeader('org-invoices', 'amount', 'Amount', 'orgRefreshInvoices')}</th><th>${sortHeader('org-invoices', 'status', 'Status', 'orgRefreshInvoices')}</th><th>Action</th></tr></thead>
-    <tbody>${rows || `<tr><td colspan="5" class="table-empty">No invoices yet.</td></tr>`}</tbody></table></div>
+    <thead><tr><th>${sortHeader('org-invoices', 'id', 'Invoice', 'orgRefreshInvoices')}</th><th>${sortHeader('org-invoices', 'contract', 'Contract', 'orgRefreshInvoices')}</th><th>${sortHeader('org-invoices', 'service', 'Service', 'orgRefreshInvoices')}</th><th>${sortHeader('org-invoices', 'date', 'Date', 'orgRefreshInvoices')}</th><th>${sortHeader('org-invoices', 'amount', 'Amount', 'orgRefreshInvoices')}</th><th>${sortHeader('org-invoices', 'status', 'Status', 'orgRefreshInvoices')}</th><th>Action</th></tr></thead>
+    <tbody>${rows || `<tr><td colspan="7" class="table-empty">No invoices yet.</td></tr>`}</tbody></table></div>
     ${paginationBar('org-invoices', list.length, 'orgRefreshInvoices')}`;
 }
 function orgRefreshInvoices() { renderRegion('org-invoice-region', orgInvoiceTableHTML()); }
@@ -6330,6 +6372,8 @@ function orgDownloadInvoice(invId) {
     '==========================================',
     '',
     `Invoice:        ${inv.id}`,
+    `Contract:       ${inv.contractNo || '—'}`,
+    `Service:        ${inv.services.join(', ')}`,
     `Date:           ${fmtDate(inv.date)}`,
     `Billed to:      ${b.contact.legal}`,
     `Attention:      ${b.contact.person}`,
@@ -6615,7 +6659,9 @@ ${common}
 - ✎ edit mode with validation (required fields, email format, 6-digit postal code).
 
 ## Billing History
-- Columns Invoice, Date, Amount, Status (Paid green / Pending orange / Failed red dot), Action.
+- Columns Invoice, **Contract**, **Service**, Date, Amount, Status (Paid green / Pending orange / Failed red dot), Action.
+- **Billing is per contract (23/10/2026).** A contract covers one or more services (e.g. Google Ads + Facebook Ads on one contract); a client can have several contracts running at once; each service has at most one active contract at a time, so contracts for the same service never overlap. Each invoice belongs to one contract, and **Service** lists every service on that contract (never "+N").
+- Client workspaces: one invoice per contract per month, from the contract's agency CRM record (instalment n of N). The agency workspace, and clients without a CRM record, show the Galaxis Hub plan instalments (Service: Galaxis Hub plan, Contract: —).
 - Sortable, paginated (10 per page by default).
 - **Download** saves a plain-text placeholder invoice clearly labelled "PLACEHOLDER DOCUMENT".
 - Failed invoices also offer **Retry payment** against the default card.
@@ -6624,7 +6670,9 @@ ${common}
 - Figma's button says "Configure Plan"; the brief said "Manage Plan". Figma copy is used.
 - Real plan names, prices and seat limits are needed from the product owner.
 - Who can see billing in a client workspace (Super Admin only)?
-- Real invoices should be PDFs from the billing provider.`;
+- Real invoices should be PDFs from the billing provider.
+- **Invoice amounts per contract are placeholders** (the CRM's monthly value, which for ad services is the media budget). Is media spend invoiced by OOm, or only the management fee? Are invoices monthly for every contract type?
+- In a client workspace, does the Subscription & Plan card (Galaxis seats) still apply when billing is per service contract?`;
   const brand = `## Purpose
 The organisation's approved brand kit. Figma frame \`6240:9519\`. Each organisation (agency and every client) has its own brand data, with defaults generated from its name.
 

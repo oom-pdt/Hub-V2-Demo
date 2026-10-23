@@ -2714,9 +2714,10 @@ const DASH_ADGROUPS = {
 };
 const DASH_FORMATS = { google: ['Text/Search', 'Image', 'Video'], meta: ['Image', 'Video', 'Carousel'] };
 const DASH_ALL_FORMATS = ['Image', 'Video', 'Carousel', 'Text/Search'];
-const DASH_STATUSES = ['Active', 'Paused', 'Attention Required'];
-const DASH_STATUS_RANK = { 'Active': 0, 'Attention Required': 1, 'Paused': 2 };
-const DASH_STATUS_KEY = { 'Active': 'active', 'Paused': 'paused', 'Attention Required': 'attention' };
+// Google and Meta report campaigns, ad groups / ad sets and ads as Active or Paused only.
+const DASH_STATUSES = ['Active', 'Paused'];
+const DASH_STATUS_RANK = { 'Active': 0, 'Paused': 1 };
+const DASH_STATUS_KEY = { 'Active': 'active', 'Paused': 'paused' };
 const DASH_LEVELS = ['platform', 'campaign', 'adgroup', 'ad'];
 const DASH_LEVEL_LABEL = { platform: 'Platform', campaign: 'Campaign', adgroup: 'Ad Group', ad: 'Ad' };
 const DASH_LEVEL_TAB = { platform: 'Platform', campaign: 'Campaigns', adgroup: 'Ad Groups', ad: 'Ads' };
@@ -2743,12 +2744,15 @@ function dashShuffle(arr, rnd) {
   for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
   return a;
 }
-function dashPickStatus(rnd, attentionBias) {
+// 'Limited' = active but delivery-limited. The consolidated table shows it as Active; the native views show
+// Google "Limited" / Meta "Learning limited" from the entity's `limited` flag.
+function dashPickStatus(rnd, limitedBias) {
   const r = rnd();
   if (r < 0.12) return 'Paused';
-  if (r < 0.12 + (attentionBias ? 0.2 : 0.07)) return 'Attention Required';
+  if (r < 0.12 + (limitedBias ? 0.2 : 0.07)) return 'Limited';
   return 'Active';
 }
+const dashStatusFields = raw => ({ status: raw === 'Limited' ? 'Active' : raw, limited: raw === 'Limited' });
 // Linked platforms as the dashboard sees them. Dev toggles can simulate "no ad accounts linked" and
 // "single platform (Google only)" without changing ad-account data.
 function dashPlatforms(wsId) {
@@ -2774,12 +2778,12 @@ function dashTree(wsId) {
     t.platforms.push({ id: pid, level: 'platform', platform: p, name: PLATFORM_NAME[p], status: 'Active', parents: [], path: { platform: pid } });
     dashShuffle(DASH_CAMPAIGNS[p], rnd).slice(0, 2 + Math.floor(rnd() * 2)).forEach((cName, ci) => {
       const cid = `${pid}~c${ci + 1}`;
-      const cStatus = ci === 0 ? (bias ? 'Attention Required' : 'Active') : dashPickStatus(rnd, bias);
-      t.campaigns.push({ id: cid, level: 'campaign', platform: p, name: cName, status: cStatus, parents: [PLATFORM_NAME[p]], path: { platform: pid, campaign: cid } });
+      const cStatus = ci === 0 ? (bias ? 'Limited' : 'Active') : dashPickStatus(rnd, bias);
+      t.campaigns.push({ id: cid, level: 'campaign', platform: p, name: cName, ...dashStatusFields(cStatus), parents: [PLATFORM_NAME[p]], path: { platform: pid, campaign: cid } });
       dashShuffle(DASH_ADGROUPS[p], rnd).slice(0, 1 + Math.floor(rnd() * 3)).forEach((gName, gi) => {
         const gid = `${cid}~g${gi + 1}`;
         const gStatus = cStatus === 'Paused' ? 'Paused' : (gi === 0 ? 'Active' : dashPickStatus(rnd, bias));
-        t.adGroups.push({ id: gid, level: 'adgroup', platform: p, name: gName, status: gStatus, parents: [cName], campaignName: cName, path: { platform: pid, campaign: cid, adgroup: gid } });
+        t.adGroups.push({ id: gid, level: 'adgroup', platform: p, name: gName, ...dashStatusFields(gStatus), parents: [cName], campaignName: cName, path: { platform: pid, campaign: cid, adgroup: gid } });
         const n = 2 + Math.floor(rnd() * 3);
         for (let k = 0; k < n; k++) {
           adNo++;
@@ -2799,7 +2803,7 @@ function dashTree(wsId) {
           const engRate = (p === 'google' ? 0.4 + xr() * 1.2 : 1 + xr() * 3.5) / 100;
           const purchases = conversions * (0.1 + xr() * 0.2);
           t.ads.push({
-            id, level: 'ad', platform: p, name: `Ad Creative Q${Math.ceil(adNo / 2)} - Variant ${adNo}`, format: fmt, status,
+            id, level: 'ad', platform: p, name: `Ad Creative Q${Math.ceil(adNo / 2)} - Variant ${adNo}`, format: fmt, ...dashStatusFields(status),
             parents: [cName, gName], campaignName: cName, adGroupName: gName,
             path: { platform: pid, campaign: cid, adgroup: gid, ad: id },
             base: {
@@ -4663,7 +4667,8 @@ const DASH_G_TYPES = ['Search', 'Display', 'Video', 'Performance Max'];
 const DASH_G_BID = { Search: ['Maximise conversions', 'Target CPA', 'Manual CPC', 'Maximise clicks'], Display: ['Target CPA', 'Maximise conversions'], Video: ['Target CPM', 'Maximum CPV'], 'Performance Max': ['Maximise conversion value', 'Target ROAS'] };
 const DASH_G_AG_TYPE = { Search: 'Search standard', Display: 'Display standard', Video: 'Video responsive', 'Performance Max': 'Asset group' };
 const DASH_G_AD_TYPE = { 'Text/Search': 'Responsive search ad', Image: 'Responsive display ad', Video: 'Video responsive ad' };
-const DASH_G_STATUS = { 'Active': 'Enabled', 'Paused': 'Paused', 'Attention Required': 'Limited' };
+const DASH_G_STATUS = { 'Active': 'Enabled', 'Paused': 'Paused' };
+const dashGStatus = e => e.limited ? 'Limited' : DASH_G_STATUS[e.status];
 const DASH_G_STATUSES = ['Enabled', 'Limited', 'Paused'];
 const DASH_G_MATCH = ['Exact', 'Phrase', 'Broad'];
 // Keyword templates: {b} = brand (first word of the workspace name), {i} = industry. Placeholder terms only.
@@ -4780,12 +4785,12 @@ function dashPfStatic(wsId) {
     if (c.platform === 'google') {
       const type = DASH_G_CAMP_TYPE[c.name] || 'Search';
       const bids = DASH_G_BID[type];
-      attrs[c.id] = { pfStatus: DASH_G_STATUS[c.status], campType: type, bid: bids[Math.floor(r() * bids.length)], budget: { amount: daily, kind: 'daily', daily } };
+      attrs[c.id] = { pfStatus: dashGStatus(c), campType: type, bid: bids[Math.floor(r() * bids.length)], budget: { amount: daily, kind: 'daily', daily } };
     } else {
       const objective = DASH_M_OBJECTIVE[c.name] || 'Traffic';
       const cbo = r() < 0.55, lifetime = r() < 0.35;
       attrs[c.id] = {
-        pfStatus: c.status === 'Paused' ? 'Paused' : c.status === 'Attention Required' ? 'Learning limited' : 'Active', campType: objective, cbo, attribution: DASH_M_ATTRIBUTION,
+        pfStatus: c.status === 'Paused' ? 'Paused' : c.limited ? 'Learning limited' : 'Active', campType: objective, cbo, attribution: DASH_M_ATTRIBUTION,
         budget: cbo ? (lifetime ? { amount: daily * 30, kind: 'lifetime', daily } : { amount: daily, kind: 'daily', daily }) : { note: 'Using ad set budget' }
       };
     }
@@ -4796,7 +4801,7 @@ function dashPfStatic(wsId) {
     const roll = r(), spread = r();
     const b = base(a => a.path.adgroup === g.id);
     if (g.platform === 'google') {
-      attrs[g.id] = { pfStatus: DASH_G_STATUS[g.status], campType: c.campType, agType: DASH_G_AG_TYPE[c.campType] };
+      attrs[g.id] = { pfStatus: dashGStatus(g), campType: c.campType, agType: DASH_G_AG_TYPE[c.campType] };
       if (c.campType !== 'Search') return;
       const kr = dashRng(`${g.id}:keywords`);
       const brand = ws.name.split(/\s+/)[0].toLowerCase(), ind = (ws.industry || 'services').toLowerCase();
@@ -4815,7 +4820,7 @@ function dashPfStatic(wsId) {
         });
       });
     } else {
-      const delivery = g.status === 'Paused' ? 'Paused' : g.status === 'Attention Required' ? 'Learning limited' : roll < 0.25 ? 'Learning' : 'Active';
+      const delivery = g.status === 'Paused' ? 'Paused' : g.limited ? 'Learning limited' : roll < 0.25 ? 'Learning' : 'Active';
       const daily = round5(b.spend / 30 * (1.1 + spread * 0.4));
       attrs[g.id] = { pfStatus: delivery, campType: c.campType, attribution: DASH_M_ATTRIBUTION, optGoal: DASH_M_GOAL[c.campType],
         budget: c.cbo ? { note: 'Using campaign budget' } : { amount: daily, kind: 'daily', daily } };
@@ -4823,9 +4828,9 @@ function dashPfStatic(wsId) {
   });
   t.ads.forEach(a => {
     const g = attrs[a.path.adgroup];
-    if (a.platform === 'google') attrs[a.id] = { pfStatus: DASH_G_STATUS[a.status], campType: g.campType, adType: DASH_G_AD_TYPE[a.format], finalUrl: `https://${site}/${dashSlug(a.adGroupName)}` };
+    if (a.platform === 'google') attrs[a.id] = { pfStatus: dashGStatus(a), campType: g.campType, adType: DASH_G_AD_TYPE[a.format], finalUrl: `https://${site}/${dashSlug(a.adGroupName)}` };
     else attrs[a.id] = {
-      pfStatus: a.status === 'Paused' ? 'Paused' : a.status === 'Attention Required' ? 'Learning limited' : /^Learning/.test(g.pfStatus) ? g.pfStatus : 'Active',
+      pfStatus: a.status === 'Paused' ? 'Paused' : a.limited ? 'Learning limited' : /^Learning/.test(g.pfStatus) ? g.pfStatus : 'Active',
       campType: g.campType, adFormat: DASH_M_FORMAT[a.format], attribution: DASH_M_ATTRIBUTION
     };
   });
@@ -5600,7 +5605,7 @@ Client-facing workspace dashboard giving a simplified, unified view of Meta and 
 - **Hierarchical Campaign Breakdown Table ("Campaigns and Ads")**: Users drill down through Platform → Campaign → Ad Group → Ad to compare key statistics.
   - **Level tabs**: Platform / Campaigns / Ad Groups / Ads.
   - **Drill-down**: clicking a row, or "View …" in the ⋮ menu, opens the next level with a "Filtered for X ✕" badge. Clearing the badge returns to Platform.
-  - **Columns**: Name (parent shown above), Ad Format (+N overflow), Status, then the platform metrics from the *Google & Meta Ads Metrics* sheet (Metrics (Dev Notes), green rows), in sheet order: Spend (Cost), Impressions, Reach, CPM, Frequency, Clicks, CTR, CPC, Conversions, Conversion Rate, Cost Per Conversion (kept from V1), Cost Per Lead, Cost Per Purchase, ROAS, Conversion Value, Engagement Rate, Engagement, Cost Per Engagement. In CRM mode, CRM Leads, CRM CPL, CRM Revenue and CRM ROAS follow ("CRM" prefix to separate CRM-attributed ROAS from platform-reported ROAS). Header tooltips show the sheet's definitions. Every column is sortable, including Status (Active → Attention Required → Paused) and Ad Format (first format).
+  - **Columns**: Name (parent shown above), Ad Format (+N overflow), Status, then the platform metrics from the *Google & Meta Ads Metrics* sheet (Metrics (Dev Notes), green rows), in sheet order: Spend (Cost), Impressions, Reach, CPM, Frequency, Clicks, CTR, CPC, Conversions, Conversion Rate, Cost Per Conversion (kept from V1), Cost Per Lead, Cost Per Purchase, ROAS, Conversion Value, Engagement Rate, Engagement, Cost Per Engagement. In CRM mode, CRM Leads, CRM CPL, CRM Revenue and CRM ROAS follow ("CRM" prefix to separate CRM-attributed ROAS from platform-reported ROAS). Header tooltips show the sheet's definitions. Every column is sortable, including Status (Active → Paused; Google and Meta report only these two) and Ad Format (first format).
   - **Column picker** (columns icon next to the filter): show or hide columns, grouped as Overview (Ad Format, Status, Spend), Impressions (Impressions, Reach, CPM, Frequency), Clicks, Conversions, Engagement and CRM (CRM mode only), with Show all / Hide all per group and Show all columns. The badge counts hidden columns. Name and Action are always shown.
   - **Default columns (23/10/2026 client table principle: simple show / hide)**: Name, Ad Format, Status, Spend, Impressions, CTR, Conversions, Engagement Rate, CRM ROAS (CRM mode), Action, i.e. Overview in full plus each other group's primary field. The other columns start hidden; switch them on in the column picker. **Reset to default** restores this. The storage key was bumped (v4) so every viewer gets the new default once.
   - **Column picker groups**: Overview, Impressions, Clicks, Conversions, Engagement, CRM appear only as headings in the column picker (no band row or tints in the table). Each viewer's choice is remembered in the browser (prototype: localStorage; product: save per user).

@@ -4250,23 +4250,26 @@ const DASH_CT_CRM_COLS = [
 ];
 
 // ---------- Column picker (show / hide columns; shared helper in core.js) ----------
-// Name and Action are always shown; every other column (Status included) can be hidden or collapsed with its group.
+// Name and Action are always shown; every other column (Status included) can be shown or hidden.
 // Overview group: Ad Format and Status, shown before the metrics (Spend joins them from DASH_CT_COLS).
 const DASH_CT_DETAIL_COLS = [{ key: 'format', group: 'details', label: 'Ad Format' }, { key: 'status', group: 'details', label: 'Status' }];
+// Client tables are plain show / hide (no collapsible bands; groups only organise the column picker).
+// Default: the first group in full, plus each other group's primary field; the rest start hidden.
+function dashPrimaryDefaults(cols, groups) {
+  const keep = new Set([groups[0][0]]);
+  return cols.filter(c => !keep.has(c.group) && c.key !== groups.find(g => g[0] === c.group)?.[2]?.summary).map(c => c.key);
+}
+const DASH_CT_GROUPS = [['details', 'Overview', { summary: 'spend', tone: 'neutral' }], ['delivery', 'Impressions', { summary: 'impressions', tone: 'ads' }],
+    ['clicks', 'Clicks', { summary: 'ctr', tone: 'ads2' }], ['conversions', 'Conversions', { summary: 'conversions', tone: 'ads' }],
+    ['engagement', 'Engagement', { summary: 'engRate', tone: 'ads2' }], ['crm', 'CRM', { summary: 'roas', tone: 'crm' }]];
 registerColumnPicker('campaigns', {
   columns: () => DASH_CT_DETAIL_COLS.concat(DASH_CT_COLS, activeCrm(state.ctx) ? DASH_CT_CRM_COLS : []),
-  groups: [['details', 'Overview', { summary: 'spend', tone: 'neutral' }], ['delivery', 'Impressions', { summary: 'impressions', tone: 'ads' }],
-    ['clicks', 'Clicks', { summary: 'ctr', tone: 'ads2' }], ['conversions', 'Conversions', { summary: 'conversions', tone: 'ads' }],
-    ['engagement', 'Engagement', { summary: 'engRate', tone: 'ads2' }], ['crm', 'CRM', { summary: 'roas', tone: 'crm' }]],
-  collapsible: true,
+  groups: DASH_CT_GROUPS,
   note: 'Name and Action are always shown',
   onChange: 'dashRefreshCampaignTable',
-  // Default view (22/10/2026): every column shown, every metric group collapsed to its summary column;
-  // Overview stays expanded. Keys bumped (v3 / v2) so viewers with the old hidden-columns default get the new one.
-  defaultHidden: [],
-  defaultCollapsed: ['delivery', 'clicks', 'conversions', 'engagement', 'crm'],
-  storageKey: 'galaxis-demo:campaign-columns-hidden-v3',
-  collapsedKey: 'galaxis-demo:campaign-groups-collapsed-v2'
+  // Same default view as the old collapsed bands (Overview + each group's primary field). Key bumped (v4) for the new default.
+  defaultHidden: dashPrimaryDefaults(DASH_CT_DETAIL_COLS.concat(DASH_CT_COLS, DASH_CT_CRM_COLS), DASH_CT_GROUPS),
+  storageKey: 'galaxis-demo:campaign-columns-hidden-v4'
 });
 
 function dashCampaignBody() {
@@ -4297,13 +4300,11 @@ function dashCampaignBody() {
   const page = paginate(rows, 'dash-ct', 10);
   const ref = m.total;
   const next = DASH_LEVELS[DASH_LEVELS.indexOf(level) + 1];
-  // Grouped, collapsible columns (core.js colLayout): Overview · Impressions · Clicks · Conversions · Engagement · CRM.
-  const layout = colLayout('campaigns', DASH_CT_DETAIL_COLS.concat(metricCols).filter(c => colVisible('campaigns', c.key)));
-  const cols = layout.columns;
+  // Plain show / hide columns, in picker group order (Overview · Impressions · Clicks · Conversions · Engagement · CRM).
+  const cols = colLayout('campaigns', DASH_CT_DETAIL_COLS.concat(metricCols).filter(c => colVisible('campaigns', c.key))).columns;
   const colDef = Object.fromEntries(metricCols.map(c => [c.key, c]));
   const fn = 'dashRefreshCampaignTable';
-  const head = `${colGroupHeaderRow('campaigns', layout, { lead: 1, trail: next ? 1 : 0 })}
-    <tr><th>${sortHeader('dash-ct', 'name', DASH_NAME_COL[level], fn)}</th>${cols.map(c => `<th class="${colCellClass(c)}"${colDef[c.key] ? ` title="${esc(colDef[c.key].tip)}"` : ''}>${sortHeader('dash-ct', c.key, c.label, fn)}</th>`).join('')}${next ? '<th>Action</th>' : ''}</tr>`;
+  const head = `<tr><th>${sortHeader('dash-ct', 'name', DASH_NAME_COL[level], fn)}</th>${cols.map(c => `<th${colDef[c.key] ? ` title="${esc(colDef[c.key].tip)}"` : ''}>${sortHeader('dash-ct', c.key, c.label, fn)}</th>`).join('')}${next ? '<th>Action</th>' : ''}</tr>`;
   const cell = (e, c) => {
     if (c === 'format') return dashFormatCell(e.formats);
     if (c === 'status') return statusPill(DASH_STATUS_KEY[e.status], e.status);
@@ -4315,7 +4316,7 @@ function dashCampaignBody() {
   const body = page.map(e => `
     <tr ${next ? `class="clickable" onclick="dashDrill('${q(e.id)}')"` : ''}>
       <td>${dashNameCell(e, level)}</td>
-      ${cols.map(c => `<td class="dash-nowrap ${colCellClass(c)}">${cell(e, c.key)}</td>`).join('')}
+      ${cols.map(c => `<td class="dash-nowrap">${cell(e, c.key)}</td>`).join('')}
       ${next ? `<td onclick="event.stopPropagation()">${rowMenu(`dash-ctm-${dashHash(e.id)}`, [{ label: `View ${DASH_LEVEL_TAB[next].toLowerCase()} (${e.childCount})`, icon: 'arrow-right', onClick: `dashDrill('${q(e.id)}')` }])}</td>` : ''}
     </tr>`).join('');
   const drill = u.dashDrill ? `<div class="dash-drill"><span>Filtered for ${DASH_LEVEL_LABEL[u.dashDrill.level]}: <b>${esc(u.dashDrill.name)}</b></span><button type="button" class="chip-remove" onclick="dashClearDrill()" aria-label="Clear filter"><i data-lucide="x"></i></button></div>` : '';
@@ -5026,7 +5027,7 @@ const DASH_PF_COLS = {
 };
 // CRM-attributed columns (CRM mode only), the same as the consolidated table's CRM group. Not at keyword level.
 const DASH_PF_CRM_COLS = DASH_CT_CRM_COLS.map(c => ({ ...c, t: { leads: 'int', cpl: 'money2', revenue: 'money2', roas: 'roas' }[c.key], levels: DASH_PF_NOT_KW }));
-// Bands as each platform groups its columns. summary = the primary field a collapsed group keeps.
+// Column groups as each platform names them (column picker only). summary = the group's primary field, shown by default.
 // Meta Conversions → Leads: most workspaces run lead objectives and the Hub's CRM mode is lead-based;
 // Purchase ROAS only means something with purchase tracking (it stays one click away).
 const DASH_PF_GROUPS = {
@@ -5043,17 +5044,14 @@ function dashPfState(p) { return state.ui.dashPf[p]; }
 function dashPfLevelCols(p, level) {
   return DASH_PF_COLS[p].concat(activeCrm(state.ctx) ? DASH_PF_CRM_COLS : []).filter(c => !c.levels || c.levels.includes(level));
 }
-// Default: every column shown; every metric group collapsed to its primary field; Attributes / Settings expanded.
+// Plain show / hide columns. Default: Attributes / Settings in full plus each other group's primary field.
 ['google', 'meta'].forEach(p => registerColumnPicker(`pf-${p}`, {
   columns: () => dashPfLevelCols(p, dashPfState(p).level),
   groups: DASH_PF_GROUPS[p],
-  collapsible: true,
   note: 'Name and Action are always shown',
   onChange: DASH_PF_FN[p],
-  defaultHidden: [],
-  defaultCollapsed: DASH_PF_GROUPS[p].map(g => g[0]).filter(k => k !== 'attr'),
-  storageKey: `galaxis-demo:pf-${p}-columns-hidden-v1`,
-  collapsedKey: `galaxis-demo:pf-${p}-groups-collapsed-v1`
+  defaultHidden: dashPrimaryDefaults(DASH_PF_COLS[p].concat(DASH_PF_CRM_COLS), DASH_PF_GROUPS[p]),
+  storageKey: `galaxis-demo:pf-${p}-columns-hidden-v2`
 }));
 // Filters: Status + Campaign type (Google), Delivery + Objective (Meta). Lower levels filter by their campaign's type.
 ['google', 'meta'].forEach(p => {
@@ -5113,7 +5111,7 @@ function dashPfReportCard(p) {
   const s = dashPfState(p);
   const tabs = DASH_PF_LEVELS[p].map(l => `<button type="button" role="tab" class="${l === s.level ? 'active' : ''}" onclick="dashPfSetLevel('${p}','${l}')">${DASH_PF_LEVEL_TAB[p][l]}</button>`).join('');
   return `<div class="card-header">
-      <div><h2 class="h-section">${DASH_VIEW_LABEL[p]} report</h2><div class="card-sub">Every ${DASH_VIEW_LABEL[p]} column, under its native name. Metric groups start collapsed to their key column: expand a group, or choose columns with the column picker.</div></div>
+      <div><h2 class="h-section">${DASH_VIEW_LABEL[p]} report</h2><div class="card-sub">Every ${DASH_VIEW_LABEL[p]} column, under its native name. Key columns are shown by default: choose more with the column picker.</div></div>
       <div class="seg" role="tablist" aria-label="${DASH_VIEW_LABEL[p]} level">${tabs}</div>
     </div>
     <div class="dash-ct-toolbar">
@@ -5198,12 +5196,10 @@ function dashPfBody(p) {
   const d = dashPfData(state.ctx, p);
   const rows = dashPfRows(p);
   const page = paginate(rows, tid, 10);
-  const layout = colLayout(pid, dashPfLevelCols(p, level).filter(c => colVisible(pid, c.key)));
-  const cols = layout.columns;
+  const cols = colLayout(pid, dashPfLevelCols(p, level).filter(c => colVisible(pid, c.key))).columns;
   const next = dashPfNext(p, level);
   const levelName = DASH_PF_LEVEL_TAB[p][level].toLowerCase();
-  const head = `${colGroupHeaderRow(pid, layout, { lead: 1, trail: next ? 1 : 0 })}
-    <tr><th>${sortHeader(tid, 'name', DASH_PF_NAME_COL[p][level], fn)}</th>${cols.map(c => `<th class="${colCellClass(c)}" title="${esc(c.tip)}">${sortHeader(tid, c.key, c.label, fn)}</th>`).join('')}${next ? '<th>Action</th>' : ''}</tr>`;
+  const head = `<tr><th>${sortHeader(tid, 'name', DASH_PF_NAME_COL[p][level], fn)}</th>${cols.map(c => `<th title="${esc(c.tip)}">${sortHeader(tid, c.key, c.label, fn)}</th>`).join('')}${next ? '<th>Action</th>' : ''}</tr>`;
   const menu = e => {
     const items = [{ label: `View ${DASH_PF_LEVEL_TAB[p][next].toLowerCase()} (${e.childCount})`, icon: 'arrow-right', onClick: `dashPfDrill('${p}','${q(e.id)}')` }];
     if (p === 'google' && e.kwCount) items.push({ label: `View keywords (${e.kwCount})`, icon: 'key-round', onClick: `dashPfDrill('${p}','${q(e.id)}','keyword')` });
@@ -5212,12 +5208,12 @@ function dashPfBody(p) {
   const body = page.map(e => `
     <tr ${next ? `class="clickable" onclick="dashPfDrill('${p}','${q(e.id)}')"` : ''}>
       <td>${dashPfNameCell(p, e, level)}</td>
-      ${cols.map(c => `<td class="dash-nowrap ${colCellClass(c)}">${dashPfCell(e, c, d.total)}</td>`).join('')}
+      ${cols.map(c => `<td class="dash-nowrap">${dashPfCell(e, c, d.total)}</td>`).join('')}
       ${next ? `<td onclick="event.stopPropagation()">${menu(e)}</td>` : ''}
     </tr>`).join('');
   const tot = dashPfSum(rows);
   const foot = rows.length ? `<tfoot><tr class="dash-pf-total"><td><b>Total: ${rows.length} ${rows.length === 1 ? DASH_PF_LEVEL_ONE[p][level].toLowerCase() : levelName}</b>${rows.length < d[level].length ? '<div class="cell-sub">Filtered</div>' : ''}</td>
-      ${cols.map(c => `<td class="dash-nowrap ${colCellClass(c)}">${c.group === 'attr' ? '' : dashPfCell(tot, c, null)}</td>`).join('')}${next ? '<td></td>' : ''}</tr></tfoot>` : '';
+      ${cols.map(c => `<td class="dash-nowrap">${c.group === 'attr' ? '' : dashPfCell(tot, c, null)}</td>`).join('')}${next ? '<td></td>' : ''}</tr></tfoot>` : '';
   const empty = level === 'keyword' && !d.keyword.length ? 'No keywords. Keywords exist only in Search campaigns.'
     : level === 'keyword' && s.drill ? 'No keywords here. Keywords exist only in Search campaigns.' : 'No data matches criteria.';
   const drill = s.drill ? `<div class="dash-drill"><span>Filtered for ${DASH_PF_LEVEL_ONE[p][s.drill.level]}: <b>${esc(s.drill.name)}</b></span><button type="button" class="chip-remove" onclick="dashPfClearDrill('${p}')" aria-label="Clear filter"><i data-lucide="x"></i></button></div>` : '';
@@ -5450,12 +5446,12 @@ A dedicated **${name}** view inside the Ad Performance tab that replicates the n
 - **View switcher**: All Platforms | Google Ads | Meta Ads under the page tabs (rules in \`client-dashboard-ads\`). Route \`view: '${name === 'Google Ads' ? 'google' : 'meta'}'\`.
 - **Totals agree with All Platforms**: Cost / Impressions / Clicks / Conversions in this view (KPIs and the table's total row) equal the ${name === 'Google Ads' ? 'Google' : 'Meta'} platform row of the consolidated Campaigns and Ads table for the same dates. Both read the same platform data.
 - **Leads & Revenue** (CRM mode): the same section as All Platforms, scoped to this platform. Ad-only mode shows the locked cards and the Connect CRM banner.
-- **Report table**: level tabs, search, filter, column picker, **Download CSV**; grouped, collapsible column bands like the native column sets; every column sortable (default Cost / Amount spent, high to low; rows with no data sort last); 10 rows per page (10 / 20 / 50); name column and Action pinned; two-line headers; header tooltips with the sheet's definitions. Name cells show the parent above (campaign: ad account; lower levels: campaign › ad group). A grey **Total** row sums every filtered row (all pages), "Filtered" when a search, filter or drill-down applies; ratios are recalculated from the sums.
+- **Report table**: level tabs, search, filter, column picker, **Download CSV**; plain show / hide columns (the column picker lists them under the native column-set names); every column sortable (default Cost / Amount spent, high to low; rows with no data sort last); 10 rows per page (10 / 20 / 50); name column and Action pinned; two-line headers; header tooltips with the sheet's definitions. Name cells show the parent above (campaign: ad account; lower levels: campaign › ad group). A grey **Total** row sums every filtered row (all pages), "Filtered" when a search, filter or drill-down applies; ratios are recalculated from the sums.
 - **Drill-down**: clicking a row, or "View …" in the ⋮ menu, opens the next level with a "Filtered for X ✕" badge; ✕ returns to Campaigns. Level tabs keep the drill-down filter.
-- **Table principle (22/10/2026)**: **all columns shown by default, in collapsed state**. Every metric group starts collapsed to its primary field ("+N" on the band shows how many columns are folded in); the Attributes / Settings group starts expanded, with Status / Delivery as its primary field when collapsed. "Collapse all / Expand all" above the name column; the column picker hides or shows single columns; **Reset to default** restores the defaults. Choices are remembered per viewer (prototype: localStorage; product: per user).
+- **Client table principle (23/10/2026)**: client tables use **simple shown / hidden columns**, with no collapsible group bands or group tints (collapsible groups stay on the agency Managed Accounts table only). By default the Attributes / Settings group is shown in full, plus each other group's primary field; every other column starts hidden and can be switched on in the column picker, which keeps the groups as headings for easier scanning (with Show all / Hide all per group). **Reset to default** restores the defaults. Choices are remembered per viewer (prototype: localStorage; product: per user).
 - Only columns that exist at the current level natively are offered (e.g. Quality Score only for keywords).
 - Quality dots (green / orange / red vs this platform's total) on CTR, CPC, CPM and cost per conversion / result.
-- **Download CSV** (the native "Download report"): exports the current level, every column switched on in the column picker (collapsed groups included, since collapsing is only a display choice), every filtered row in the current sort order (not only the current page), then a Total row. Name and parent columns (Campaign, Ad group / Ad set) come first. Plain numbers: money in SGD to 2 dp ("(SGD)" in the header), percentages as numbers ("(%)"), "—" cells empty. UTF-8 with BOM for Excel. File name: \`{workspace}_${name === 'Google Ads' ? 'google' : 'meta'}-ads_{level}_{start}_{end}.csv\`. Text cells starting with = + - @ are prefixed with ' so spreadsheets do not run them as formulas.
+- **Download CSV** (the native "Download report"): exports the current level, every column switched on in the column picker (hidden columns are left out), every filtered row in the current sort order (not only the current page), then a Total row. Name and parent columns (Campaign, Ad group / Ad set) come first. Plain numbers: money in SGD to 2 dp ("(SGD)" in the header), percentages as numbers ("(%)"), "—" cells empty. UTF-8 with BOM for Excel. File name: \`{workspace}_${name === 'Google Ads' ? 'google' : 'meta'}-ads_{level}_{start}_{end}.csv\`. Text cells starting with = + - @ are prefixed with ' so spreadsheets do not run them as formulas.
 - **Daily Performance**: below the table, a daily line chart for this platform only (${name === 'Google Ads' ? 'Cost / Conversions / Clicks' : 'Amount spent / Results / Link clicks'} toggle, hover tooltip), adding up to this platform's totals.
 - **Date filter**: the shared client date filter applies to every number, as on All Platforms. **Prototype note:** mock data is scaled to the range, not filtered by event date.
 - **Mock data**: new platform metrics are generated per ad from their own random streams, so the consolidated numbers never change, and rolled up through the levels as sums or recalculated ratios.
@@ -5606,8 +5602,8 @@ Client-facing workspace dashboard giving a simplified, unified view of Meta and 
   - **Drill-down**: clicking a row, or "View …" in the ⋮ menu, opens the next level with a "Filtered for X ✕" badge. Clearing the badge returns to Platform.
   - **Columns**: Name (parent shown above), Ad Format (+N overflow), Status, then the platform metrics from the *Google & Meta Ads Metrics* sheet (Metrics (Dev Notes), green rows), in sheet order: Spend (Cost), Impressions, Reach, CPM, Frequency, Clicks, CTR, CPC, Conversions, Conversion Rate, Cost Per Conversion (kept from V1), Cost Per Lead, Cost Per Purchase, ROAS, Conversion Value, Engagement Rate, Engagement, Cost Per Engagement. In CRM mode, CRM Leads, CRM CPL, CRM Revenue and CRM ROAS follow ("CRM" prefix to separate CRM-attributed ROAS from platform-reported ROAS). Header tooltips show the sheet's definitions. Every column is sortable, including Status (Active → Attention Required → Paused) and Ad Format (first format).
   - **Column picker** (columns icon next to the filter): show or hide columns, grouped as Overview (Ad Format, Status, Spend), Impressions (Impressions, Reach, CPM, Frequency), Clicks, Conversions, Engagement and CRM (CRM mode only), with Show all / Hide all per group and Show all columns. The badge counts hidden columns. Name and Action are always shown.
-  - **Default columns (22/10/2026 table principle: all columns, collapsed)**: every column is shown; every metric group starts **collapsed** to its summary column, and Overview (Ad Format, Status, Spend) stays expanded. Default view: Name, Ad Format, Status, Spend, Impressions, CTR, Conversions, Engagement Rate, CRM ROAS (CRM mode), Action. Expanding a group shows the rest of its columns. **Reset to default** restores this. (Before 22/10/2026, 11 columns started hidden; the storage keys were bumped so every viewer gets the new default once.)
-  - **Column groups**: the same groups appear as coloured, collapsible bands above the column headers. Collapsing a group leaves its summary column: Overview → Spend, Impressions → Impressions, Clicks → CTR, Conversions → Conversions, Engagement → Engagement Rate, CRM → CRM ROAS (or the group's first visible column if that one is hidden). "Collapse all / Expand all" sits above the name column. Each viewer's choice is remembered in the browser (prototype: localStorage; product: save per user).
+  - **Default columns (23/10/2026 client table principle: simple show / hide)**: Name, Ad Format, Status, Spend, Impressions, CTR, Conversions, Engagement Rate, CRM ROAS (CRM mode), Action, i.e. Overview in full plus each other group's primary field. The other columns start hidden; switch them on in the column picker. **Reset to default** restores this. The storage key was bumped (v4) so every viewer gets the new default once.
+  - **Column picker groups**: Overview, Impressions, Clicks, Conversions, Engagement, CRM appear only as headings in the column picker (no band row or tints in the table). Each viewer's choice is remembered in the browser (prototype: localStorage; product: save per user).
   - **API fields** (from the sheet, for development):
     - Cost — Meta \`spend\`; Google \`metrics.cost_micros\`
     - Impressions — Meta \`impressions\`; Google \`metrics.impressions\`
@@ -5672,7 +5668,7 @@ Client-facing workspace dashboard giving a simplified, unified view of Meta and 
   - **Video** [not keywords]: Video views (ThruView views in the sheet), Video played to 25% / 50% / 75% / 100% (percentages). Video ads only; other rows "—".
   - **Store visits** [not keywords]: Store visits (Shop Visits in the sheet). Sparse: most rows are 0.
   - **CRM** (CRM mode, not keywords): CRM Leads, CRM CPL, CRM Revenue, CRM ROAS.
-- **Collapsed defaults (primary field)**: Attributes → Status (expanded by default), Performance → Cost, Conversions → Cost / conv., Competitive metrics → Search impr. share, Reach metrics → Unique reach, Video → Video views, Store visits → Store visits, CRM → CRM ROAS.
+- **Default columns**: Attributes in full, plus each group's primary field: Performance → Cost, Conversions → Cost / conv., Competitive metrics → Search impr. share, Reach metrics → Unique reach, Video → Video views, Store visits → Store visits, CRM → CRM ROAS.
 - **Filter**: Status (Enabled / Limited / Paused) and Campaign type. Ad groups, ads and keywords filter by their campaign's type.
 - **Google-only metrics** (N/A for Meta in the sheet): All conv., Search impr. share, Search top IS, Search abs. top IS, Search lost IS (rank), Search lost IS (budget), Shop visits (Store visits), ThruView views (Video views).
 - **Not separate columns in Google**: the sheet's Leads, Purchases, Adds to cart and Initiate checkout map to Google's Conversions *for that conversion action*. They need a "Conversion action" segment, not extra columns (open question below). Cost per lead / cost per purchase likewise come from Cost / conv.
@@ -5704,7 +5700,7 @@ Client-facing workspace dashboard giving a simplified, unified view of Meta and 
   - **Video**: ThruPlays (15-second ThruPlays in the sheet), Video plays at 25% / 50% / 75% / 100% (counts). Video ads only.
   - **Conversions**: Leads, Cost per lead, Purchases, Cost per purchase, Purchases conversion value, Purchase ROAS (return on ad spend), Adds to cart, Checkouts initiated.
   - **CRM** (CRM mode): CRM Leads, CRM CPL, CRM Revenue, CRM ROAS.
-- **Collapsed defaults (primary field)**: Settings → Delivery (expanded by default), Performance → Cost per result, Clicks → CTR (link), Engagement → Post engagement, Messaging → Messaging conversations started, Video → ThruPlays, Conversions → **Leads**, CRM → CRM ROAS.
+- **Default columns**: Settings in full, plus each group's primary field: Performance → Cost per result, Clicks → CTR (link), Engagement → Post engagement, Messaging → Messaging conversations started, Video → ThruPlays, Conversions → **Leads**, CRM → CRM ROAS.
   - Why Leads rather than Purchase ROAS: most workspaces run lead objectives and the Hub's CRM mode is lead-based; Purchase ROAS only means something with purchase tracking (it is one click away).
 - **Filter**: Delivery and Objective. Ad sets and ads filter by their campaign's objective.
 - **Meta-only metrics** (N/A for Google in the sheet): Clicks (all), CTR (all), CPC (all), Landing page views, Cost per landing page view, Messaging conversations started, Cost per messaging conversation started, 15-second ThruPlays, Post shares, Post saves, Instagram follows, Instagram profile visits.

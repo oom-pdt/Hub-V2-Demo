@@ -25,8 +25,6 @@ const INTEG_CATS = [
   { id: 'CDP', label: 'CDP', icon: 'database' },
   { id: 'Marketing', label: 'Marketing', icon: 'megaphone' }
 ];
-const INTEG_FIELDS = ['Full name', 'Lead full name', 'Organisation', 'Email', 'Phone number', 'Phone number [Primary identifier]', 'Marketing channel & campaign',
-  'Marketing source / keyword', 'Source / campaign', 'Lead intelligence & deal intent', 'Qualified call (>2m) flag', 'Contracts & closed revenue', 'Do not map'];
 const INTEG_BACKFILL = [['lifetime', 'Lifetime (default) — up to 2,000 records'], ['365', 'Past 1 year'], ['90', 'Past 90 days'], ['30', 'Past 30 days']];
 
 // Vendor set-up guides. Ported from V2 prdPlatformGuides (sleekflow, wati, delacon, aurix, hubspot, salesforce);
@@ -39,7 +37,6 @@ const integGuides = {
     webhookSteps: ['Log into SleekFlow and select <strong>Flow Builder</strong> from the left navigation bar', 'Click <strong>Create new flow</strong> → <strong>Advanced</strong> → <strong>Start from scratch</strong>',
       'Enter a <strong>Flow Name</strong> (e.g. Galaxis Hub Lead Sync) and enable <strong>Allow re-enrolment</strong>', 'Click the <strong>Start</strong> node and select <strong>“Incoming message from Click-to-WhatsApp (CTWA) ad”</strong>',
       'Click <strong>+ Add node</strong>, choose <strong>Action</strong>, and select <strong>“Send contact webhook”</strong>', 'In the right-hand panel, <strong>paste the webhook URL below</strong>', 'Click <strong>Publish</strong> to make the webhook active'],
-    mappings: [['customer_phone / wa_id', 'Phone number [Primary identifier]'], ['contact_full_name', 'Lead full name'], ['utm_source / ad_campaign', 'Marketing channel & campaign']]
   },
   wati: {
     apiSteps: ['Log into Wati and go to <strong>Connector → API → Create API Token</strong>', 'On the <strong>API Tokens</strong> page, click <strong>Generate new token</strong>',
@@ -48,28 +45,91 @@ const integGuides = {
     webhookSteps: ['Log into Wati and select <strong>Webhooks</strong> from the top navigation bar', 'Click <strong>Add Webhook</strong>',
       'Enter the following:<br>• <strong>URL:</strong> <code>{URL}</code><br>• <strong>Status:</strong> Enabled<br>• <strong>Events:</strong> New Contact Message', 'Click <strong>Save</strong> to publish the webhook',
       'Click <strong>…</strong> next to the webhook and choose <strong>Trigger sample callback</strong> to test the connection'],
-    mappings: [['phone_number / waId', 'Phone number [Primary identifier]'], ['contact_name', 'Lead full name'], ['custom_fields.utm_source', 'Marketing source / keyword']]
   },
   delacon: {
     apiSteps: ['Log into Delacon and go to <strong>Settings → Master API Key</strong>', 'Copy the <strong>API Key</strong> and paste it below'],
     keyLabel: 'Delacon API key',
     webhookSteps: ['Log into Delacon and go to <strong>Services → List Services → Edit relevant Service</strong>', 'Under <strong>Data Integration</strong>, select <strong>Push live data through to the webhooks provided</strong>',
       'Enter the following:<br>• <strong>Create URL Hook:</strong> <code>{URL}</code><br>• <strong>Update URL Hook:</strong> <code>{URL}</code>', 'Click <strong>Submit</strong> to save the set-up'],
-    mappings: [['caller_number', 'Phone number [Primary identifier]'], ['call_duration / qualified_flag', 'Qualified call (>2m) flag'], ['search_keyword / ad_source', 'Marketing source / keyword']]
   },
-  aurix: { mappings: [['lead_phone / user_id', 'Phone number [Primary identifier]'], ['lead_name', 'Lead full name'], ['ai_intent_score / budget_extracted', 'Lead intelligence & deal intent']] },
-  'crm-lite': { mappings: [['Contact name', 'Full name'], ['Company', 'Organisation'], ['Email', 'Email'], ['Mobile', 'Phone number'], ['Lead source', 'Source / campaign'], ['Won deal value', 'Contracts & closed revenue']] },
-  'institute-crm': { mappings: [['Learner name', 'Full name'], ['Email', 'Email'], ['Mobile', 'Phone number'], ['Enquiry source', 'Source / campaign'], ['Course fee (enrolled)', 'Contracts & closed revenue']] },
-  cdp: { mappings: [['profile.name', 'Full name'], ['profile.email', 'Email'], ['profile.phone', 'Phone number'], ['event.utm_campaign', 'Marketing channel & campaign']] },
   'seo-cloud': { mappings: null, noMapNote: 'SEO Cloud shares keyword, ranking and approval data only, so there are no lead fields to map.' },
-  hubspot: { mappings: [['First Name + Last Name (Contacts)', 'Full name'], ['Company', 'Organisation'], ['Email', 'Email'], ['Phone number', 'Phone number'], ['Original Source (hs_analytics_source)', 'Source / campaign'], ['Deal Amount in Company Currency (closed won)', 'Contracts & closed revenue']] },
-  salesforce: { mappings: [['FirstName + LastName (Leads & Contacts)', 'Full name'], ['Account', 'Organisation'], ['Email', 'Email'], ['Phone', 'Phone number'], ['LeadSource', 'Source / campaign'], ['Opportunity Amount (IsWon = true)', 'Contracts & closed revenue']] },
-  zoho: { mappings: [['First Name + Last Name (Leads)', 'Full name'], ['Company', 'Organisation'], ['Email', 'Email'], ['Mobile', 'Phone number'], ['Lead Source', 'Source / campaign'], ['Deal Amount (Stage = Closed Won)', 'Contracts & closed revenue']] },
-  dynamics: { mappings: [['fullname (Lead)', 'Full name'], ['companyname', 'Organisation'], ['emailaddress1', 'Email'], ['mobilephone', 'Phone number'], ['leadsourcecode', 'Source / campaign'], ['actualvalue (Opportunity, state = Won)', 'Contracts & closed revenue']] },
-  mailchimp: { mappings: [['FNAME + LNAME', 'Full name'], ['EMAIL', 'Email'], ['PHONE', 'Phone number'], ['Audience tags', 'Marketing source / keyword'], ['Campaign opens / clicks', 'Marketing channel & campaign']] },
   slack: { mapTitle: 'Notification Routing', mapHelp: 'Choose which Slack channel receives each Galaxis event.', sourceLabel: 'Galaxis event', targetLabel: 'Slack channel',
     options: ['#leads', '#marketing-alerts', '#general', 'Do not send'], mappings: [['New lead created', '#leads'], ['Lead converted', '#leads'], ['Integration error', '#marketing-alerts']] }
 };
+
+// Field mapping: the external product's field names → Galaxis fields. Rows are the Galaxis fields the product type
+// needs (fixed); each row picks the vendor field that holds it. Galaxis needs, for every source: an identifier to
+// match the same person across sources, contact details, attribution, a timestamp, and (CRMs) the won value.
+const INTEG_TARGETS = {
+  crm: [
+    { key: 'email', label: 'Email', req: true, type: 'email', help: 'Primary identifier: matches the same person across sources.' },
+    { key: 'phone', label: 'Phone number', type: 'phone', help: 'Matches chats and calls to this contact.' },
+    { key: 'name', label: 'Full name', req: true },
+    { key: 'company', label: 'Organisation' },
+    { key: 'source', label: 'Lead source / campaign', req: true, help: 'Attributes the lead to a channel and campaign.' },
+    { key: 'created', label: 'Created date', req: true },
+    { key: 'value', label: 'Won deal value', help: 'Needed for CRM Revenue and ROAS.' },
+    { key: 'wonAt', label: 'Won date' }
+  ],
+  chat: [
+    { key: 'phone', label: 'Phone number', req: true, type: 'phone', help: 'Primary identifier: matches the same person across sources.' },
+    { key: 'name', label: 'Contact name' },
+    { key: 'email', label: 'Email', type: 'email' },
+    { key: 'adId', label: 'Ad click / CTWA ad ID', help: 'Ties the chat to the exact ad that started it.' },
+    { key: 'source', label: 'Source / campaign', req: true },
+    { key: 'created', label: 'First message time', req: true },
+    { key: 'intent', label: 'Lead intent score' }
+  ],
+  calls: [
+    { key: 'phone', label: 'Caller number', req: true, type: 'phone', help: 'Primary identifier: matches the same person across sources.' },
+    { key: 'created', label: 'Call time', req: true },
+    { key: 'duration', label: 'Call duration', req: true, help: 'Calls over 2 minutes count as qualified.' },
+    { key: 'source', label: 'Keyword / ad source', req: true }
+  ],
+  contacts: [
+    { key: 'email', label: 'Email', req: true, type: 'email', help: 'Primary identifier: matches the same person across sources.' },
+    { key: 'name', label: 'Full name', req: true },
+    { key: 'phone', label: 'Phone number', type: 'phone' },
+    { key: 'source', label: 'Source / campaign' },
+    { key: 'created', label: 'Created date' }
+  ]
+};
+// Fields read from the connected account ([name, sample value]; samples are placeholders) and the auto-match.
+const INTEG_SCHEMA = {
+  'crm-lite': { set: 'crm', fields: [['Contact name', 'Jordan Sample'], ['Email', 'jordan.sample@example.com'], ['Mobile', '+65 0000 0001'], ['Company', 'Sample Pte Ltd'], ['Lead source', 'Google Ads · Search'], ['Created on', '12/10/2026 14:32'], ['Won deal value', 'SGD 12,000'], ['Won on', '20/10/2026'], ['Stage', 'Won']],
+    auto: { name: 'Contact name', email: 'Email', phone: 'Mobile', company: 'Company', source: 'Lead source', created: 'Created on', value: 'Won deal value', wonAt: 'Won on' } },
+  'institute-crm': { set: 'crm', fields: [['Learner name', 'Jordan Sample'], ['Email', 'jordan.sample@example.com'], ['Mobile', '+65 0000 0001'], ['Enquiry source', 'Meta Ads · Lead form'], ['Enquiry date', '12/10/2026 14:32'], ['Course fee (enrolled)', 'SGD 3,600'], ['Enrolment date', '20/10/2026']],
+    auto: { name: 'Learner name', email: 'Email', phone: 'Mobile', source: 'Enquiry source', created: 'Enquiry date', value: 'Course fee (enrolled)', wonAt: 'Enrolment date' } },
+  hubspot: { set: 'crm', fields: [['firstname + lastname', 'Jordan Sample'], ['email', 'jordan.sample@example.com'], ['phone', '+65 0000 0001'], ['mobilephone', '+65 0000 0002'], ['company', 'Sample Pte Ltd'], ['hs_analytics_source', 'PAID_SEARCH'], ['hs_analytics_source_data_1', 'brand-search-sg'], ['createdate', '12/10/2026 14:32'], ['Deal: amount', '12000'], ['Deal: closedate', '20/10/2026'], ['lifecyclestage', 'customer']],
+    auto: { name: 'firstname + lastname', email: 'email', phone: 'phone', company: 'company', source: 'hs_analytics_source', created: 'createdate', value: 'Deal: amount', wonAt: 'Deal: closedate' } },
+  salesforce: { set: 'crm', fields: [['Name', 'Jordan Sample'], ['Email', 'jordan.sample@example.com'], ['Phone', '+65 0000 0001'], ['MobilePhone', '+65 0000 0002'], ['Company', 'Sample Pte Ltd'], ['LeadSource', 'Paid Search'], ['CreatedDate', '12/10/2026 14:32'], ['Opportunity.Amount (IsWon)', '12000'], ['Opportunity.CloseDate', '20/10/2026'], ['Status', 'Closed - Converted']],
+    auto: { name: 'Name', email: 'Email', phone: 'Phone', company: 'Company', source: 'LeadSource', created: 'CreatedDate', value: 'Opportunity.Amount (IsWon)', wonAt: 'Opportunity.CloseDate' } },
+  zoho: { set: 'crm', fields: [['Full_Name', 'Jordan Sample'], ['Email', 'jordan.sample@example.com'], ['Phone', '+65 0000 0001'], ['Mobile', '+65 0000 0002'], ['Company', 'Sample Pte Ltd'], ['Lead_Source', 'Google AdWords'], ['Created_Time', '12/10/2026 14:32'], ['Deals.Amount (Closed Won)', '12000'], ['Deals.Closing_Date', '20/10/2026'], ['Lead_Status', 'Contacted']],
+    auto: { name: 'Full_Name', email: 'Email', phone: 'Mobile', company: 'Company', source: 'Lead_Source', created: 'Created_Time', value: 'Deals.Amount (Closed Won)', wonAt: 'Deals.Closing_Date' } },
+  dynamics: { set: 'crm', fields: [['fullname', 'Jordan Sample'], ['emailaddress1', 'jordan.sample@example.com'], ['telephone1', '+65 0000 0001'], ['mobilephone', '+65 0000 0002'], ['companyname', 'Sample Pte Ltd'], ['leadsourcecode', 'Advertisement'], ['createdon', '12/10/2026 14:32'], ['opportunity.actualvalue (Won)', '12000'], ['opportunity.actualclosedate', '20/10/2026'], ['statuscode', 'Qualified']],
+    auto: { name: 'fullname', email: 'emailaddress1', phone: 'mobilephone', company: 'companyname', source: 'leadsourcecode', created: 'createdon', value: 'opportunity.actualvalue (Won)', wonAt: 'opportunity.actualclosedate' } },
+  aurix: { set: 'chat', fields: [['lead_phone', '+65 0000 0001'], ['user_id', 'usr_PLACEHOLDER'], ['lead_name', 'Jordan Sample'], ['lead_email', 'jordan.sample@example.com'], ['ad_id', '1200000000000000'], ['utm_campaign', 'ctwa-oct-promo'], ['created_at', '12/10/2026 14:32'], ['ai_intent_score', '82']],
+    auto: { phone: 'lead_phone', name: 'lead_name', email: 'lead_email', adId: 'ad_id', source: 'utm_campaign', created: 'created_at', intent: 'ai_intent_score' } },
+  sleekflow: { set: 'chat', fields: [['customer_phone', '+65 0000 0001'], ['wa_id', '6500000001'], ['contact_full_name', 'Jordan Sample'], ['email', 'jordan.sample@example.com'], ['ctwa_clid', 'ARAkPLACEHOLDER'], ['ad_campaign', 'ctwa-oct-promo'], ['utm_source', 'facebook'], ['created_at', '12/10/2026 14:32']],
+    auto: { phone: 'customer_phone', name: 'contact_full_name', email: 'email', adId: 'ctwa_clid', source: 'ad_campaign', created: 'created_at' } },
+  wati: { set: 'chat', fields: [['waId', '6500000001'], ['phone_number', '+65 0000 0001'], ['contact_name', 'Jordan Sample'], ['sourceId (ad)', '1200000000000000'], ['custom_fields.utm_source', 'facebook'], ['created', '12/10/2026 14:32']],
+    auto: { phone: 'phone_number', name: 'contact_name', adId: 'sourceId (ad)', source: 'custom_fields.utm_source', created: 'created' } },
+  delacon: { set: 'calls', fields: [['caller_number', '+65 0000 0001'], ['dnis', '+65 0000 0099'], ['call_start_time', '12/10/2026 14:32'], ['call_duration', '00:03:12'], ['qualified_flag', 'true'], ['search_keyword', 'video production company'], ['ad_source', 'Google Ads']],
+    auto: { phone: 'caller_number', created: 'call_start_time', duration: 'call_duration', source: 'search_keyword' } },
+  cdp: { set: 'contacts', fields: [['profile.name', 'Jordan Sample'], ['profile.email', 'jordan.sample@example.com'], ['profile.phone', '+65 0000 0001'], ['event.utm_campaign', 'brand-search-sg'], ['profile.created_at', '12/10/2026 14:32']],
+    auto: { name: 'profile.name', email: 'profile.email', phone: 'profile.phone', source: 'event.utm_campaign', created: 'profile.created_at' } },
+  mailchimp: { set: 'contacts', fields: [['FNAME + LNAME', 'Jordan Sample'], ['EMAIL', 'jordan.sample@example.com'], ['PHONE', '+65 0000 0001'], ['Audience tags', 'webinar-oct'], ['TIMESTAMP_SIGNUP', '12/10/2026 14:32']],
+    auto: { name: 'FNAME + LNAME', email: 'EMAIL', phone: 'PHONE', source: 'Audience tags', created: 'TIMESTAMP_SIGNUP' } }
+};
+function integTargets(pid) { const sc = INTEG_SCHEMA[pid]; return sc ? INTEG_TARGETS[sc.set] : null; }
+// A saved mapping is { galaxisKey: vendorField }; anything else (older drafts) falls back to the auto-match.
+function integDefaultMapping(pid, saved) {
+  const t = integTargets(pid);
+  if (!t) return {};
+  if (saved && Object.keys(saved).every(k => t.some(x => x.key === k))) return { ...saved };
+  return Object.fromEntries(t.map(x => [x.key, INTEG_SCHEMA[pid].auto[x.key] || '']));
+}
+function integMissingRequired(c) { return (integTargets(c.pid) || []).filter(x => x.req && !c.mapping[x.key]); }
 
 // ---------- Helpers ----------
 function integNow() { return new Date().toISOString(); }
@@ -427,7 +487,8 @@ function integCfgDraft(pid) {
     verified: !!e && e.status === 'connected' && !e.routedVia && p.flow === 'api', webhookTested: false, showKey: false,
     key: e && p.flow === 'api' && !e.routedVia ? 'sk_test_PLACEHOLDER' : '',
     backfill: (e && e.backfill) || 'lifetime',
-    mapping: (e && e.mapping) || Object.fromEntries((g.mappings || []).map(([s, t]) => [s, t]))
+    // Slack keeps event → channel routing; everything else maps vendor fields to Galaxis fields.
+    mapping: pid === 'slack' ? ((e && e.mapping) || Object.fromEntries((g.mappings || []).map(([s, t]) => [s, t]))) : integDefaultMapping(pid, e && e.mapping)
   };
 }
 function integOpenSetup(pid) {
@@ -483,10 +544,16 @@ function integSetupRender() {
   </div>`;
 }
 
-// Only the connection step has a requirement: OAuth authorised, or the API key entered and verified.
+// Requirements: Connect needs OAuth authorised or the API key verified; Field mapping needs every required Galaxis field.
 function integSetupValid(c, tell = true) {
   const p = productById(c.pid);
-  if (integSetupSteps(p)[c.step].key !== 'connect' || integConnOk(c)) return true;
+  const step = integSetupSteps(p)[c.step].key;
+  if (step === 'mapping') {
+    const missing = integMissingRequired(c);
+    if (missing.length && tell) showToast(`Map ${missing.map(x => x.label).join(', ')} to continue`, 'triangle-alert');
+    return !missing.length;
+  }
+  if (step !== 'connect' || integConnOk(c)) return true;
   if (tell) {
     if (p.flow === 'oauth') showToast(`Connect ${p.name} via OAuth to continue`, 'triangle-alert');
     else if (!c.key.trim()) { showToast('Enter an API key to continue', 'key-round'); document.getElementById('integ-key')?.focus(); }
@@ -508,6 +575,7 @@ function integSetupGo(i) {
   window.scrollTo(0, 0);
 }
 function integRefreshConfig() { if (state.page === 'integration-setup') rerender(); }
+function integSetMap(key, field) { state.ui.integCfg.mapping[key] = field; integRefreshConfig(); }
 
 function integSteps(steps, pid) {
   return `<ol class="integ-steps">${steps.map(s => `<li><span>${s.replace(/\{URL\}/g, esc(integWebhookUrl(pid)))}</span></li>`).join('')}</ol>`;
@@ -557,21 +625,53 @@ function integSetupStepHTML(c, key) {
   }
 
   if (key === 'mapping') {
-    const opts = g.options || INTEG_FIELDS;
-    const mapping = g.mappings ? `
-      <div class="integ-map">
-        <div class="integ-map-row integ-map-head"><div>${esc(g.sourceLabel || `${p.name} field`)}</div><div></div><div>${esc(g.targetLabel || 'Galaxis field')}</div></div>
-        ${g.mappings.map(([src]) => `<div class="integ-map-row"><div class="integ-map-src">${esc(src)}</div><i data-lucide="arrow-right"></i>
-          <select class="select" aria-label="Map ${esc(src)}" onchange="state.ui.integCfg.mapping['${q(src)}'] = this.value">${opts.map(o => `<option ${o === c.mapping[src] ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select></div>`).join('')}
-      </div>` : `<p class="integ-help">${esc(g.noMapNote || 'No fields to map for this product.')}</p>`;
-    return `${head(g.mapTitle || 'Lead Field Mapping', g.mappings ? '<span class="integ-tag integ-tag-ok">Auto-mapped</span>' : '')}
-      <p class="integ-help">${esc(g.mapHelp || 'Review how source fields map into Galaxis. You can change them later without repeating the connection set-up.')}</p>
-      ${mapping}`;
+    const targets = integTargets(c.pid);
+    if (c.pid === 'slack') {
+      // Slack: Galaxis events → Slack channels (notification routing, not field mapping).
+      return `${head(g.mapTitle)}<p class="integ-help">${esc(g.mapHelp)}</p>
+        <div class="integ-map">
+          <div class="integ-map-row integ-map-head"><div>${esc(g.sourceLabel)}</div><div></div><div>${esc(g.targetLabel)}</div></div>
+          ${g.mappings.map(([src]) => `<div class="integ-map-row"><div class="integ-map-src">${esc(src)}</div><i data-lucide="arrow-right"></i>
+            <select class="select" aria-label="Route ${esc(src)}" onchange="state.ui.integCfg.mapping['${q(src)}'] = this.value">${g.options.map(o => `<option ${o === c.mapping[src] ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select></div>`).join('')}
+        </div>`;
+    }
+    if (!targets) return `${head('Field mapping')}<p class="integ-help">${esc(g.noMapNote || 'No fields to map for this product.')}</p>`;
+    const sc = INTEG_SCHEMA[c.pid];
+    const sample = (x, field) => {
+      const v = (sc.fields.find(f => f[0] === field) || [])[1];
+      if (!v) return '<span class="t-muted">—</span>';
+      // Samples come from the client's account, so agency viewers see contact details masked (as on Leads).
+      const masked = typeof leadMasked === 'function' && leadMasked() && x.type ? (x.type === 'email' ? leadEmail({ email: v }) : leadPhone({ phone: v })) : v;
+      return esc(masked);
+    };
+    const missing = integMissingRequired(c);
+    const rows = targets.map(x => {
+      const cur = c.mapping[x.key] || '';
+      const usedBy = f => targets.find(o => o.key !== x.key && c.mapping[o.key] === f);
+      const opts = `<option value="">${x.req ? 'Select a field…' : 'Not mapped'}</option>` + sc.fields.map(([f]) => {
+        const u = usedBy(f);
+        return `<option value="${esc(f)}" ${f === cur ? 'selected' : ''} ${u ? 'disabled' : ''}>${esc(f)}${u ? ` (used for ${esc(u.label)})` : ''}</option>`;
+      }).join('');
+      return `<div class="integ-fmap-row ${x.req && !cur ? 'is-missing' : ''}">
+        <div class="integ-fmap-target"><div class="integ-fmap-label">${esc(x.label)}<span class="integ-tag ${x.req ? 'integ-tag-req' : ''}">${x.req ? 'Required' : 'Optional'}</span></div>${x.help ? `<div class="integ-fmap-help">${esc(x.help)}</div>` : ''}</div>
+        <i data-lucide="arrow-left" class="integ-fmap-arrow"></i>
+        <select class="select" aria-label="${esc(p.name)} field for ${esc(x.label)}" onchange="integSetMap('${x.key}', this.value)">${opts}</select>
+        <div class="integ-fmap-sample">${cur ? sample(x, cur) : '<span class="t-muted">—</span>'}</div>
+      </div>`;
+    }).join('');
+    return `${head('Field mapping', missing.length ? `<span class="integ-tag integ-tag-warn">${missing.length} required field${missing.length === 1 ? '' : 's'} to map</span>` : '<span class="integ-tag integ-tag-ok">Auto-mapped</span>')}
+      <p class="integ-help">Choose which ${esc(p.name)} field holds each Galaxis field. The ${esc(p.name)} fields were read from your account when you connected it, and we've matched them where we could. Each ${esc(p.name)} field can be used once.</p>
+      <div class="integ-fmap">
+        <div class="integ-fmap-row integ-fmap-head"><div>Galaxis field</div><div></div><div>${esc(p.name)} field</div><div>Sample value</div></div>
+        ${rows}
+      </div>`;
   }
 
   // Review & sync: backfill choice, a summary of the earlier steps, and the one-per-lane replacement warning.
   const old = laneOccupant(state.ctx, c.pid);
-  const mapped = g.mappings ? g.mappings.filter(([s]) => c.mapping[s] && c.mapping[s] !== 'Do not map').length : 0;
+  const targets = integTargets(c.pid);
+  const mapped = targets ? targets.filter(x => c.mapping[x.key]).length : 0;
+  const missing = integMissingRequired(c);
   const row = (label, value, ok) => `<div class="integ-review-row"><span class="t-muted">${esc(label)}</span><span class="${ok === false ? 't-warning' : ''}">${value}</span></div>`;
   return `${head('Review & sync')}
     <p class="integ-help">Check the set-up, choose how much history to import, then ${e ? 'save' : 'connect'}.</p>
@@ -579,7 +679,7 @@ function integSetupStepHTML(c, key) {
     <div class="integ-review">
       ${row('Connection', p.flow === 'internal' ? 'Managed by OOm' : p.flow === 'oauth' ? 'OAuth authorised' : 'API key verified')}
       ${p.flow === 'api' ? row('Webhook', c.webhookTested ? 'Tested · real-time sync on' : 'Not set up · syncs on schedule', c.webhookTested) : ''}
-      ${row(g.mapTitle || 'Field mapping', g.mappings ? `${mapped} of ${g.mappings.length} fields mapped` : 'Nothing to map')}
+      ${row(g.mapTitle || 'Field mapping', c.pid === 'slack' ? `${g.mappings.length} events routed` : targets ? `${mapped} of ${targets.length} Galaxis fields mapped${missing.length ? ` · ${missing.length} required missing` : ' · all required mapped'}` : 'Nothing to map', missing.length ? false : undefined)}
     </div>
     <div class="field integ-mt"><label class="field-label" for="integ-backfill">Historical Backfill</label>
       <select class="select" id="integ-backfill" onchange="state.ui.integCfg.backfill = this.value">${INTEG_BACKFILL.map(([v, l]) => `<option value="${v}" ${v === c.backfill ? 'selected' : ''}>${l}</option>`).join('')}</select>
@@ -622,6 +722,7 @@ function integSaveConfig() {
   const c = state.ui.integCfg;
   const p = productById(c.pid);
   if (!integConnOk(c)) { c.step = 0; rerender(); integSetupValid(c); return; }
+  if (integMissingRequired(c).length) { c.step = integSetupSteps(p).findIndex(s => s.key === 'mapping'); rerender(); integSetupValid(c); return; }
   const existed = !!integEntry(c.pid);
   const { entry, replaced } = integCommit(c.pid, { extra: { backfill: c.backfill, mapping: { ...c.mapping } } });
   delete entry.routedVia;
@@ -1090,7 +1191,10 @@ The workspace's integrations hub, built from the Figma "Integrations" frames wit
   - **Breadcrumbed steps**: Connect account › Webhook (API products only) › Field mapping › Review & sync. Done steps show a tick and can be reopened; the current step is highlighted; later steps unlock in order. When editing a working connection every step can be opened directly.
     - **Connect account**: OAuth, or API key with the vendor's steps and **Verify connection** (required to continue). OOm products need no credentials ("Managed by OOm").
     - **Webhook** (optional): steps, URL with Copy, and Test webhook signal.
-    - **Field mapping**: auto-mapped, editable (Slack: notification routing; SEO Cloud: nothing to map).
+    - **Field mapping** (23/10/2026: external field names → Galaxis fields): one row per **Galaxis field** (fixed, tagged Required / Optional), and a dropdown of the **{product} fields read from the connected account** (prototype: a placeholder schema per product), with a sample value. Fields are auto-matched where possible; each vendor field can be used once (others show "used for …"); **Next is blocked until every required field is mapped**.
+      - Why this direction: Galaxis needs the same things from every source, whatever the vendor calls them: an identifier to match one person across sources, contact details, attribution, a timestamp and, for CRMs, the won value. Vendors' fields differ per account (custom fields), so they are the options, not the rows.
+      - Galaxis fields by product type. **CRM**: Email (identifier), Phone, Full name, Organisation, Lead source / campaign, Created date, Won deal value (needed for CRM Revenue and ROAS), Won date. **Chat** (Aurix, SleekFlow, Wati): Phone (identifier), Contact name, Email, Ad click / CTWA ad ID, Source / campaign, First message time, Lead intent score. **Call tracking** (Delacon): Caller number (identifier), Call time, Call duration (over 2 minutes = qualified), Keyword / ad source. **Contacts** (CDP, Mailchimp): Email (identifier), Full name, Phone, Source / campaign, Created date.
+      - Sample emails and phone numbers are masked for agency users, as on Leads. Slack keeps its event → channel routing; SEO Cloud has nothing to map.
     - **Review & sync**: summary of the steps, Historical backfill (Lifetime up to 2,000 records, 1 year, 90 days, 30 days), and the one-per-lane replacement warning when another product will be disconnected.
   - Footer: Disconnect (existing connections), Cancel, Back, **Next** / **Connect and start sync** (or Save Configuration). Nothing is saved until the last step; Cancel or leaving the page changes nothing.
 - **Rules**

@@ -178,3 +178,19 @@
 .integ-review-row { display: flex; justify-content: space-between; gap: 16px; padding: 12px 14px; font-size: 13px; }
 .integ-review-row + .integ-review-row { border-top: 1px solid var(--border-light); }
 @media (max-width: 720px) { .integ-stepper-sep { display: none; } .integ-setup-body { padding: 20px; } }
+/* Field mapping: Galaxis field ← vendor field, with a sample value */
+.integ-fmap { display: flex; flex-direction: column; border: 1px solid var(--border-light); border-radius: var(--r-md); }
+.integ-fmap-row { display: grid; grid-template-columns: minmax(0, 1.3fr) 16px minmax(0, 1fr) minmax(0, .9fr); gap: 12px; align-items: center; padding: 12px 14px; font-size: 13px; }
+.integ-fmap-row + .integ-fmap-row { border-top: 1px solid var(--border-light); }
+.integ-fmap-head { background: var(--tint); border-radius: var(--r-md) var(--r-md) 0 0; color: var(--text-secondary); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; padding-top: 10px; padding-bottom: 10px; }
+.integ-fmap-label { display: flex; align-items: center; gap: 8px; font-weight: 700; flex-wrap: wrap; }
+.integ-fmap-help { font-size: 11px; color: var(--text-muted); margin-top: 3px; line-height: 15px; }
+.integ-fmap-arrow { width: 14px; height: 14px; color: var(--text-muted); }
+.integ-fmap-row .select { height: 36px; font-size: 12px; padding: 0 8px; }
+.integ-fmap-sample { font-size: 12px; color: var(--text-secondary); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.integ-fmap-row.is-missing .select { border-color: var(--warning); }
+.integ-tag-req { background: var(--tint); color: var(--primary); }
+@media (max-width: 720px) {
+  .integ-fmap-row { grid-template-columns: 1fr; gap: 6px; }
+  .integ-fmap-arrow, .integ-fmap-head { display: none; }
+}

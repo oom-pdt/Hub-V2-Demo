@@ -5662,6 +5662,8 @@ Central command dashboard for agency administrators managing many client workspa
 - Client Follow-ups Due needs a CRM task feed; until then it is placeholder data.
 - Is the keyword contract (X keywords, Y% top-10 target) owned by SEO Cloud or by the Agency CRM?
 - Should the average position count keywords outside the top 100 as position 100, instead of leaving them out?
+- **Managed Accounts Ads columns (reviewed 23/10/2026: keep all for now).** Conversions, ROAS, CPM and CPC are candidates to move to the workspace only (not comparable across clients, or diagnostic); revisit after user feedback.
+- **Period-over-period comparison (deferred).** Cost Per Conversion is coloured against the portfolio average because ad data is a live API call with no stored history. Comparing each client with its own previous period would be more meaningful; it could also come from a second live query for the previous date range rather than storage (to confirm with engineering: extra API calls and rate limits).
 
 ### Dev toolbar states
 - **Alerts on / Alerts off**: Off clears every issue: no banner, Attention Required 0, every account On Track (the healthy state).

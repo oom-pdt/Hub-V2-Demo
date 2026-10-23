@@ -77,3 +77,11 @@
   .org-svc-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 0; }
   .org-svc-kpis > div:nth-child(3) { padding-left: 0; border-left: 0; }
 }
+/* Contracts & Payments (Services & Contract card) */
+.org-contracts-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 28px 0 10px; }
+.org-contracts-head .form-section-title { margin: 0; }
+.org-paid-cell { min-width: 170px; }
+.org-paid-bar { position: relative; height: 6px; border-radius: 99px; background: var(--grey-light); overflow: hidden; margin: 6px 0 4px auto; max-width: 160px; }
+.org-paid-bar span { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 99px; }
+.org-paid-inv { background: #F9C576; }
+.org-paid-fill { background: var(--success-pill); }

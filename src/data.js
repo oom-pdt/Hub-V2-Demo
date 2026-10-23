@@ -314,3 +314,32 @@ const CRM_DAYS_LEFT = { 'ws-visual': { ads: 72, seo: 41 }, 'ws-bright': { ads: 1
   });
   agencyCrm.accountsSynced = Object.keys(crmAccounts).length;
 })();
+// Billing terms per contract, using the Agency CRM revamp's payment terms (PAY_TERMS) and media payment options.
+// A separate random stream, so the existing seeded data (budgets, contract dates) is unchanged. [PLACEHOLDER] fees.
+(function crmBillingSeed() {
+  Object.entries(crmAccounts).forEach(([wsId, acc]) => {
+    const ws = workspaces.find(w => w.id === wsId);
+    const r = seededRandom(ws.seed * 31 + 11);
+    const pick = list => list[Math.floor(r() * list.length)];
+    acc.contracts = {};
+    acc.services.forEach(x => {
+      const c = acc.contracts[x.contractNo] = acc.contracts[x.contractNo] || {};
+      if (c.payTerm) return;
+      if (x.type === 'Google Ads' || x.type === 'Facebook Ads') {
+        // Ads: agency (management) fee by the contract's payment term; media budget billed monthly via OOm, or paid by the client's card.
+        Object.assign(c, { payTerm: pick(['Monthly', 'Monthly', 'Quarterly', 'Quarterly Pre-Paid']), mediaVia: pick(['OOm', 'OOm', 'Client card']), mediaTerm: 'Monthly' });
+        // Demo: Visual Studio (the default client) bills ads monthly with media via OOm, so a next payment is always shown.
+        if (wsId === 'ws-visual') Object.assign(c, { payTerm: 'Monthly', mediaVia: 'OOm' });
+      } else if (x.type === 'SEO') c.payTerm = pick(['100%', '50-30-20%', '60-20-20%', 'Quarterly', 'Monthly']);
+      else if (x.type === 'Aurix') c.payTerm = pick(['100%', 'Pre-Paid', 'Bi-Annual']);
+      else if (x.type === 'Content Marketing') {
+        // One customised schedule (non-standard terms, approved in the CRM): 40% upfront, 30% at month 2, 30% at the end.
+        Object.assign(c, ws.seed % 2 ? { payTerm: 'Customised', custom: [[0, 0.4], [2, 0.3], [5, 0.3]] } : { payTerm: '50-50%' });
+      } else c.payTerm = 'Monthly';
+    });
+    // Monthly agency fee on ad contracts (the CRM's management fee), placeholder: 15% of media, at least $800.
+    acc.services.filter(x => x.type === 'Google Ads' || x.type === 'Facebook Ads').forEach(x => {
+      x.monthlyFee = Math.max(800, Math.round(x.monthlyBudget * 0.15 / 100) * 100);
+    });
+  });
+})();

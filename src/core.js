@@ -61,6 +61,67 @@ function crmLiveServices(wsId) {
   return (crmAccounts[wsId]?.services || []).filter(x => (!x.start || x.start <= today) && (!x.end || x.end >= today))
     .map(x => ({ ...x, daysLeft: x.end ? Math.round((new Date(x.end + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000) : null }));
 }
+// ---------- Contract billing schedules (Agency CRM) ----------
+// Payment terms as in the Agency CRM revamp (PAY_TERMS), plus 'Customised' (a non-standard schedule approved there).
+const CRM_PAY_TERMS = ['100%', 'Pre-Paid', '50-50%', '60-20-20%', '50-30-20%', 'Monthly', 'Quarterly', 'Quarterly Pre-Paid', 'Bi-Annual'];
+const CRM_PAY_TERM_LABEL = {
+  '100%': 'One-time, 100% upfront', 'Pre-Paid': 'Pre-paid in full', '50-50%': '50% upfront, 50% midway', '60-20-20%': '60% upfront, 20% at 1/3, 20% at 2/3',
+  '50-30-20%': '50% upfront, 30% at 1/3, 20% at 2/3', Monthly: 'Monthly', Quarterly: 'Quarterly', 'Quarterly Pre-Paid': 'Quarterly, pre-paid', 'Bi-Annual': 'Every 6 months', Customised: 'Customised schedule'
+};
+// Instalments for a term over a contract of `months`: [[months after start, share of the total]] (the CRM revamp's rules).
+function crmInstalments(term, months, custom) {
+  months = Math.max(1, Math.round(months) || 1);
+  const n = k => Array.from({ length: k }, (_, i) => i);
+  switch (term) {
+    case '100%': case 'Pre-Paid': return [[0, 1]];
+    case '50-50%': return [[0, 0.5], [Math.round(months / 2), 0.5]];
+    case '60-20-20%': return [[0, 0.6], [Math.round(months / 3), 0.2], [Math.round(2 * months / 3), 0.2]];
+    case '50-30-20%': return [[0, 0.5], [Math.round(months / 3), 0.3], [Math.round(2 * months / 3), 0.2]];
+    case 'Quarterly': case 'Quarterly Pre-Paid': { const k = Math.ceil(months / 3); return n(k).map(i => [i * 3, 1 / k]); }
+    case 'Bi-Annual': { const k = Math.max(1, Math.ceil(months / 6)); return n(k).map(i => [i * 6, 1 / k]); }
+    case 'Customised': return custom && custom.length ? custom : [[0, 1]];
+    default: return n(months).map(i => [i, 1 / months]);
+  }
+}
+function crmMonths(start, end) { return Math.max(1, Math.round((new Date(end + 'T00:00:00') - new Date(start + 'T00:00:00')) / (86400000 * 30.44))); }
+function crmAddMonths(iso, m) { const d = new Date(iso + 'T00:00:00'); d.setMonth(d.getMonth() + m); return toDateInput(d); }
+// Every contract in a workspace with its billing schedule: fee lines by the contract's payment term, media budget lines
+// (when paid via OOm) by the media term, grouped into one instalment per billing date. value = what OOm bills in total.
+function crmContracts(wsId) {
+  const acc = crmAccounts[wsId];
+  if (!acc) return [];
+  const by = {};
+  acc.services.forEach(x => {
+    const no = x.contractNo || `${x.type}-${x.start}`;
+    const c = by[no] = by[no] || { contractNo: x.contractNo || '—', start: x.start, end: x.end, services: [], fee: 0, media: 0, monthly: 0, ...(acc.contracts && acc.contracts[x.contractNo]) };
+    c.services.push(x.type);
+    c.monthly += x.monthlyBudget || 0;
+    if (CRM_AD_SERVICES.includes(x.type)) { c.fee += x.monthlyFee || 0; c.media += x.monthlyBudget || 0; } else c.fee += x.monthlyBudget || 0;
+  });
+  return Object.values(by).map(c => {
+    const months = crmMonths(c.start, c.end);
+    const feeTotal = c.fee * months, mediaTotal = c.mediaVia === 'OOm' ? c.media * months : 0;
+    const lines = [];
+    const add = (label, total, term, custom) => {
+      if (total <= 0) return;
+      const ins = crmInstalments(term, months, custom);
+      let acc2 = 0;
+      ins.forEach(([off, f], i) => {
+        const amount = i === ins.length - 1 ? Math.round((total - acc2) * 100) / 100 : Math.round(total * f * 100) / 100;
+        acc2 += amount;
+        lines.push({ date: crmAddMonths(c.start, off), label, n: i + 1, of: ins.length, amount });
+      });
+    };
+    add(c.media ? 'Agency fee' : 'Service fee', feeTotal, c.payTerm || 'Monthly', c.custom);
+    add('Media budget', mediaTotal, c.mediaTerm || 'Monthly');
+    const dates = [...new Set(lines.map(l => l.date))].sort();
+    const schedule = dates.map((date, i) => {
+      const parts = lines.filter(l => l.date === date);
+      return { date, n: i + 1, of: dates.length, parts, amount: Math.round(parts.reduce((t, l) => t + l.amount, 0) * 100) / 100 };
+    });
+    return { ...c, payTerm: c.payTerm || 'Monthly', months, feeTotal, mediaTotal, value: feeTotal + mediaTotal, schedule };
+  });
+}
 // Open an OOm product's web app in a new tab (product.url), or say it isn't available in the demo.
 function openProductApp(pid) {
   const p = productById(pid);

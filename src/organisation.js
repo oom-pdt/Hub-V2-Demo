@@ -63,40 +63,32 @@ function orgStatus(orgId) {
 // ---------- Billing data (placeholders) ----------
 // Billing is per contract: a contract covers one or more services, a client can have several contracts running at
 // once, and each service has at most one active contract at a time (no overlapping contracts for a service).
-// Contracts come from the agency CRM services (grouped by contract number).
-function orgContracts(orgId) {
-  const acc = crmAccounts[orgId];
-  if (!acc) return [];
-  const by = {};
-  acc.services.forEach(x => {
-    const k = x.contractNo || `${x.type}-${x.start}`;
-    (by[k] = by[k] || { contractNo: x.contractNo || '—', start: x.start, end: x.end, services: [], monthly: 0 });
-    by[k].services.push(x.type);
-    by[k].monthly += x.monthlyBudget || 0;
-  });
-  return Object.values(by);
-}
-// One invoice per contract per month, from the contract start up to today. [PLACEHOLDER] amounts: the contract's
-// monthly value in the CRM (which for ad services is the media budget; whether media spend is invoiced is TBC).
+// Each contract bills by its own schedule (crmContracts in core.js: the Agency CRM's payment terms).
+function orgContracts(orgId) { return crmContracts(orgId); }
+// Invoices = the schedule's instalments due so far (billing date on or before today). One invoice per instalment.
 function orgContractInvoices(contracts, seed) {
+  const today = toDateInput(new Date());
   const list = [];
-  contracts.forEach((c, ci) => {
-    const start = new Date(c.start + 'T00:00:00');
-    const months = Math.max(1, Math.round((new Date(c.end + 'T00:00:00') - start) / (86400000 * 30.44)));
-    for (let n = 0; n < months; n++) {
-      const d = new Date(start); d.setMonth(d.getMonth() + n);
-      if (toDateInput(d) > ORG_DEMO_TODAY) break;
-      list.push({ id: `INV-${c.contractNo}-${String(n + 1).padStart(2, '0')}`, date: toDateInput(d), amount: c.monthly, contractNo: c.contractNo, services: c.services,
-        desc: `${c.services.join(' + ')} · instalment ${n + 1} of ${months}`, n });
-    }
-  });
+  contracts.forEach(c => c.schedule.filter(x => x.date <= today).forEach(x => list.push({
+    id: `INV-${c.contractNo}-${String(x.n).padStart(2, '0')}`, date: x.date, amount: x.amount, contractNo: c.contractNo, services: c.services,
+    desc: x.parts.map(p => `${p.label} ${p.n} of ${p.of}`).join(' + ')
+  })));
   // Demo variety: the newest invoice of some contracts is pending; one older invoice failed for some clients.
   contracts.forEach((c, ci) => {
-    const own = list.filter(i => i.contractNo === c.contractNo).sort((a, b) => b.date.localeCompare(a.date));
-    own.forEach((i, k) => { i.status = k === 0 && (seed + ci) % 2 ? 'pending' : (k === 2 && ci === 0 && seed % 3 === 0) ? 'failed' : 'paid'; });
+    list.filter(i => i.contractNo === c.contractNo).sort((a, b) => b.date.localeCompare(a.date))
+      .forEach((i, k) => { i.status = k === 0 && (seed + ci) % 2 ? 'pending' : (k === 2 && ci === 0 && seed % 3 === 0) ? 'failed' : 'paid'; });
   });
-  return list.map(({ n, ...i }) => i);
+  return list;
 }
+// Payment position of one contract, from its invoices (so Billing History and Services & Contract always agree).
+function orgContractPayments(orgId, c) {
+  const inv = orgBilling(orgId).invoices.filter(i => i.contractNo === c.contractNo);
+  const sum = f => Math.round(inv.filter(f).reduce((t, i) => t + i.amount, 0) * 100) / 100;
+  const today = toDateInput(new Date());
+  return { paid: sum(i => i.status === 'paid'), outstanding: sum(i => i.status !== 'paid'), invoiced: sum(() => true),
+    next: c.schedule.find(x => x.date > today) || null, issued: inv.length };
+}
+
 const orgBillingStore = {};
 function orgBilling(orgId = currentOrgId()) {
   if (orgBillingStore[orgId]) return orgBillingStore[orgId];
@@ -392,8 +384,39 @@ function orgServicesHTML() {
     <div class="table-wrap org-svc-table"><table class="table">
       <thead><tr><th>Service</th><th>Contract</th><th class="num">Monthly budget</th><th>Start date</th><th>End date</th><th>Days left</th><th>Status</th></tr></thead>
       <tbody>${rows || '<tr><td class="table-empty" colspan="7">No services in the CRM record.</td></tr>'}</tbody></table></div>
+    ${orgContractPaymentsHTML(id)}
     <div class="org-sync-note org-svc-sync"><i data-lucide="refresh-cw"></i>Synced from Agency CRM · ${esc(fmtDateTime(agencyCrm.lastSynced))}${agencyCrm.status !== 'connected' ? ' · connection paused, figures may be out of date' : ''}</div>
   </section>`;
+}
+
+// Contracts & Payments: per contract, its billing schedule (payment term), total value, how much has been paid and
+// what's next. Payments come from the same invoices as Billing History. [PLACEHOLDER] amounts.
+function orgContractPaymentsHTML(id) {
+  const contracts = orgContracts(id);
+  if (!contracts.length) return '';
+  const rows = contracts.map(c => {
+    const p = orgContractPayments(id, c);
+    const pct = c.value ? Math.min(100, p.paid / c.value * 100) : 0;
+    const invPct = c.value ? Math.min(100, p.invoiced / c.value * 100) : 0;
+    const term = `${esc(CRM_PAY_TERM_LABEL[c.payTerm] || c.payTerm)}<div class="cell-sub">${c.payTerm === 'Customised' ? 'Non-standard terms, approved in the CRM · ' : ''}${c.schedule.length} instalment${c.schedule.length === 1 ? '' : 's'}${c.media ? ` · media ${c.mediaVia === 'OOm' ? 'billed monthly via OOm' : 'paid by client card (not billed)'}` : ''}</div>`;
+    return `<tr>
+      <td class="t-bold dash-nowrap">${esc(c.contractNo)}<div class="cell-sub">${fmtDate(c.start)} – ${fmtDate(c.end)}</div></td>
+      <td><span class="chips org-inv-svcs">${c.services.map(x => `<span class="chip">${esc(x)}</span>`).join('')}</span></td>
+      <td>${term}</td>
+      <td class="num">${fmtMoney(c.value, 2)}${c.mediaTotal ? `<div class="cell-sub">Fees ${fmtMoney(c.feeTotal)} · media ${fmtMoney(c.mediaTotal)}</div>` : ''}</td>
+      <td class="num org-paid-cell"><div class="t-bold">${fmtMoney(p.paid, 2)}</div>
+        <div class="org-paid-bar" title="Paid ${pct.toFixed(0)}% · invoiced ${invPct.toFixed(0)}%"><span class="org-paid-inv" style="width:${invPct.toFixed(1)}%"></span><span class="org-paid-fill" style="width:${pct.toFixed(1)}%"></span></div>
+        <div class="cell-sub">${pct.toFixed(0)}% of contract value${p.outstanding ? ` · <span class="t-warning">${fmtMoney(p.outstanding, 2)} unpaid</span>` : ''}</div></td>
+      <td>${p.next ? `${fmtMoney(p.next.amount, 2)}<div class="cell-sub dash-nowrap">${fmtDate(p.next.date)}</div><div class="cell-sub">Instalment ${p.next.n} of ${p.next.of}</div>` : '<span class="t-muted">Fully invoiced</span>'}</td>
+    </tr>`;
+  }).join('');
+  const tot = contracts.reduce((t, c) => { const p = orgContractPayments(id, c); return { value: t.value + c.value, paid: t.paid + p.paid }; }, { value: 0, paid: 0 });
+  return `<div class="org-contracts-head"><div class="form-section-title">Contracts &amp; Payments</div>
+      <span class="t-caption t-muted">${fmtMoney(tot.paid, 2)} paid of ${fmtMoney(tot.value, 2)} across ${contracts.length} contract${contracts.length === 1 ? '' : 's'} (${tot.value ? Math.round(tot.paid / tot.value * 100) : 0}%)</span></div>
+    <div class="table-wrap org-svc-table"><table class="table">
+      <thead><tr><th>Contract</th><th>Services</th><th>Billing schedule</th><th class="num">Contract value</th><th class="num">Paid to date</th><th>Next payment</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>
+    <div class="field-hint" style="margin-top:8px">Billing schedules come from each contract's payment terms in the agency CRM. Paid amounts follow the invoices in Billing History (official payment status: QBB). [PLACEHOLDER] amounts.</div>`;
 }
 
 // ---------- Billing Information ----------
@@ -757,6 +780,11 @@ ${ctx === 'client' ? `
 - Empty state when the workspace has no CRM record (created manually): "No CRM record linked".
 - Open questions: what happens when a service ends or the account churns; is the ad budget taken from the CRM or set per workspace; should client users see budgets at all?
 
+- **Contracts & Payments (23/10/2026)**: below the services, one row per contract: Contract (no. and dates), Services, **Billing schedule**, **Contract value**, **Paid to date** (amount, % of contract value, a bar showing paid in green and invoiced-but-unpaid in amber, and the unpaid amount) and **Next payment** (amount, date, instalment n of N; "Fully invoiced" when nothing is left to bill). A line above totals paid vs value across contracts.
+  - **Billing schedules follow the Agency CRM revamp's payment terms**: 100% (one-time), Pre-Paid, 50-50%, 60-20-20%, 50-30-20% (upfront, then at one third and two thirds of the term), Monthly, Quarterly, Quarterly Pre-Paid, Bi-Annual, or a **Customised** schedule (non-standard terms, approved in the CRM). Instalment timing uses the CRM's rules.
+  - **Ad contracts**: the agency fee bills by the contract's payment term; the media budget is billed monthly via OOm, or paid by the client's card and not billed by OOm (CRM "Pay via OOm" / "Pay via client card"), so it's excluded from the contract value.
+  - **Paid** comes from the same invoices as Billing History (each invoice = one instalment), so the two always agree; official payment status lives in QBB.
+  - [PLACEHOLDER] amounts: ad agency fees are 15% of the media budget (min. $800/month) until the CRM provides the real fees.
 ## Primary Business Contact (client workspace)
 - Synced with the workspace **Primary Contact** in Team & Access.
 - In edit mode, Contact Person is a member picker; Email follows the chosen member.
@@ -794,7 +822,7 @@ ${common}
 ## Billing History
 - Columns Invoice, **Contract**, **Service**, Date, Amount, Status (Paid green / Pending orange / Failed red dot), Action.
 - **Billing is per contract (23/10/2026).** A contract covers one or more services (e.g. Google Ads + Facebook Ads on one contract); a client can have several contracts running at once; each service has at most one active contract at a time, so contracts for the same service never overlap. Each invoice belongs to one contract, and **Service** lists every service on that contract (never "+N").
-- Client workspaces: one invoice per contract per month, from the contract's agency CRM record (instalment n of N). The agency workspace, and clients without a CRM record, show the Galaxis Hub plan instalments (Service: Galaxis Hub plan, Contract: —).
+- Client workspaces: one invoice per **instalment of the contract's billing schedule** (its payment term in the agency CRM: one-time, monthly, quarterly, 50-30-20% and so on), issued on or before today. The agency workspace, and clients without a CRM record, show the Galaxis Hub plan instalments (Service: Galaxis Hub plan, Contract: —).
 - Sortable, paginated (10 per page by default).
 - **Download** saves a plain-text placeholder invoice clearly labelled "PLACEHOLDER DOCUMENT".
 - Failed invoices also offer **Retry payment** against the default card.
@@ -804,7 +832,7 @@ ${common}
 - Real plan names, prices and seat limits are needed from the product owner.
 - Who can see billing in a client workspace (Super Admin only)?
 - Real invoices should be PDFs from the billing provider.
-- **Invoice amounts per contract are placeholders** (the CRM's monthly value, which for ad services is the media budget). Is media spend invoiced by OOm, or only the management fee? Are invoices monthly for every contract type?
+- Invoices follow each contract's billing schedule (Services & Contract → Contracts & Payments): one invoice per instalment, with media budget included only when it's paid via OOm. Amounts are placeholders.
 - In a client workspace, does the Subscription & Plan card (Galaxis seats) still apply when billing is per service contract?`;
   const brand = `## Purpose
 The organisation's approved brand kit. Figma frame \`6240:9519\`. Each organisation (agency and every client) has its own brand data, with defaults generated from its name.

@@ -484,6 +484,26 @@ svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
   .page-header { flex-direction: column; }
 }
 
+/* ---------- Column / group reordering ---------- */
+.colpick-sortable { grid-template-columns: 1fr; gap: 2px; }
+.colpick-item { display: flex; align-items: center; gap: 4px; padding: 3px 6px 3px 0; border-radius: var(--r-sm); }
+.colpick-item:hover { background: var(--page); }
+.colpick-item .check { flex: 1; }
+.colpick-grip { width: 22px; height: 22px; display: grid; place-items: center; border: 0; background: none; color: var(--text-muted); cursor: grab; border-radius: var(--r-sm); flex-shrink: 0; padding: 0; }
+.colpick-grip:hover, .colpick-grip:focus-visible { color: var(--primary); background: var(--tint); }
+.colpick-grip svg.lucide { width: 14px; height: 14px; }
+.colpick-group-head .colpick-grip { margin-left: -4px; }
+.colpick-group-head .filter-group-title { flex: 1; }
+.colpick-first { font-size: 10px; font-weight: 700; color: var(--primary); background: var(--tint); padding: 2px 6px; border-radius: var(--r-pill); white-space: nowrap; }
+.is-dragging { opacity: .45; }
+.colpick-item.is-drop-before { box-shadow: inset 0 2px 0 var(--primary); }
+.colpick-item.is-drop-after { box-shadow: inset 0 -2px 0 var(--primary); }
+.colpick-group.is-drop-before { box-shadow: 0 -2px 0 var(--primary); }
+.colpick-group.is-drop-after { box-shadow: 0 2px 0 var(--primary); }
+.table thead th[draggable="true"] { cursor: grab; }
+.table thead th.is-drop-before { box-shadow: inset 3px 0 0 var(--primary); }
+.table thead th.is-drop-after { box-shadow: inset -3px 0 0 var(--primary); }
+
 /* dashboard module styles — component-specific only; shared components live in design.css */
 
 /* ---------- Welcome header ---------- */
@@ -2232,13 +2252,15 @@ function applyDateFilter(scope, onApply) {
 // ---------- Column picker (show / hide table columns) ----------
 // registerColumnPicker('campaigns', {
 //   columns: () => [{ key, group, label }],   // toggleable columns (fixed columns are simply not listed)
-//   groups: [['delivery', 'Delivery', { summary: 'spend' }], …],  // order, labels; empty groups are skipped (tone is optional; bands share one colour)
-//   collapsible: true,                          // optional: column groups get a band row and can collapse to their summary column
+//   groups: [['delivery', 'Delivery', { summary: 'spend' }], …],  // default order, labels; summary = the column placed first by default;
+//                                                                  // empty groups are skipped (tone is optional; bands share one colour)
+//   collapsible: true,                          // optional: column groups get a band row, collapse to their first column,
+//                                               // and columns / groups can be reordered (picker handles or dragging headers)
 //   note: 'Name and Action are always shown',
 //   onChange: 'dashRefreshCampaignTable',      // global fn re-rendering the table
 //   storageKey: 'galaxis-demo:…',              // optional; hidden columns are a per-viewer convenience
 //   defaultHidden: ['cpm', …],                 // optional; columns hidden until the viewer changes them (Reset to default restores)
-//   defaultCollapsed: ['ads', …]               // optional; groups collapsed to their summary column until the viewer expands them
+//   defaultCollapsed: ['ads', …]               // optional; groups collapsed to their first column until the viewer expands them
 // })
 const columnPickers = {};
 function registerColumnPicker(id, def) {
@@ -2246,7 +2268,107 @@ function registerColumnPicker(id, def) {
   try { def.hidden = JSON.parse(localStorage.getItem(def.storageKey)) || def.defaultHidden || []; } catch (e) { def.hidden = def.defaultHidden || []; }
   def.collapsedKey = def.collapsedKey || `galaxis-demo:${id}-groups-collapsed`;
   try { def.collapsed = JSON.parse(localStorage.getItem(def.collapsedKey)) || [...(def.defaultCollapsed || [])]; } catch (e) { def.collapsed = [...(def.defaultCollapsed || [])]; }   // default: defaultCollapsed, else all expanded
+  // Viewer's order: { groups: [groupKey…], cols: { groupKey: [colKey…] } }; null = default order.
+  def.orderKey = def.orderKey || `galaxis-demo:${id}-order`;
+  try { def.order = JSON.parse(localStorage.getItem(def.orderKey)) || null; } catch (e) { def.order = null; }
   columnPickers[id] = def;
+}
+
+// ---------- Column order ----------
+// Default: the groups in definition order; within a group the summary (key) column first, then definition order.
+// A collapsed group shows its first visible column, so whatever the viewer drags to the front is what stays visible.
+function colGroupOrder(id) {
+  const d = columnPickers[id];
+  const keys = d.groups.map(g => g[0]);
+  const saved = (d.order && d.order.groups || []).filter(k => keys.includes(k));
+  return [...saved, ...keys.filter(k => !saved.includes(k))];
+}
+function colSortGroup(id, g, items) {
+  const d = columnPickers[id];
+  const summary = (d.groups.find(x => x[0] === g) || [])[2]?.summary;
+  const base = [...items].sort((a, b) => (b.key === summary) - (a.key === summary));
+  const saved = d.order && d.order.cols && d.order.cols[g];
+  if (!saved) return base;
+  const pos = new Map(base.map((c, i) => [c.key, i]));
+  const rank = k => { const i = saved.indexOf(k); return i < 0 ? saved.length + pos.get(k) : i; };
+  return base.sort((a, b) => rank(a.key) - rank(b.key));
+}
+// Columns in the viewer's order (groups, then within each group), ignoring collapse. Used for CSV exports.
+function colOrdered(id, cols) { return colGroupOrder(id).flatMap(g => colSortGroup(id, g, cols.filter(c => c.group === g))); }
+function colSaveOrder(id) {
+  const d = columnPickers[id];
+  try { localStorage.setItem(d.orderKey, JSON.stringify(d.order)); } catch (e) { /* storage unavailable: keep in memory */ }
+  colChanged(id);
+}
+// Move column `key` before / after `target` (same group only), or a group before / after another group.
+function colMove(id, key, target, after) {
+  const d = columnPickers[id];
+  const all = d.columns();
+  const c = all.find(x => x.key === key), t = all.find(x => x.key === target);
+  if (!c || !t || c.group !== t.group || key === target) return;
+  const list = colSortGroup(id, c.group, all.filter(x => x.group === c.group)).map(x => x.key).filter(k => k !== key);
+  list.splice(list.indexOf(target) + (after ? 1 : 0), 0, key);
+  const prev = (d.order && d.order.cols && d.order.cols[c.group]) || [];
+  d.order = { groups: (d.order && d.order.groups) || null, cols: { ...((d.order && d.order.cols) || {}), [c.group]: [...list, ...prev.filter(k => !list.includes(k))] } };
+  if (!d.order.groups) delete d.order.groups;
+  colSaveOrder(id);
+}
+function colMoveGroup(id, g, target, after) {
+  const d = columnPickers[id];
+  if (g === target) return;
+  const list = colGroupOrder(id).filter(k => k !== g);
+  list.splice(list.indexOf(target) + (after ? 1 : 0), 0, g);
+  d.order = { ...(d.order || {}), groups: list };
+  colSaveOrder(id);
+}
+// Keyboard: arrow keys on a picker handle move the column / group one place.
+function colMoveStep(ev, id, kind, key, group) {
+  if (ev.key !== 'ArrowUp' && ev.key !== 'ArrowDown') return;
+  ev.preventDefault();
+  const down = ev.key === 'ArrowDown';
+  if (kind === 'group') {
+    const list = colGroupOrder(id).filter(g => columnPickers[id].columns().some(c => c.group === g));
+    const i = list.indexOf(key), j = i + (down ? 1 : -1);
+    if (j >= 0 && j < list.length) colMoveGroup(id, key, list[j], down);
+  } else {
+    const list = colSortGroup(id, group, columnPickers[id].columns().filter(c => c.group === group)).map(c => c.key);
+    const i = list.indexOf(key), j = i + (down ? 1 : -1);
+    if (j >= 0 && j < list.length) colMove(id, key, list[j], down);
+  }
+  requestAnimationFrame(() => document.querySelector(`#colpick-inner-${id} [data-handle="${kind}:${key}"]`)?.focus());
+}
+// Drag and drop (picker rows and table headers). Columns only drop within their own group.
+let colDrag = null;
+function colDragStart(ev, id, kind, key, group) {
+  colDrag = { id, kind, key, group };
+  ev.dataTransfer.effectAllowed = 'move';
+  try { ev.dataTransfer.setData('text/plain', key); } catch (e) { /* some browsers restrict dataTransfer */ }
+  ev.currentTarget.classList.add('is-dragging');
+}
+function colDragOk(id, kind, group) { return colDrag && colDrag.id === id && colDrag.kind === kind && (kind === 'group' || colDrag.group === group); }
+function colDropAfter(ev, horizontal) { const r = ev.currentTarget.getBoundingClientRect(); return horizontal ? ev.clientX > r.left + r.width / 2 : ev.clientY > r.top + r.height / 2; }
+function colDragOver(ev, id, kind, group, horizontal) {
+  if (!colDragOk(id, kind, group)) return;
+  ev.preventDefault();
+  const after = colDropAfter(ev, horizontal);
+  ev.currentTarget.classList.toggle('is-drop-after', after);
+  ev.currentTarget.classList.toggle('is-drop-before', !after);
+}
+function colDragLeave(ev) { ev.currentTarget.classList.remove('is-drop-before', 'is-drop-after'); }
+function colDrop(ev, id, kind, key, group, horizontal) {
+  colDragLeave(ev);
+  if (!colDragOk(id, kind, group)) return;
+  ev.preventDefault();
+  const d = colDrag; colDrag = null;
+  if (kind === 'group') colMoveGroup(id, d.key, key, colDropAfter(ev, horizontal));
+  else colMove(id, d.key, key, colDropAfter(ev, horizontal));
+}
+function colDragEnd(ev) { colDrag = null; ev.currentTarget.classList.remove('is-dragging'); }
+// Drag attributes for a reorderable table header cell (column) or band cell (group).
+function colDragAttrs(id, kind, key, group = '') {
+  if (!columnPickers[id] || !columnPickers[id].collapsible) return '';
+  const a = `'${id}','${kind}','${key}','${group}'`;
+  return ` draggable="true" ondragstart="colDragStart(event,${a})" ondragover="colDragOver(event,'${id}','${kind}','${group}',true)" ondragleave="colDragLeave(event)" ondrop="colDrop(event,${a},true)" ondragend="colDragEnd(event)"`;
 }
 function colVisible(id, key) { return !columnPickers[id].hidden.includes(key); }
 function colHiddenCount(id) { const d = columnPickers[id]; return d.columns().filter(c => d.hidden.includes(c.key)).length; }
@@ -2261,20 +2383,26 @@ function colPickerInner(id) {
   const d = columnPickers[id];
   const cols = d.columns();
   const shown = cols.filter(c => colVisible(id, c.key)).length;
-  const groups = d.groups.map(([g, label]) => {
-    const items = cols.filter(c => c.group === g);
+  const sortable = !!d.collapsible;
+  const label = g => (d.groups.find(x => x[0] === g) || [])[1] || g;
+  // Reorderable pickers: grip handles (drag, or arrow keys) on groups and on columns within a group.
+  const handle = (kind, key, group, name) => sortable ? `<button type="button" class="colpick-grip" data-handle="${kind}:${key}" aria-label="Move ${esc(name)} (arrow keys)" title="Drag to reorder"
+      onkeydown="colMoveStep(event,'${id}','${kind}','${key}','${group}')"><i data-lucide="grip-vertical"></i></button>` : '';
+  const dnd = (kind, key, group) => sortable ? ` draggable="true" ondragstart="colDragStart(event,'${id}','${kind}','${key}','${group}')" ondragover="colDragOver(event,'${id}','${kind}','${group}',false)" ondragleave="colDragLeave(event)" ondrop="colDrop(event,'${id}','${kind}','${key}','${group}',false)" ondragend="colDragEnd(event)"` : '';
+  const groups = (sortable ? colGroupOrder(id) : d.groups.map(x => x[0])).map(g => {
+    const items = sortable ? colSortGroup(id, g, cols.filter(c => c.group === g)) : cols.filter(c => c.group === g);
     if (!items.length) return '';
     const on = items.filter(c => colVisible(id, c.key)).length;
-    return `<div class="filter-group">
-      <div class="colpick-group-head"><span class="filter-group-title">${esc(label)}</span>
+    return `<div class="filter-group colpick-group"${dnd('group', g, '')}>
+      <div class="colpick-group-head">${handle('group', g, '', label(g))}<span class="filter-group-title">${esc(label(g))}</span>
         <button type="button" class="t-link" onclick="colSetGroup('${id}', '${g}', ${on !== items.length})">${on === items.length ? 'Hide all' : 'Show all'}</button></div>
-      <div class="colpick-options">${items.map(c => `<label class="check"><input type="checkbox" ${colVisible(id, c.key) ? 'checked' : ''} onchange="colSet('${id}', '${c.key}', this.checked)">${esc(c.label)}</label>`).join('')}</div>
+      <div class="colpick-options ${sortable ? 'colpick-sortable' : ''}">${items.map((c, i) => `<div class="colpick-item"${dnd('col', c.key, g)}>${handle('col', c.key, g, c.label)}<label class="check"><input type="checkbox" ${colVisible(id, c.key) ? 'checked' : ''} onchange="colSet('${id}', '${c.key}', this.checked)">${esc(c.label)}</label>${sortable && d.collapsible && i === 0 ? '<span class="colpick-first" title="Shown when the group is collapsed">Shown collapsed</span>' : ''}</div>`).join('')}</div>
     </div>`;
   }).join('');
-  return `<div class="colpick-head"><div class="h-card">Columns</div><div class="card-sub">${shown} of ${cols.length} shown${d.note ? ` · ${esc(d.note)}` : ''}</div></div>
+  return `<div class="colpick-head"><div class="h-card">Columns</div><div class="card-sub">${shown} of ${cols.length} shown${d.note ? ` · ${esc(d.note)}` : ''}${sortable ? '<br>Drag to reorder columns and groups. A collapsed group shows its first column.' : ''}</div></div>
     ${groups}
     <div class="filter-actions">
-      ${d.defaultHidden || d.defaultCollapsed ? `<button type="button" class="btn btn-ghost btn-sm" onclick="colResetDefault('${id}')" ${colIsDefault(id) ? 'disabled' : ''}>Reset to default</button>` : ''}
+      ${d.defaultHidden || d.defaultCollapsed || d.collapsible ? `<button type="button" class="btn btn-ghost btn-sm" onclick="colResetDefault('${id}')" ${colIsDefault(id) ? 'disabled' : ''}>Reset to default</button>` : ''}
       <button type="button" class="btn btn-outline btn-sm" onclick="colShowAll('${id}')" ${shown === cols.length ? 'disabled' : ''}>Show all columns</button></div>`;
 }
 function colSet(id, key, on) {
@@ -2296,13 +2424,14 @@ function colResetDefault(id) {
   const d = columnPickers[id];
   d.hidden = [...(d.defaultHidden || [])];
   d.collapsed = [...(d.defaultCollapsed || [])];
-  try { localStorage.setItem(d.collapsedKey, JSON.stringify(d.collapsed)); } catch (e) { /* keep in memory */ }
+  d.order = null;
+  try { localStorage.setItem(d.collapsedKey, JSON.stringify(d.collapsed)); localStorage.removeItem(d.orderKey); } catch (e) { /* keep in memory */ }
   colChanged(id);
 }
 function colIsDefault(id) {
   const d = columnPickers[id];
   const same = (x, y) => [...x].sort().join() === [...y].sort().join();
-  return same(d.hidden, d.defaultHidden || []) && same(d.collapsed, d.defaultCollapsed || []);
+  return same(d.hidden, d.defaultHidden || []) && same(d.collapsed, d.defaultCollapsed || []) && !d.order;
 }
 function colChanged(id) {
   const d = columnPickers[id];
@@ -2315,16 +2444,17 @@ function colChanged(id) {
 }
 
 // ---------- Collapsible column groups ----------
-// colLayout(id, cols): cols = the table's ordered, visible column defs (each with .group). Returns the columns to render
-// (a collapsed group keeps only its summary column, or its first visible column) and the band groups.
+// colLayout(id, cols): cols = the table's visible column defs (each with .group). Returns the columns to render in the
+// viewer's order (a collapsed group keeps only its first visible column) and the band groups.
 function colLayout(id, cols) {
   const d = columnPickers[id];
   const columns = [], groups = [];
-  d.groups.forEach(([key, label, o = {}]) => {
-    const items = cols.filter(c => c.group === key);
+  colGroupOrder(id).forEach(key => {
+    const [, label, o = {}] = d.groups.find(g => g[0] === key);
+    const items = colSortGroup(id, key, cols.filter(c => c.group === key));
     if (!items.length) return;
     const collapsed = !!d.collapsible && d.collapsed.includes(key);
-    const shown = collapsed ? [items.find(c => c.key === o.summary) || items[0]] : items;
+    const shown = collapsed ? [items[0]] : items;
     const tone = o.tone || 'neutral';
     groups.push({ key, label, tone, collapsed, span: shown.length, hidden: items.length - shown.length });
     shown.forEach((c, i) => columns.push({ ...c, colGroup: key, colTone: tone, colStart: i === 0 }));
@@ -2341,7 +2471,7 @@ function colGroupHeaderRow(id, layout, { lead = 1, trail = 0 } = {}) {
     ? `<button type="button" class="colgrp-all" onclick="colSetAllGroups('${id}', ${anyOpen})"><i data-lucide="${anyOpen ? 'chevrons-left-right' : 'chevrons-right-left'}"></i>${anyOpen ? 'Collapse all' : 'Expand all'}</button>` : '';
   const blank = (n, cls, content = '') => n ? `<th class="colgrp-blank ${cls}"${n > 1 ? ` colspan="${n}"` : ''}>${content}</th>` : '';
   return `<tr class="colgrp-row">${blank(lead, 'colgrp-lead', toggleAll)}${layout.groups.map(g => `
-    <th class="colgrp-band colgrp-${g.tone} colgrp-start ${g.collapsed ? 'is-collapsed' : ''}"${g.span > 1 ? ` colspan="${g.span}"` : ''}>
+    <th class="colgrp-band colgrp-${g.tone} colgrp-start ${g.collapsed ? 'is-collapsed' : ''}"${g.span > 1 ? ` colspan="${g.span}"` : ''}${colDragAttrs(id, 'group', g.key)}>
       <button type="button" class="colgrp-btn" onclick="colToggleGroup('${id}', '${g.key}')" aria-expanded="${!g.collapsed}"
         title="${esc(g.label)} · ${g.collapsed ? `${g.hidden} more column${g.hidden === 1 ? '' : 's'} — click to expand` : 'click to collapse'}">
         <i data-lucide="${g.collapsed ? 'chevron-right' : 'chevron-down'}"></i><span class="colgrp-label">${esc(g.label)}</span>${g.collapsed && g.hidden ? `<span class="colgrp-more">+${g.hidden}</span>` : ''}
@@ -3560,7 +3690,7 @@ function dashManagedBody() {
   // Grouped, collapsible columns (core.js colLayout): Account · Ads · SEO · CRM.
   const layout = colLayout('managed', DASH_MG_COLS.filter(c => colVisible('managed', c.key)));
   const cols = layout.columns;
-  const th = c => `<th class="${colCellClass(c)}"${c.tip ? ` title="${esc(c.tip)}"` : ''}>${sortHeader('dash-managed', c.key, c.label, fn)}</th>`;
+  const th = c => `<th class="${colCellClass(c)}"${colDragAttrs('managed', 'col', c.key, c.group)}${c.tip ? ` title="${esc(c.tip)}"` : ''}>${sortHeader('dash-managed', c.key, c.label, fn)}</th>`;
   const dash = '<span class="t-muted">—</span>';
   const money = (r, k) => r.linked ? dashDot(fmtMoney(r.t[k], 2), r.q[k]) : dash;
   const cell = (r, k) => {
@@ -4297,7 +4427,7 @@ function dashCampaignBody() {
   const colDef = Object.fromEntries(metricCols.map(c => [c.key, c]));
   const fn = 'dashRefreshCampaignTable';
   const head = `${colGroupHeaderRow('campaigns', layout, { lead: 1, trail: next ? 1 : 0 })}
-    <tr><th>${sortHeader('dash-ct', 'name', DASH_NAME_COL[level], fn)}</th>${cols.map(c => `<th class="${colCellClass(c)}"${colDef[c.key] ? ` title="${esc(colDef[c.key].tip)}"` : ''}>${sortHeader('dash-ct', c.key, c.label, fn)}</th>`).join('')}${next ? '<th>Action</th>' : ''}</tr>`;
+    <tr><th>${sortHeader('dash-ct', 'name', DASH_NAME_COL[level], fn)}</th>${cols.map(c => `<th class="${colCellClass(c)}"${colDragAttrs('campaigns', 'col', c.key, c.group)}${colDef[c.key] ? ` title="${esc(colDef[c.key].tip)}"` : ''}>${sortHeader('dash-ct', c.key, c.label, fn)}</th>`).join('')}${next ? '<th>Action</th>' : ''}</tr>`;
   const cell = (e, c) => {
     if (c === 'format') return dashFormatCell(e.formats);
     if (c === 'status') return statusPill(DASH_STATUS_KEY[e.status], e.status);
@@ -5198,7 +5328,7 @@ function dashPfBody(p) {
   const next = dashPfNext(p, level);
   const levelName = DASH_PF_LEVEL_TAB[p][level].toLowerCase();
   const head = `${colGroupHeaderRow(pid, layout, { lead: 1, trail: next ? 1 : 0 })}
-    <tr><th>${sortHeader(tid, 'name', DASH_PF_NAME_COL[p][level], fn)}</th>${cols.map(c => `<th class="${colCellClass(c)}" title="${esc(c.tip)}">${sortHeader(tid, c.key, c.label, fn)}</th>`).join('')}${next ? '<th>Action</th>' : ''}</tr>`;
+    <tr><th>${sortHeader(tid, 'name', DASH_PF_NAME_COL[p][level], fn)}</th>${cols.map(c => `<th class="${colCellClass(c)}"${colDragAttrs(pid, 'col', c.key, c.group)} title="${esc(c.tip)}">${sortHeader(tid, c.key, c.label, fn)}</th>`).join('')}${next ? '<th>Action</th>' : ''}</tr>`;
   const menu = e => {
     const items = [{ label: `View ${DASH_PF_LEVEL_TAB[p][next].toLowerCase()} (${e.childCount})`, icon: 'arrow-right', onClick: `dashPfDrill('${p}','${q(e.id)}')` }];
     if (p === 'google' && e.kwCount) items.push({ label: `View keywords (${e.kwCount})`, icon: 'key-round', onClick: `dashPfDrill('${p}','${q(e.id)}','keyword')` });
@@ -5248,7 +5378,7 @@ function dashPfCsv(p) {
     const s = dashPfState(p);
     const level = s.level;
     const rows = dashPfRows(p);
-    const cols = dashPfLevelCols(p, level).filter(c => colVisible(`pf-${p}`, c.key));
+    const cols = colOrdered(`pf-${p}`, dashPfLevelCols(p, level).filter(c => colVisible(`pf-${p}`, c.key)));
     const parentHead = level === 'campaign' ? [] : level === 'adgroup' ? ['Campaign'] : ['Campaign', DASH_PF_LEVEL_ONE[p].adgroup];
     const label = c => c.t.startsWith('money') || c.t === 'budget' ? `${c.label} (SGD)` : c.t === 'pct' && !c.label.includes('%') ? `${c.label} (%)` : c.label;
     const parents = e => level === 'campaign' ? [] : level === 'adgroup' ? [e.campaignName] : [e.campaignName, e.adGroupName];
@@ -5447,7 +5577,7 @@ A dedicated **${name}** view inside the Ad Performance tab that replicates the n
 - **Leads & Revenue** (CRM mode): the same section as All Platforms, scoped to this platform. Ad-only mode shows the locked cards and the Connect CRM banner.
 - **Report table**: level tabs, search, filter, column picker, **Download CSV**; grouped, collapsible column bands like the native column sets; every column sortable (default Cost / Amount spent, high to low; rows with no data sort last); 10 rows per page (10 / 20 / 50); name column and Action pinned; two-line headers; header tooltips with the sheet's definitions. Name cells show the parent above (campaign: ad account; lower levels: campaign › ad group). A grey **Total** row sums every filtered row (all pages), "Filtered" when a search, filter or drill-down applies; ratios are recalculated from the sums.
 - **Drill-down**: clicking a row, or "View …" in the ⋮ menu, opens the next level with a "Filtered for X ✕" badge; ✕ returns to Campaigns. Level tabs keep the drill-down filter.
-- **Table principle (22/10/2026; collapsible groups reinstated 23/10/2026 after feedback that they help on long tables)**: these views replicate the native Google Ads and Meta Ads reports as closely as possible, so clients never need the native UIs. **All columns shown by default, in collapsed state**. Every metric group starts collapsed to its primary field ("+N" on the band shows how many columns are folded in); the Attributes / Settings group starts expanded, with Status / Delivery as its primary field when collapsed. "Collapse all / Expand all" above the name column; the column picker hides or shows single columns; **Reset to default** restores the defaults. Choices are remembered per viewer (prototype: localStorage; product: per user).
+- **Table principle (22/10/2026; collapsible groups reinstated 23/10/2026 after feedback that they help on long tables)**: these views replicate the native Google Ads and Meta Ads reports as closely as possible, so clients never need the native UIs. **All columns shown by default, in collapsed state**. Every metric group starts collapsed to its primary field ("+N" on the band shows how many columns are folded in); the Attributes / Settings group starts expanded, with Status / Delivery as its primary field when collapsed. "Collapse all / Expand all" above the name column; the column picker hides or shows single columns; **Reset to default** restores the defaults. Choices are remembered per viewer (prototype: localStorage; product: per user). **Reordering (23/10/2026)**: viewers can reorder columns within a group and reorder the groups themselves, by dragging the grip handles in the column picker (arrow keys also work) or dragging the column headers / group bands in the table; columns only move within their own group. **A collapsed group always shows its first column** (the picker tags it "Shown collapsed"); by default each group's key column is placed first, so the default collapsed view is unchanged. The order is remembered per viewer and also drives the CSV export; **Reset to default** restores it.
 - Only columns that exist at the current level natively are offered (e.g. Quality Score only for keywords).
 - Quality dots (green / orange / red vs this platform's total) on CTR, CPC, CPM and cost per conversion / result.
 - **Download CSV** (the native "Download report"): exports the current level, every column switched on in the column picker (collapsed groups included, since collapsing is only a display choice), every filtered row in the current sort order (not only the current page), then a Total row. Name and parent columns (Campaign, Ad group / Ad set) come first. Plain numbers: money in SGD to 2 dp ("(SGD)" in the header), percentages as numbers ("(%)"), "—" cells empty. UTF-8 with BOM for Excel. File name: \`{workspace}_${name === 'Google Ads' ? 'google' : 'meta'}-ads_{level}_{start}_{end}.csv\`. Text cells starting with = + - @ are prefixed with ' so spreadsheets do not run them as formulas.
@@ -5508,7 +5638,7 @@ Central command dashboard for agency administrators managing many client workspa
     - **Budget Pacing**: ad spend for the selected dates against the CRM media budget for the same days (monthly media budget × days ÷ 30). Ahead of pace above 115% (red), Under spend below 80% (orange), otherwise On track (green).
     - **Contract Days Left**: each service runs on its own CRM contract; Ads shows one figure when the ad services share a contract, otherwise one per platform. Amber at 60 days or fewer, red at 30 or fewer.
     - **ROAS**: platform-reported purchase value ÷ spend, mainly meaningful for e-commerce clients.
-  - **Column groups**: Account · Ads · SEO · Contact bands, collapsible; collapsed groups keep their key column (Account Health, Cost Per Conversion, Top 10 %, Primary Contact). All start expanded; each viewer's choice is remembered (prototype: localStorage). **Reset to default** restores the default columns.
+  - **Column groups**: Account · Ads · SEO · Contact bands, collapsible; collapsed groups keep their key column (Account Health, Cost Per Conversion, Top 10 %, Primary Contact). All start expanded; each viewer's choice is remembered (prototype: localStorage). **Reset to default** restores the default columns. **Reordering (23/10/2026)**: viewers can reorder columns within a group and reorder the groups themselves, by dragging the grip handles in the column picker (arrow keys also work) or dragging the column headers / group bands in the table; columns only move within their own group. **A collapsed group always shows its first column** (the picker tags it "Shown collapsed"); by default each group's key column is placed first, so the default collapsed view is unchanged. The order is remembered per viewer and also drives the CSV export; **Reset to default** restores it.
   - Coloured dots on Cost per Conversion (and CPM / CPC) compare each workspace with the portfolio average: green at least 10% better, orange within -10% to +15%, red more than 15% worse.
   - Search by client or contact. Filter: Account Health, Ad Platforms, Performance band, SEO Status. Every column is sortable; rows without data sort last. The ⋮ menu: Go to workspace, View SEO performance (SEO Cloud clients), Organisation settings, Integrations.
 - **Filter dropdowns**: Changes apply immediately. Each group has an "All" option. **Clear Filter** removes every filter. **Revert To Original** restores the selection from when the panel was opened. **Apply** closes the panel.
@@ -5606,7 +5736,7 @@ Client-facing workspace dashboard giving a simplified, unified view of Meta and 
   - **Columns**: Name (parent shown above), Ad Format (+N overflow), Status, then the platform metrics from the *Google & Meta Ads Metrics* sheet (Metrics (Dev Notes), green rows), in sheet order: Spend (Cost), Impressions, Reach, CPM, Frequency, Clicks, CTR, CPC, Conversions, Conversion Rate, Cost Per Conversion (kept from V1), Cost Per Lead, Cost Per Purchase, ROAS, Conversion Value, Engagement Rate, Engagement, Cost Per Engagement. In CRM mode, CRM Leads, CRM CPL, CRM Revenue and CRM ROAS follow ("CRM" prefix to separate CRM-attributed ROAS from platform-reported ROAS). Header tooltips show the sheet's definitions. Every column is sortable, including Status (Active → Paused; Google and Meta report only these two) and Ad Format (first format).
   - **Column picker** (columns icon next to the filter): show or hide columns, grouped as Overview (Ad Format, Status, Spend), Impressions (Impressions, Reach, CPM, Frequency), Clicks, Conversions, Engagement and CRM (CRM mode only), with Show all / Hide all per group and Show all columns. The badge counts hidden columns. Name and Action are always shown.
   - **Default columns (22/10/2026 table principle: all columns, collapsed)**: every column is shown; every metric group starts **collapsed** to its summary column, and Overview (Ad Format, Status, Spend) stays expanded. Default view: Name, Ad Format, Status, Spend, Impressions, CTR, Conversions, Engagement Rate, CRM ROAS (CRM mode), Action. Expanding a group shows the rest of its columns. **Reset to default** restores this. (Before 22/10/2026, 11 columns started hidden; the storage keys were bumped so every viewer gets the new default once.)
-  - **Column groups**: the same groups appear as collapsible bands above the column headers (one colour for every group, a deeper blue than the column headers, with 2px soft-blue dividers; 23/10/2026). Collapsing a group leaves its summary column: Overview → Spend, Impressions → Impressions, Clicks → CTR, Conversions → Conversions, Engagement → Engagement Rate, CRM → CRM ROAS (or the group's first visible column if that one is hidden). "Collapse all / Expand all" sits above the name column. Each viewer's choice is remembered in the browser (prototype: localStorage; product: save per user).
+  - **Column groups**: the same groups appear as collapsible bands above the column headers (one colour for every group, a deeper blue than the column headers, with 2px soft-blue dividers; 23/10/2026). Collapsing a group leaves its summary column: Overview → Spend, Impressions → Impressions, Clicks → CTR, Conversions → Conversions, Engagement → Engagement Rate, CRM → CRM ROAS (or the group's first visible column if that one is hidden). "Collapse all / Expand all" sits above the name column. Each viewer's choice is remembered in the browser (prototype: localStorage; product: save per user). **Reordering (23/10/2026)**: viewers can reorder columns within a group and reorder the groups themselves, by dragging the grip handles in the column picker (arrow keys also work) or dragging the column headers / group bands in the table; columns only move within their own group. **A collapsed group always shows its first column** (the picker tags it "Shown collapsed"); by default each group's key column is placed first, so the default collapsed view is unchanged. The order is remembered per viewer and also drives the CSV export; **Reset to default** restores it.
   - **API fields** (from the sheet, for development):
     - Cost — Meta \`spend\`; Google \`metrics.cost_micros\`
     - Impressions — Meta \`impressions\`; Google \`metrics.impressions\`

@@ -493,13 +493,15 @@ function applyDateFilter(scope, onApply) {
 // ---------- Column picker (show / hide table columns) ----------
 // registerColumnPicker('campaigns', {
 //   columns: () => [{ key, group, label }],   // toggleable columns (fixed columns are simply not listed)
-//   groups: [['delivery', 'Delivery', { summary: 'spend' }], …],  // order, labels; empty groups are skipped (tone is optional; bands share one colour)
-//   collapsible: true,                          // optional: column groups get a band row and can collapse to their summary column
+//   groups: [['delivery', 'Delivery', { summary: 'spend' }], …],  // default order, labels; summary = the column placed first by default;
+//                                                                  // empty groups are skipped (tone is optional; bands share one colour)
+//   collapsible: true,                          // optional: column groups get a band row, collapse to their first column,
+//                                               // and columns / groups can be reordered (picker handles or dragging headers)
 //   note: 'Name and Action are always shown',
 //   onChange: 'dashRefreshCampaignTable',      // global fn re-rendering the table
 //   storageKey: 'galaxis-demo:…',              // optional; hidden columns are a per-viewer convenience
 //   defaultHidden: ['cpm', …],                 // optional; columns hidden until the viewer changes them (Reset to default restores)
-//   defaultCollapsed: ['ads', …]               // optional; groups collapsed to their summary column until the viewer expands them
+//   defaultCollapsed: ['ads', …]               // optional; groups collapsed to their first column until the viewer expands them
 // })
 const columnPickers = {};
 function registerColumnPicker(id, def) {
@@ -507,7 +509,107 @@ function registerColumnPicker(id, def) {
   try { def.hidden = JSON.parse(localStorage.getItem(def.storageKey)) || def.defaultHidden || []; } catch (e) { def.hidden = def.defaultHidden || []; }
   def.collapsedKey = def.collapsedKey || `galaxis-demo:${id}-groups-collapsed`;
   try { def.collapsed = JSON.parse(localStorage.getItem(def.collapsedKey)) || [...(def.defaultCollapsed || [])]; } catch (e) { def.collapsed = [...(def.defaultCollapsed || [])]; }   // default: defaultCollapsed, else all expanded
+  // Viewer's order: { groups: [groupKey…], cols: { groupKey: [colKey…] } }; null = default order.
+  def.orderKey = def.orderKey || `galaxis-demo:${id}-order`;
+  try { def.order = JSON.parse(localStorage.getItem(def.orderKey)) || null; } catch (e) { def.order = null; }
   columnPickers[id] = def;
+}
+
+// ---------- Column order ----------
+// Default: the groups in definition order; within a group the summary (key) column first, then definition order.
+// A collapsed group shows its first visible column, so whatever the viewer drags to the front is what stays visible.
+function colGroupOrder(id) {
+  const d = columnPickers[id];
+  const keys = d.groups.map(g => g[0]);
+  const saved = (d.order && d.order.groups || []).filter(k => keys.includes(k));
+  return [...saved, ...keys.filter(k => !saved.includes(k))];
+}
+function colSortGroup(id, g, items) {
+  const d = columnPickers[id];
+  const summary = (d.groups.find(x => x[0] === g) || [])[2]?.summary;
+  const base = [...items].sort((a, b) => (b.key === summary) - (a.key === summary));
+  const saved = d.order && d.order.cols && d.order.cols[g];
+  if (!saved) return base;
+  const pos = new Map(base.map((c, i) => [c.key, i]));
+  const rank = k => { const i = saved.indexOf(k); return i < 0 ? saved.length + pos.get(k) : i; };
+  return base.sort((a, b) => rank(a.key) - rank(b.key));
+}
+// Columns in the viewer's order (groups, then within each group), ignoring collapse. Used for CSV exports.
+function colOrdered(id, cols) { return colGroupOrder(id).flatMap(g => colSortGroup(id, g, cols.filter(c => c.group === g))); }
+function colSaveOrder(id) {
+  const d = columnPickers[id];
+  try { localStorage.setItem(d.orderKey, JSON.stringify(d.order)); } catch (e) { /* storage unavailable: keep in memory */ }
+  colChanged(id);
+}
+// Move column `key` before / after `target` (same group only), or a group before / after another group.
+function colMove(id, key, target, after) {
+  const d = columnPickers[id];
+  const all = d.columns();
+  const c = all.find(x => x.key === key), t = all.find(x => x.key === target);
+  if (!c || !t || c.group !== t.group || key === target) return;
+  const list = colSortGroup(id, c.group, all.filter(x => x.group === c.group)).map(x => x.key).filter(k => k !== key);
+  list.splice(list.indexOf(target) + (after ? 1 : 0), 0, key);
+  const prev = (d.order && d.order.cols && d.order.cols[c.group]) || [];
+  d.order = { groups: (d.order && d.order.groups) || null, cols: { ...((d.order && d.order.cols) || {}), [c.group]: [...list, ...prev.filter(k => !list.includes(k))] } };
+  if (!d.order.groups) delete d.order.groups;
+  colSaveOrder(id);
+}
+function colMoveGroup(id, g, target, after) {
+  const d = columnPickers[id];
+  if (g === target) return;
+  const list = colGroupOrder(id).filter(k => k !== g);
+  list.splice(list.indexOf(target) + (after ? 1 : 0), 0, g);
+  d.order = { ...(d.order || {}), groups: list };
+  colSaveOrder(id);
+}
+// Keyboard: arrow keys on a picker handle move the column / group one place.
+function colMoveStep(ev, id, kind, key, group) {
+  if (ev.key !== 'ArrowUp' && ev.key !== 'ArrowDown') return;
+  ev.preventDefault();
+  const down = ev.key === 'ArrowDown';
+  if (kind === 'group') {
+    const list = colGroupOrder(id).filter(g => columnPickers[id].columns().some(c => c.group === g));
+    const i = list.indexOf(key), j = i + (down ? 1 : -1);
+    if (j >= 0 && j < list.length) colMoveGroup(id, key, list[j], down);
+  } else {
+    const list = colSortGroup(id, group, columnPickers[id].columns().filter(c => c.group === group)).map(c => c.key);
+    const i = list.indexOf(key), j = i + (down ? 1 : -1);
+    if (j >= 0 && j < list.length) colMove(id, key, list[j], down);
+  }
+  requestAnimationFrame(() => document.querySelector(`#colpick-inner-${id} [data-handle="${kind}:${key}"]`)?.focus());
+}
+// Drag and drop (picker rows and table headers). Columns only drop within their own group.
+let colDrag = null;
+function colDragStart(ev, id, kind, key, group) {
+  colDrag = { id, kind, key, group };
+  ev.dataTransfer.effectAllowed = 'move';
+  try { ev.dataTransfer.setData('text/plain', key); } catch (e) { /* some browsers restrict dataTransfer */ }
+  ev.currentTarget.classList.add('is-dragging');
+}
+function colDragOk(id, kind, group) { return colDrag && colDrag.id === id && colDrag.kind === kind && (kind === 'group' || colDrag.group === group); }
+function colDropAfter(ev, horizontal) { const r = ev.currentTarget.getBoundingClientRect(); return horizontal ? ev.clientX > r.left + r.width / 2 : ev.clientY > r.top + r.height / 2; }
+function colDragOver(ev, id, kind, group, horizontal) {
+  if (!colDragOk(id, kind, group)) return;
+  ev.preventDefault();
+  const after = colDropAfter(ev, horizontal);
+  ev.currentTarget.classList.toggle('is-drop-after', after);
+  ev.currentTarget.classList.toggle('is-drop-before', !after);
+}
+function colDragLeave(ev) { ev.currentTarget.classList.remove('is-drop-before', 'is-drop-after'); }
+function colDrop(ev, id, kind, key, group, horizontal) {
+  colDragLeave(ev);
+  if (!colDragOk(id, kind, group)) return;
+  ev.preventDefault();
+  const d = colDrag; colDrag = null;
+  if (kind === 'group') colMoveGroup(id, d.key, key, colDropAfter(ev, horizontal));
+  else colMove(id, d.key, key, colDropAfter(ev, horizontal));
+}
+function colDragEnd(ev) { colDrag = null; ev.currentTarget.classList.remove('is-dragging'); }
+// Drag attributes for a reorderable table header cell (column) or band cell (group).
+function colDragAttrs(id, kind, key, group = '') {
+  if (!columnPickers[id] || !columnPickers[id].collapsible) return '';
+  const a = `'${id}','${kind}','${key}','${group}'`;
+  return ` draggable="true" ondragstart="colDragStart(event,${a})" ondragover="colDragOver(event,'${id}','${kind}','${group}',true)" ondragleave="colDragLeave(event)" ondrop="colDrop(event,${a},true)" ondragend="colDragEnd(event)"`;
 }
 function colVisible(id, key) { return !columnPickers[id].hidden.includes(key); }
 function colHiddenCount(id) { const d = columnPickers[id]; return d.columns().filter(c => d.hidden.includes(c.key)).length; }
@@ -522,20 +624,26 @@ function colPickerInner(id) {
   const d = columnPickers[id];
   const cols = d.columns();
   const shown = cols.filter(c => colVisible(id, c.key)).length;
-  const groups = d.groups.map(([g, label]) => {
-    const items = cols.filter(c => c.group === g);
+  const sortable = !!d.collapsible;
+  const label = g => (d.groups.find(x => x[0] === g) || [])[1] || g;
+  // Reorderable pickers: grip handles (drag, or arrow keys) on groups and on columns within a group.
+  const handle = (kind, key, group, name) => sortable ? `<button type="button" class="colpick-grip" data-handle="${kind}:${key}" aria-label="Move ${esc(name)} (arrow keys)" title="Drag to reorder"
+      onkeydown="colMoveStep(event,'${id}','${kind}','${key}','${group}')"><i data-lucide="grip-vertical"></i></button>` : '';
+  const dnd = (kind, key, group) => sortable ? ` draggable="true" ondragstart="colDragStart(event,'${id}','${kind}','${key}','${group}')" ondragover="colDragOver(event,'${id}','${kind}','${group}',false)" ondragleave="colDragLeave(event)" ondrop="colDrop(event,'${id}','${kind}','${key}','${group}',false)" ondragend="colDragEnd(event)"` : '';
+  const groups = (sortable ? colGroupOrder(id) : d.groups.map(x => x[0])).map(g => {
+    const items = sortable ? colSortGroup(id, g, cols.filter(c => c.group === g)) : cols.filter(c => c.group === g);
     if (!items.length) return '';
     const on = items.filter(c => colVisible(id, c.key)).length;
-    return `<div class="filter-group">
-      <div class="colpick-group-head"><span class="filter-group-title">${esc(label)}</span>
+    return `<div class="filter-group colpick-group"${dnd('group', g, '')}>
+      <div class="colpick-group-head">${handle('group', g, '', label(g))}<span class="filter-group-title">${esc(label(g))}</span>
         <button type="button" class="t-link" onclick="colSetGroup('${id}', '${g}', ${on !== items.length})">${on === items.length ? 'Hide all' : 'Show all'}</button></div>
-      <div class="colpick-options">${items.map(c => `<label class="check"><input type="checkbox" ${colVisible(id, c.key) ? 'checked' : ''} onchange="colSet('${id}', '${c.key}', this.checked)">${esc(c.label)}</label>`).join('')}</div>
+      <div class="colpick-options ${sortable ? 'colpick-sortable' : ''}">${items.map((c, i) => `<div class="colpick-item"${dnd('col', c.key, g)}>${handle('col', c.key, g, c.label)}<label class="check"><input type="checkbox" ${colVisible(id, c.key) ? 'checked' : ''} onchange="colSet('${id}', '${c.key}', this.checked)">${esc(c.label)}</label>${sortable && d.collapsible && i === 0 ? '<span class="colpick-first" title="Shown when the group is collapsed">Shown collapsed</span>' : ''}</div>`).join('')}</div>
     </div>`;
   }).join('');
-  return `<div class="colpick-head"><div class="h-card">Columns</div><div class="card-sub">${shown} of ${cols.length} shown${d.note ? ` · ${esc(d.note)}` : ''}</div></div>
+  return `<div class="colpick-head"><div class="h-card">Columns</div><div class="card-sub">${shown} of ${cols.length} shown${d.note ? ` · ${esc(d.note)}` : ''}${sortable ? '<br>Drag to reorder columns and groups. A collapsed group shows its first column.' : ''}</div></div>
     ${groups}
     <div class="filter-actions">
-      ${d.defaultHidden || d.defaultCollapsed ? `<button type="button" class="btn btn-ghost btn-sm" onclick="colResetDefault('${id}')" ${colIsDefault(id) ? 'disabled' : ''}>Reset to default</button>` : ''}
+      ${d.defaultHidden || d.defaultCollapsed || d.collapsible ? `<button type="button" class="btn btn-ghost btn-sm" onclick="colResetDefault('${id}')" ${colIsDefault(id) ? 'disabled' : ''}>Reset to default</button>` : ''}
       <button type="button" class="btn btn-outline btn-sm" onclick="colShowAll('${id}')" ${shown === cols.length ? 'disabled' : ''}>Show all columns</button></div>`;
 }
 function colSet(id, key, on) {
@@ -557,13 +665,14 @@ function colResetDefault(id) {
   const d = columnPickers[id];
   d.hidden = [...(d.defaultHidden || [])];
   d.collapsed = [...(d.defaultCollapsed || [])];
-  try { localStorage.setItem(d.collapsedKey, JSON.stringify(d.collapsed)); } catch (e) { /* keep in memory */ }
+  d.order = null;
+  try { localStorage.setItem(d.collapsedKey, JSON.stringify(d.collapsed)); localStorage.removeItem(d.orderKey); } catch (e) { /* keep in memory */ }
   colChanged(id);
 }
 function colIsDefault(id) {
   const d = columnPickers[id];
   const same = (x, y) => [...x].sort().join() === [...y].sort().join();
-  return same(d.hidden, d.defaultHidden || []) && same(d.collapsed, d.defaultCollapsed || []);
+  return same(d.hidden, d.defaultHidden || []) && same(d.collapsed, d.defaultCollapsed || []) && !d.order;
 }
 function colChanged(id) {
   const d = columnPickers[id];
@@ -576,16 +685,17 @@ function colChanged(id) {
 }
 
 // ---------- Collapsible column groups ----------
-// colLayout(id, cols): cols = the table's ordered, visible column defs (each with .group). Returns the columns to render
-// (a collapsed group keeps only its summary column, or its first visible column) and the band groups.
+// colLayout(id, cols): cols = the table's visible column defs (each with .group). Returns the columns to render in the
+// viewer's order (a collapsed group keeps only its first visible column) and the band groups.
 function colLayout(id, cols) {
   const d = columnPickers[id];
   const columns = [], groups = [];
-  d.groups.forEach(([key, label, o = {}]) => {
-    const items = cols.filter(c => c.group === key);
+  colGroupOrder(id).forEach(key => {
+    const [, label, o = {}] = d.groups.find(g => g[0] === key);
+    const items = colSortGroup(id, key, cols.filter(c => c.group === key));
     if (!items.length) return;
     const collapsed = !!d.collapsible && d.collapsed.includes(key);
-    const shown = collapsed ? [items.find(c => c.key === o.summary) || items[0]] : items;
+    const shown = collapsed ? [items[0]] : items;
     const tone = o.tone || 'neutral';
     groups.push({ key, label, tone, collapsed, span: shown.length, hidden: items.length - shown.length });
     shown.forEach((c, i) => columns.push({ ...c, colGroup: key, colTone: tone, colStart: i === 0 }));
@@ -602,7 +712,7 @@ function colGroupHeaderRow(id, layout, { lead = 1, trail = 0 } = {}) {
     ? `<button type="button" class="colgrp-all" onclick="colSetAllGroups('${id}', ${anyOpen})"><i data-lucide="${anyOpen ? 'chevrons-left-right' : 'chevrons-right-left'}"></i>${anyOpen ? 'Collapse all' : 'Expand all'}</button>` : '';
   const blank = (n, cls, content = '') => n ? `<th class="colgrp-blank ${cls}"${n > 1 ? ` colspan="${n}"` : ''}>${content}</th>` : '';
   return `<tr class="colgrp-row">${blank(lead, 'colgrp-lead', toggleAll)}${layout.groups.map(g => `
-    <th class="colgrp-band colgrp-${g.tone} colgrp-start ${g.collapsed ? 'is-collapsed' : ''}"${g.span > 1 ? ` colspan="${g.span}"` : ''}>
+    <th class="colgrp-band colgrp-${g.tone} colgrp-start ${g.collapsed ? 'is-collapsed' : ''}"${g.span > 1 ? ` colspan="${g.span}"` : ''}${colDragAttrs(id, 'group', g.key)}>
       <button type="button" class="colgrp-btn" onclick="colToggleGroup('${id}', '${g.key}')" aria-expanded="${!g.collapsed}"
         title="${esc(g.label)} · ${g.collapsed ? `${g.hidden} more column${g.hidden === 1 ? '' : 's'} — click to expand` : 'click to collapse'}">
         <i data-lucide="${g.collapsed ? 'chevron-right' : 'chevron-down'}"></i><span class="colgrp-label">${esc(g.label)}</span>${g.collapsed && g.hidden ? `<span class="colgrp-more">+${g.hidden}</span>` : ''}

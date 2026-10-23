@@ -471,3 +471,23 @@ svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
   .grid-2, .grid-3 { grid-template-columns: 1fr; }
   .page-header { flex-direction: column; }
 }
+
+/* ---------- Column / group reordering ---------- */
+.colpick-sortable { grid-template-columns: 1fr; gap: 2px; }
+.colpick-item { display: flex; align-items: center; gap: 4px; padding: 3px 6px 3px 0; border-radius: var(--r-sm); }
+.colpick-item:hover { background: var(--page); }
+.colpick-item .check { flex: 1; }
+.colpick-grip { width: 22px; height: 22px; display: grid; place-items: center; border: 0; background: none; color: var(--text-muted); cursor: grab; border-radius: var(--r-sm); flex-shrink: 0; padding: 0; }
+.colpick-grip:hover, .colpick-grip:focus-visible { color: var(--primary); background: var(--tint); }
+.colpick-grip svg.lucide { width: 14px; height: 14px; }
+.colpick-group-head .colpick-grip { margin-left: -4px; }
+.colpick-group-head .filter-group-title { flex: 1; }
+.colpick-first { font-size: 10px; font-weight: 700; color: var(--primary); background: var(--tint); padding: 2px 6px; border-radius: var(--r-pill); white-space: nowrap; }
+.is-dragging { opacity: .45; }
+.colpick-item.is-drop-before { box-shadow: inset 0 2px 0 var(--primary); }
+.colpick-item.is-drop-after { box-shadow: inset 0 -2px 0 var(--primary); }
+.colpick-group.is-drop-before { box-shadow: 0 -2px 0 var(--primary); }
+.colpick-group.is-drop-after { box-shadow: 0 2px 0 var(--primary); }
+.table thead th[draggable="true"] { cursor: grab; }
+.table thead th.is-drop-before { box-shadow: inset 3px 0 0 var(--primary); }
+.table thead th.is-drop-after { box-shadow: inset -3px 0 0 var(--primary); }

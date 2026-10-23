@@ -121,7 +121,9 @@ function leadsRender() {
   </div>`;
 }
 
+// Stage filter: Galaxis CRM only. External CRMs each have their own stage fields, so a mirror is search-only.
 function leadFilterHTML() {
+  if (!leadCanEdit()) return '';
   const list = leadFiltered();
   const count = s => s === 'All' ? list.length : list.filter(l => l.status === s).length;
   return `<div class="seg" role="tablist" aria-label="Filter by status">${['All', ...LEAD_STATUSES].map(s =>
@@ -131,7 +133,8 @@ function leadFilterHTML() {
 function leadTableHTML() {
   const edit = leadCanEdit();
   let list = leadFiltered();
-  if (state.ui.leadStatus !== 'All') list = list.filter(l => l.status === state.ui.leadStatus);
+  const status = edit ? state.ui.leadStatus : 'All';
+  if (status !== 'All') list = list.filter(l => l.status === state.ui.leadStatus);
   const order = { New: 0, Qualified: 1, Converted: 2, Lost: 3 };
   list = applySort(list, 'leads', {
     name: l => l.name, phone: l => l.phone, source: l => l.source, owner: l => l.owner, status: l => order[l.status], created: l => l.created, ltv: l => l.ltv
@@ -140,7 +143,7 @@ function leadTableHTML() {
   const page = paginate(list, 'leads');
   const th = (col, label, cls = '') => `<th class="${cls}">${sortHeader('leads', col, label, 'leadRefreshTable')}</th>`;
   const term = state.ui.leadSearch.trim();
-  const emptyMsg = term ? `No leads found matching “${term}”${state.ui.leadStatus !== 'All' ? ` with status ${state.ui.leadStatus}` : ''}.` : `No ${state.ui.leadStatus.toLowerCase()} leads yet.`;
+  const emptyMsg = term ? `No leads found matching “${term}”${status !== 'All' ? ` with status ${status}` : ''}.` : `No ${status === 'All' ? '' : `${status.toLowerCase()} `}leads yet.`;
   const rows = page.map(l => `<tr class="clickable" onclick="leadOpen('${q(l.id)}')">
       <td><div class="t-bold">${esc(l.name)}</div><div class="cell-sub">${esc(l.email)}</div></td>
       <td>${esc(l.phone)}</td>
@@ -502,7 +505,8 @@ Ported from V2. Lists leads synchronised from the workspace's active CRM and con
 - Dev toggles override the authority for the demo: Auto / Read-only mirror / Galaxis CRM (full edit).
 
 ## Table
-- Status filter (All / New / Qualified / Converted / Lost, with counts) and search by name, email or source. Counts follow the search.
+- Search by name, email or source.
+- Status filter (All / New / Qualified / Converted / Lost, with counts that follow the search): **Galaxis CRM (full edit) only**. Read-only mirrors don't have it: each third-party CRM has its own stage fields and values, and the mirror is a searchable list, not a working pipeline. The Status column still shows the status synced from the CRM.
 - Columns: Name & Email, Phone, Source, Owner, Status (Converted green, Qualified blue, New grey, Lost red), Created, Lifetime Value.
 - All columns sort; default is newest first. 15 per page (V2), with 10 / 20 / 50 also available.
 - Empty state: "No leads found matching …".

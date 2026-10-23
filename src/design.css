@@ -491,3 +491,7 @@ svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
 .table thead th[draggable="true"] { cursor: grab; }
 .table thead th.is-drop-before { box-shadow: inset 3px 0 0 var(--primary); }
 .table thead th.is-drop-after { box-shadow: inset -3px 0 0 var(--primary); }
+.colpick-panel.is-group-drag .colpick-options { display: none; }
+.colpick-panel.is-group-drag .colpick-group { margin-bottom: 4px; padding: 6px 8px; border: 1px dashed var(--border); border-radius: var(--r-sm); background: var(--surface); }
+.colpick-panel.is-group-drag .colpick-group-head { margin-bottom: 0; }
+.colpick-panel.is-group-drag .colpick-group-head .t-link { visibility: hidden; }

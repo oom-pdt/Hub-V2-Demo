@@ -585,7 +585,12 @@ function colDragStart(ev, id, kind, key, group) {
   ev.dataTransfer.effectAllowed = 'move';
   try { ev.dataTransfer.setData('text/plain', key); } catch (e) { /* some browsers restrict dataTransfer */ }
   ev.currentTarget.classList.add('is-dragging');
+  // Dragging a whole group in the picker folds every group's column list, so only the group names are left to reorder.
+  // Applied a frame later: changing layout inside dragstart can cancel the drag in some browsers.
+  const panel = kind === 'group' && ev.currentTarget.closest('.colpick-panel');
+  if (panel) requestAnimationFrame(() => panel.classList.add('is-group-drag'));
 }
+function colEndGroupDrag() { document.querySelectorAll('.colpick-panel.is-group-drag').forEach(p => p.classList.remove('is-group-drag')); }
 function colDragOk(id, kind, group) { return colDrag && colDrag.id === id && colDrag.kind === kind && (kind === 'group' || colDrag.group === group); }
 function colDropAfter(ev, horizontal) { const r = ev.currentTarget.getBoundingClientRect(); return horizontal ? ev.clientX > r.left + r.width / 2 : ev.clientY > r.top + r.height / 2; }
 function colDragOver(ev, id, kind, group, horizontal) {
@@ -598,13 +603,14 @@ function colDragOver(ev, id, kind, group, horizontal) {
 function colDragLeave(ev) { ev.currentTarget.classList.remove('is-drop-before', 'is-drop-after'); }
 function colDrop(ev, id, kind, key, group, horizontal) {
   colDragLeave(ev);
+  colEndGroupDrag();
   if (!colDragOk(id, kind, group)) return;
   ev.preventDefault();
   const d = colDrag; colDrag = null;
   if (kind === 'group') colMoveGroup(id, d.key, key, colDropAfter(ev, horizontal));
   else colMove(id, d.key, key, colDropAfter(ev, horizontal));
 }
-function colDragEnd(ev) { colDrag = null; ev.currentTarget.classList.remove('is-dragging'); }
+function colDragEnd(ev) { colDrag = null; ev.currentTarget.classList.remove('is-dragging'); colEndGroupDrag(); }
 // Drag attributes for a reorderable table header cell (column) or band cell (group).
 function colDragAttrs(id, kind, key, group = '') {
   if (!columnPickers[id] || !columnPickers[id].collapsible) return '';
@@ -637,7 +643,7 @@ function colPickerInner(id) {
     return `<div class="filter-group colpick-group"${dnd('group', g, '')}>
       <div class="colpick-group-head">${handle('group', g, '', label(g))}<span class="filter-group-title">${esc(label(g))}</span>
         <button type="button" class="t-link" onclick="colSetGroup('${id}', '${g}', ${on !== items.length})">${on === items.length ? 'Hide all' : 'Show all'}</button></div>
-      <div class="colpick-options ${sortable ? 'colpick-sortable' : ''}">${items.map((c, i) => `<div class="colpick-item"${dnd('col', c.key, g)}>${handle('col', c.key, g, c.label)}<label class="check"><input type="checkbox" ${colVisible(id, c.key) ? 'checked' : ''} onchange="colSet('${id}', '${c.key}', this.checked)">${esc(c.label)}</label>${sortable && d.collapsible && i === 0 ? '<span class="colpick-first" title="Shown when the group is collapsed">Shown collapsed</span>' : ''}</div>`).join('')}</div>
+      <div class="colpick-options ${sortable ? 'colpick-sortable' : ''}">${items.map((c, i) => `<div class="colpick-item"${dnd('col', c.key, g)}>${handle('col', c.key, g, c.label)}<label class="check"><input type="checkbox" ${colVisible(id, c.key) ? 'checked' : ''} onchange="colSet('${id}', '${c.key}', this.checked)">${esc(c.label)}</label>${sortable && d.collapsible && i === 0 ? '<span class="colpick-first" title="Shown when the group is collapsed">Shown when collapsed</span>' : ''}</div>`).join('')}</div>
     </div>`;
   }).join('');
   return `<div class="colpick-head"><div class="h-card">Columns</div><div class="card-sub">${shown} of ${cols.length} shown${d.note ? ` · ${esc(d.note)}` : ''}${sortable ? '<br>Drag to reorder columns and groups. A collapsed group shows its first column.' : ''}</div></div>

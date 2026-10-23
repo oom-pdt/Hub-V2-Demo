@@ -279,10 +279,11 @@ function confirmDialog({ title, text, confirmLabel = 'Confirm', danger = false, 
 }
 
 // ---------- Drawer (right slide-over) ----------
-function openDrawer(bodyHtml, footerHtml = '') {
+// opts.wide: the wider slide-over used for product and issue panels.
+function openDrawer(bodyHtml, footerHtml = '', opts = {}) {
   document.getElementById('drawer-root').innerHTML = `
     <div class="drawer-backdrop open" onclick="closeDrawer()"></div>
-    <aside class="drawer" role="dialog" aria-modal="true">
+    <aside class="drawer${opts.wide ? ' drawer-wide' : ''}" role="dialog" aria-modal="true">
       <button type="button" class="kebab drawer-close" onclick="closeDrawer()" aria-label="Close"><i data-lucide="x"></i></button>
       <div class="drawer-body" id="drawer-body">${bodyHtml}</div>
       ${footerHtml ? `<div class="drawer-footer" id="drawer-footer">${footerHtml}</div>` : ''}

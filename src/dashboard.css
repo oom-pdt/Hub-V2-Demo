@@ -354,3 +354,30 @@
 }
 .dash-ct-card > .card-header > .seg { flex-shrink: 0; }
 .dash-ct-card > .card-header > .seg button { white-space: nowrap; }
+
+/* ---------- Product and issue slide-overs (Figma 6551:24738) ---------- */
+.dash-product-row.clickable { cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+.dash-product-row.clickable:hover { border-color: var(--primary); }
+.dash-agency-kpi { position: relative; }
+.dash-kpi-panel { position: absolute; top: 14px; right: 14px; color: var(--primary); display: inline-grid; place-items: center; }
+.dash-kpi-panel svg { width: 18px; height: 18px; }
+.dash-sp .h-section { margin: 0; }
+.dash-sp-sub { font-size: 14px; color: var(--text); margin: 10px 0 28px; }
+.dash-sp-section + .dash-sp-section { margin-top: 32px; }
+.dash-sp-title { font-size: 12px; font-weight: 700; color: var(--text-muted); letter-spacing: .5px; margin-bottom: 12px; }
+.dash-sp-card { display: flex; align-items: flex-start; gap: 16px; padding: 20px; border: 1px solid var(--border-light); border-radius: var(--r-md); box-shadow: var(--shadow-light); background: var(--surface); }
+.dash-sp-card + .dash-sp-card { margin-top: 14px; }
+.dash-sp-card .team-org-logo { width: 36px; height: 36px; font-size: 11px; }
+.dash-sp-name { font-family: var(--font-head); font-size: 15px; font-weight: 600; margin-bottom: 10px; }
+.dash-sp-meter { font-size: 12px; gap: 12px; margin-bottom: 8px; }
+.dash-sp-bar { height: 8px; border-radius: 99px; background: var(--grey-light); overflow: hidden; }
+.dash-sp-bar span { display: block; height: 100%; border-radius: 99px; }
+.dash-sp-bar .red { background: #F78483; }
+.dash-sp-bar .amber { background: #F9C576; }
+.dash-sp-gap { font-size: 12px; margin: -4px 0 12px; }
+.dash-sp-metric { font-size: 12px; color: var(--text-muted); }
+.dash-sp-value { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.dash-sp-value b { color: var(--text); }
+.dash-sp-open { color: var(--primary); flex-shrink: 0; align-self: center; }
+.dash-sp .dash-att-list { max-height: none; overflow: visible; padding-right: 0; }
+.drawer-footer .dash-sp-view { flex: 1; justify-content: center; }

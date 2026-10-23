@@ -456,7 +456,7 @@ function dashAgencyBanner(items) {
   return `<div class="banner banner-warning dash-banner">
     <i data-lucide="triangle-alert"></i>
     <div><div class="banner-title">Attention Required</div><div class="banner-text">${items.length} account issue${items.length === 1 ? '' : 's'} need${items.length === 1 ? 's' : ''} your attention across ${esc(list)}.</div></div>
-    <button type="button" class="banner-action" onclick="dashReviewAccounts()">Review Accounts</button>
+    <button type="button" class="banner-action" onclick="dashOpenAllIssues()">View Issues</button>
   </div>`;
 }
 // "Review Accounts": filter Managed Accounts to accounts that need attention, worst first.
@@ -478,39 +478,117 @@ function dashAgencyKpis(items) {
   const renewals = new Set(svcs.filter(x => x.daysLeft !== null && x.daysLeft <= 30).map(x => `${x.wsId}|${x.contractNo}`)).size;
   const followUps = list.reduce((t, w) => t + (crmAccounts[w.id]?.followUpsDue || 0), 0);
   const card = (title, tip, value, sub, onclick) => `<div class="kpi-card dash-agency-kpi ${onclick ? 'clickable' : ''}" ${onclick ? `role="button" tabindex="0" onclick="${onclick}"` : ''}>
-      <div class="kpi-title t-bold">${esc(title)} ${infoTip(tip)}</div><div class="kpi-value dash-agency-kpi-value">${value}</div><div class="kpi-sub">${sub}</div></div>`;
+      <div class="kpi-title t-bold">${esc(title)} ${infoTip(tip)}</div>${onclick ? '<span class="dash-kpi-panel" title="Show all pending issues"><i data-lucide="panel-right-open"></i></span>' : ''}<div class="kpi-value dash-agency-kpi-value">${value}</div><div class="kpi-sub">${sub}</div></div>`;
   return `<div class="grid-4 dash-kpis dash-agency-kpis">
     ${card('Managed Contract Value', 'Total value of the live contracts across your managed accounts (monthly budget × contract months), from the Agency CRM.', fmtMoney(value, 2), 'Total value across managed contracts')}
-    ${card('Attention Required', 'Open issues across ads, SEO, Aurix, contracts and integrations. The same issues drive the banner and Account Health.', fmtNum(items.length), `Issues across <b>${clients}</b> client${clients === 1 ? '' : 's'}`, 'dashReviewAccounts()')}
+    ${card('Attention Required', 'Open issues across ads, SEO, Aurix, contracts and integrations. The same issues drive the banner and Account Health. Select to see them all in a side panel.', fmtNum(items.length), `Issues across <b>${clients}</b> client${clients === 1 ? '' : 's'}`, 'dashOpenAllIssues()')}
     ${card('Upcoming Renewals', 'Live Agency CRM contracts that end within 30 days.', fmtNum(renewals), 'Contracts renewing within 30 days')}
     ${card('Client Follow-ups Due', 'Open follow-up tasks on your clients in the Agency CRM. [PLACEHOLDER] mock counts.', fmtNum(followUps), 'Follow-ups pending')}
   </div>`;
 }
 
-// Your Products: one row per OOm product with a short health line.
-function dashProductsCard() {
-  const rows = dashManagedRows();
-  const ahead = rows.filter(r => r.pacing && r.pacing.key === 'ahead').length;
-  const under = rows.filter(r => r.q.cpa === 'bad').length;
-  const aurixGap = rows.filter(r => r.services.includes('aurix') && !(wsProducts(r.w.id).aurix?.status === 'connected')).length;
-  const seoCrit = rows.filter(r => r.seo && r.seo.status.key === 'critical').length;
-  const seoOff = rows.filter(r => r.seo && r.seo.status.key === 'off').length;
-  const ok = '<span class="t-success">No critical issues detected</span>';
+// Your Products: one row per OOm product with a short health line. Selecting a row opens its slide-over.
+const DASH_PRODUCTS = [
+  { key: 'ads', name: 'Ads Performance', product: 'Ads Performance', covered: ['Budget Pacing'], view: "dashFocusGroup('ads')" },
+  { key: 'aurix', name: 'Aurix', product: 'Aurix', covered: ['Aurix Not Linked'], view: "openProductApp('aurix')" },
+  { key: 'seo', name: 'SEO Cloud', product: 'SEO Cloud', covered: ['SEO Critical', 'SEO Off Track'], view: "openProductApp('seo-cloud')" }
+];
+// Sections behind each product line, from the same rows and issues as the rest of the dashboard.
+// Issues not covered by a section (e.g. Token Expired, Renewal at Risk) are listed under Other Issues.
+function dashProductIssues(key, rows = dashManagedRows(), items = dashAttentionItems()) {
+  const def = DASH_PRODUCTS.find(p => p.key === key);
+  const other = items.filter(i => i.product === def.product && !def.covered.includes(i.type));
   const n = (v, txt) => `<b class="t-error">${v}</b> ${txt}`;
-  const list = [
-    { key: 'ads', name: 'Ads Performance', icon: dashServiceIcon('ads', 36), line: ahead || under ? [ahead && n(ahead, `Account${ahead === 1 ? '' : 's'} nearing spend limits`), under && n(under, 'Underperforming')].filter(Boolean).join(' • ') : ok, open: 'dashFocusGroup(\'ads\')', ext: false },
-    { key: 'aurix', name: 'Aurix', icon: dashServiceIcon('aurix', 36), line: aurixGap ? n(aurixGap, `Account${aurixGap === 1 ? '' : 's'} currently not linked`) : ok, open: "openProductApp('aurix')", ext: true },
-    { key: 'seo', name: 'SEO Cloud', icon: dashServiceIcon('seo', 36), line: seoCrit || seoOff ? [seoCrit && n(seoCrit, 'Critical'), seoOff && `<b class="t-warning">${seoOff}</b> Off track`].filter(Boolean).join(' • ') : ok, open: "openProductApp('seo-cloud')", ext: true }
-  ];
+  let sections = [], parts = [];
+  if (key === 'ads') {
+    const days = dateRangeDays('agency');
+    const avg = dashPortfolio().total.cpa;
+    const near = rows.filter(r => r.pacing && r.pacing.key === 'ahead').sort((a, b) => b.pacing.pct - a.pacing.pct);
+    const under = rows.filter(r => r.q.cpa === 'bad').sort((a, b) => b.t.cpa - a.t.cpa);
+    sections = [
+      { title: 'Accounts Near Spend Limits', rows: near, card: r => {
+        const budget = r.pacing.monthly * days / 30, pct = r.pacing.pct;
+        return `<div class="row-between dash-sp-meter"><span>${fmtMoney(r.t.spend)} / ${fmtMoney(budget)} spent</span><span class="pill pill-sm ${pct >= 100 ? 'pill-red' : 'pill-orange'}">${Math.round(pct)}%</span></div>
+          <div class="dash-sp-bar"><span class="${pct >= 100 ? 'red' : 'amber'}" style="width:${Math.min(100, pct).toFixed(1)}%"></span></div>`;
+      }, open: r => `openWorkspace('${r.w.id}','dashboard',{tab:'ads'})` },
+      { title: 'Accounts Underperforming', rows: under, card: r => `
+        <div class="t-error dash-sp-gap">${Math.round((r.t.cpa / avg - 1) * 100)}% above agency average</div>
+        <div class="dash-sp-metric">Cost per conversion</div>
+        <div class="dash-sp-value"><b>${fmtMoney(r.t.cpa, 2)}</b> / Agency avg: ${fmtMoney(avg, 2)}</div>`,
+        open: r => `openWorkspace('${r.w.id}','dashboard',{tab:'ads'})` }
+    ];
+    if (near.length) parts.push(n(near.length, `Account${near.length === 1 ? '' : 's'} nearing spend limits`));
+    if (under.length) parts.push(n(under.length, 'Underperforming'));
+  } else if (key === 'aurix') {
+    const gap = rows.filter(r => r.services.includes('aurix') && !(wsProducts(r.w.id).aurix?.status === 'connected'));
+    sections = [{ title: 'Accounts Not Linked', rows: gap, card: () => '<div class="dash-sp-metric">Aurix is a live service in the Agency CRM, but this workspace is not linked to Aurix yet.</div>',
+      open: r => `openWorkspace('${r.w.id}','integrations')` }];
+    if (gap.length) parts.push(n(gap.length, `Account${gap.length === 1 ? '' : 's'} currently not linked`));
+  } else {
+    const seoRows = k => rows.filter(r => r.seo && r.seo.status.key === k).sort((a, b) => b.seo.status.gap - a.seo.status.gap);
+    const card = r => {
+      const s = r.seo, fill = s.target ? Math.min(100, s.top10Pct / s.target * 100) : 0;
+      return `<div class="row-between dash-sp-meter"><span>Keywords in top 10: <b>${dashPctTxt(s.top10Pct)}</b> / Target: ${dashPctTxt(s.target)}</span><span class="pill pill-sm ${s.status.pill}">${dashNum1(s.status.gap)} pts below</span></div>
+        <div class="dash-sp-bar"><span class="${s.status.key === 'critical' ? 'red' : 'amber'}" style="width:${fill.toFixed(1)}%"></span></div>`;
+    };
+    const open = r => `openWorkspace('${r.w.id}','dashboard',{tab:'seo'})`;
+    const crit = seoRows('critical'), off = seoRows('off');
+    sections = [{ title: 'Critical', rows: crit, card, open }, { title: 'Off Track', rows: off, card, open }];
+    if (crit.length) parts.push(n(crit.length, 'Critical'));
+    if (off.length) parts.push(`<b class="t-warning">${off.length}</b> Off track`);
+  }
+  if (other.length) parts.push(n(other.length, 'more'));
+  const count = sections.reduce((t, x) => t + x.rows.length, 0) + other.length;
+  return { def, sections, other, count, line: parts.length ? parts.join(' • ') : '<span class="t-success">No critical issues detected</span>' };
+}
+function dashProductsCard() {
+  const rows = dashManagedRows(), items = dashAttentionItems();
+  const list = DASH_PRODUCTS.map(def => ({ ...def, icon: dashServiceIcon(def.key, 36), ...dashProductIssues(def.key, rows, items) }));
   return `<div class="card dash-products">
     <div class="row-between dash-products-head"><h2 class="h-section">Your Products</h2><span class="t-caption t-muted">${list.length} Connected Products</span></div>
     <div class="dash-products-list">${list.map(p => `
-      <div class="dash-product-row">
+      <div class="dash-product-row clickable" role="button" tabindex="0" onclick="dashOpenProductPanel('${p.key}')" onkeydown="if(event.key==='Enter')dashOpenProductPanel('${p.key}')">
         ${p.icon}
         <div class="grow"><div class="t-bold">${esc(p.name)}</div><div class="t-caption">${p.line}</div></div>
-        <button type="button" class="kebab dash-product-open" onclick="${p.open}" title="Open ${esc(p.name)}" aria-label="Open ${esc(p.name)}"><i data-lucide="${p.ext ? 'square-arrow-out-up-right' : 'panels-top-left'}"></i></button>
+        ${p.count
+          ? `<button type="button" class="kebab dash-product-open" onclick="event.stopPropagation(); dashOpenProductPanel('${p.key}')" title="${p.count} pending issue${p.count === 1 ? '' : 's'}" aria-label="Show ${esc(p.name)} issues"><i data-lucide="panel-right-open"></i></button>`
+          : `<button type="button" class="kebab dash-product-open" onclick="event.stopPropagation(); ${p.view}" title="Open ${esc(p.name)}" aria-label="Open ${esc(p.name)}"><i data-lucide="square-arrow-out-up-right"></i></button>`}
       </div>`).join('')}</div>
   </div>`;
+}
+// Product slide-over (Figma 6551:24738): summary line, one section per issue type with a card per account, View Product.
+function dashOpenProductPanel(key) {
+  const { def, sections, other, count, line } = dashProductIssues(key);
+  const body = sections.filter(x => x.rows.length).map(x => `
+    <div class="dash-sp-section">
+      <div class="dash-sp-title">${esc(x.title)} (${x.rows.length})</div>
+      ${x.rows.map(r => `<div class="dash-sp-card">
+        <span class="team-org-logo">${esc(initials(r.w.name))}</span>
+        <div class="grow"><div class="dash-sp-name">${esc(r.w.name)}</div>${x.card(r)}</div>
+        <button type="button" class="kebab dash-sp-open" onclick="closeDrawer(); ${x.open(r)}" title="Open ${esc(r.w.name)}" aria-label="Open ${esc(r.w.name)}"><i data-lucide="square-arrow-out-up-right"></i></button>
+      </div>`).join('')}
+    </div>`).join('') + (other.length ? `<div class="dash-sp-section"><div class="dash-sp-title">Other Issues (${other.length})</div>${dashIssueListHTML(other)}</div>` : '');
+  openDrawer(`<div class="dash-sp">
+      <h3 class="h-section">${esc(def.name)}</h3>
+      <div class="dash-sp-sub">${line}</div>
+      ${count ? body : emptyState('circle-check', 'No pending issues', `Nothing in ${def.name} needs attention right now.`)}
+    </div>`,
+    `<button type="button" class="btn btn-primary dash-sp-view" onclick="closeDrawer(); ${def.view}"><i data-lucide="square-arrow-out-up-right"></i>View Product</button>`, { wide: true });
+}
+// All pending issues (Attention Required KPI and banner), grouped by product or area, most issues first.
+function dashOpenAllIssues() {
+  const items = dashAttentionItems();
+  const clients = new Set(items.filter(i => i.wsId).map(i => i.wsId)).size;
+  const groups = {};
+  items.forEach(i => { (groups[i.product] = groups[i.product] || []).push(i); });
+  const order = Object.keys(groups).sort((a, b) => groups[b].length - groups[a].length);
+  openDrawer(`<div class="dash-sp">
+      <h3 class="h-section">Attention Required</h3>
+      <div class="dash-sp-sub"><b class="t-error">${items.length}</b> pending issue${items.length === 1 ? '' : 's'} across <b>${clients}</b> client${clients === 1 ? '' : 's'}</div>
+      ${items.length ? order.map(g => `<div class="dash-sp-section"><div class="dash-sp-title">${esc(g)} (${groups[g].length})</div>${dashIssueListHTML(groups[g])}</div>`).join('')
+        : emptyState('circle-check', 'No pending issues', 'Nothing across your accounts needs attention right now.')}
+    </div>`,
+    items.length ? `<button type="button" class="btn btn-outline" onclick="closeDrawer(); dashReviewAccounts()">Show accounts in Managed Accounts</button>` : '', { wide: true });
 }
 // Ads Performance "open": expand and show the Ads columns in Managed Accounts.
 function dashFocusGroup(group) {
@@ -2710,17 +2788,18 @@ Central command dashboard for agency administrators managing many client workspa
 - **Date Filter (Past / Current / Date Range)**: Applies to every spend and cost metric on this page. Total Accounts Managed is not date-dependent.
   - **Prototype note:** the date filter scales mock 30-day data to the selected range. It does **not** yet filter by event date. Real behaviour must use the event date (click / conversion date), as in the client dashboard spec.
 - **Layout (new agency dashboard design, 22/10/2026)**: banner → four KPI cards → Total Accounts Managed + Your Products → Managed Accounts. The dashboard is a performance indicator: each account shows its health and issue count, and users click through for the specifics.
-- **Attention Required banner**: "N account issues need your attention across …", naming the three areas with the most issues (Ads Performance, SEO Cloud, Aurix, Integrations, Contracts, Agency CRM) and summarising the rest ("and 2 other areas"). It counts the same issues as the Attention Required KPI and the Issues Count column, so the numbers always agree. **Review Accounts** filters Managed Accounts to Attention Required and Off Track, worst first. Hidden when there are no issues.
+- **Attention Required banner**: "N account issues need your attention across …", naming the three areas with the most issues (Ads Performance, SEO Cloud, Aurix, Integrations, Contracts, Agency CRM) and summarising the rest ("and 2 other areas"). It counts the same issues as the Attention Required KPI and the Issues Count column, so the numbers always agree. **View Issues** opens the all-issues slide-over. Hidden when there are no issues.
 - **KPI cards** (all from the Agency CRM and the issue list; "KPIs TBC" still applies):
   - **Managed Contract Value**: sum of live CRM contracts (monthly budget × contract months) across managed accounts.
-  - **Attention Required**: open issues, "Issues across N clients". Selecting it does the same as Review Accounts.
+  - **Attention Required**: open issues, "Issues across N clients". A panel icon marks it; selecting it opens the **all-issues slide-over**: every pending issue grouped by product or area (most issues first), each with its CTA. The footer's "Show accounts in Managed Accounts" filters the table to Attention Required and Off Track, worst first. This replaces a dedicated outstanding-issues section on the page.
   - **Upcoming Renewals**: live CRM contracts ending within 30 days (each contract counted once).
   - **Client Follow-ups Due**: open CRM follow-up tasks. [PLACEHOLDER] mock counts until the CRM exposes tasks.
 - **Total Accounts Managed**: donut by account lifecycle status (Active / New / Inactive / Cancelled). Performance problems are no longer a lifecycle status; they show as Account Health.
-- **Your Products** ("N Connected Products"): one row per OOm product with a health line.
-  - **Ads Performance**: accounts nearing spend limits (budget pacing ahead of pace) • underperforming (cost per conversion more than 15% worse than the portfolio). Open shows the Ads columns in Managed Accounts.
-  - **Aurix**: accounts with a live Aurix service in the CRM that are not linked to Aurix in Galaxis. Open hands off to Aurix.
-  - **SEO Cloud**: Critical • Off track projects, or "No critical issues detected". Open hands off to SEO Cloud.
+- **Your Products** ("N Connected Products"): one row per OOm product with a health line, plus "• N more" for the product's other pending issues. Selecting a row opens the **product slide-over** (Figma 6551:24738). Rows with pending issues show a panel icon; rows without show an external-link icon that opens the product directly.
+  - **Product slide-over**: product name, the same health line, one section per issue type with a card per account (initials tile, name, detail, external-link icon that opens the client workspace), then **Other Issues** (the product's remaining issues from the issue list), and a full-width **View Product** button.
+  - **Ads Performance**: *Accounts Near Spend Limits*: budget pacing ahead of pace (over 115%), shown as spend / CRM media budget for the selected dates with a % pill and bar. *Accounts Underperforming*: cost per conversion more than 15% worse than the agency average, shown as "X% above agency average" and value / agency average. There are no per-client ad targets in the CRM yet, so the agency average stands in. View Product shows the Ads columns in Managed Accounts.
+  - **Aurix**: *Accounts Not Linked*: a live Aurix service in the CRM, but not linked to Aurix in Galaxis. View Product hands off to Aurix.
+  - **SEO Cloud**: *Critical* and *Off Track* sections: keywords in top 10 vs target, points below, and a bar. View Product hands off to SEO Cloud.
 - **Issues** (shared by the banner, KPI, Account Health and Issues Count). Each has a type, priority (High / Medium / Low), product and CTA:
   - **Performance Review** (Ads, High for the first then Medium): accounts flagged for a performance issue.
   - **Budget Pacing** (Ads, Medium): ad spend ahead of pace. **No Account Linked** (Ads, Low). **Unlinked Ad Accounts** and **Token Expired** (Ads, agency-level).

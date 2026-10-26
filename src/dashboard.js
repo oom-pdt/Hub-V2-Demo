@@ -1426,17 +1426,21 @@ function dashKpiPanels(ws, p, m) {
     return `${head}<div class="card dash-kp">${p1}${p2}${dashKpiCrmPanel(t, crm)}</div>`;
   }
   const d = dashPfData(ws.id, p), t = d.total;
+  // Bars are only budget progress or a split with a legend: here, this platform's share of workspace spend vs the other.
   const share = both && m.total.spend ? t.spend / m.total.spend * 100 : null;
-  const shareCap = share !== null ? `<b>${Math.round(share)}%</b> of workspace ad spend` : `Across <b>${d.campaign.length}</b> campaigns`;
+  const other = p === 'google' ? 'meta' : 'google';
+  const shareBar = share !== null ? [[share, p === 'google' ? '' : 'is-alt'], [100 - share, p === 'google' ? 'is-alt' : '']] : null;
+  const sw = x => `<i class="dash-kp-sw ${x === 'google' ? '' : 'sw-b'}"></i>`;
+  const shareCap = share !== null ? `<span class="dash-kp-legend"><span>${sw(p)}${DASH_VIEW_LABEL[p]} <b>${Math.round(share)}%</b></span><span>${sw(other)}${DASH_VIEW_LABEL[other]} <b>${100 - Math.round(share)}%</b></span><span class="t-muted">of workspace ad spend</span></span>` : `Across <b>${d.campaign.length}</b> campaigns`;
   const acct = wsAdAccounts(ws.id).filter(a => a.platform === p).map(a => `${esc(a.name)} (${esc(a.id)})`).join(', ');
   head = dashSectionHead(DASH_VIEW_LABEL[p], `Platform-reported results from ${acct} for the selected dates, under ${PLATFORM_NAME[p]}'s own metric names. SGD · Asia/Singapore.`, modelSel);
   if (p === 'google') {
-    p1 = dashKpiPanel({ eyebrow: 'Spend & Traffic', label: 'Cost', tip: DASH_SHEET.cost, value: fmtMoney(t.spend, 2), bar: share !== null ? [[share, '']] : null, caption: shareCap,
+    p1 = dashKpiPanel({ eyebrow: 'Spend & Traffic', label: 'Cost', tip: DASH_SHEET.cost, value: fmtMoney(t.spend, 2), bar: shareBar, caption: shareCap,
       rows: [['Impr.', fmtNum(t.impressions)], ['Avg. CPM', fmtMoney(t.cpm, 2)], ['Clicks', fmtNum(t.clicks)], ['CTR', fmtPct(t.ctr)], ['Avg. CPC', fmtMoney(t.cpc, 2)]] });
     p2 = dashKpiPanel({ eyebrow: 'Conversions', source: 'Reported by Google', label: 'Conversions', tip: DASH_SHEET.conversions, value: fmtNum(t.conversions), caption: `Across <b>${d.campaign.length}</b> campaigns`,
       rows: [['Cost / conv.', t.conversions ? fmtMoney(t.cpa, 2) : '—'], ['Conv. rate', fmtPct(t.cvr)], ['All conv.', fmtNum(t.allConv)], ['Conv. value', fmtMoney(t.convValue)], ['Conv. value / cost', t.spend ? t.pRoas.toFixed(2) : '—']] });
   } else {
-    p1 = dashKpiPanel({ eyebrow: 'Spend & Traffic', label: 'Amount spent', tip: DASH_SHEET.cost, value: fmtMoney(t.spend, 2), bar: share !== null ? [[share, '']] : null, caption: shareCap,
+    p1 = dashKpiPanel({ eyebrow: 'Spend & Traffic', label: 'Amount spent', tip: DASH_SHEET.cost, value: fmtMoney(t.spend, 2), bar: shareBar, caption: shareCap,
       rows: [['Reach', fmtNum(t.reach)], ['Frequency', t.freq.toFixed(2)], ['Impressions', fmtNum(t.impressions)], ['CPM (cost per 1,000 impressions)', fmtMoney(t.cpm, 2)],
         ['Link clicks', fmtNum(t.clicks)], ['CTR (link click-through rate)', fmtPct(t.ctr)], ['CPC (cost per link click)', fmtMoney(t.cpc, 2)]] });
     p2 = dashKpiPanel({ eyebrow: 'Conversions', source: 'Reported by Meta', label: 'Leads', tip: DASH_SHEET.leads, value: fmtNum(t.pLeads), caption: `Across <b>${d.campaign.length}</b> campaigns`,
@@ -2818,7 +2822,7 @@ A dedicated **${name}** view inside the Ad Performance tab that replicates the n
 - Should CRM-attributed columns appear at Google keyword level (needs click-ID matching)?
 
 ### Dev toolbar states
-- **Viewing as Agency Admin / Client User** (shared). **KPI cards / KPI panels** (26/10/2026, prototyping): switches the KPI layout on All Platforms, Google Ads and Meta Ads between the card rows and one card with three panels (Spend & Traffic · Conversions · Leads & Revenue; each a headline metric, a bar, a caption and a metric list, in that tab's own metric names). In panels mode the Leads & Revenue section becomes the third panel, with the attribution model in the section header. Each panel names its source on the heading (Conversions: "Reported by Google / Meta"; Leads & Revenue: "Verified in {CRM}"), and CRM metrics are labelled as such (Cost per CRM lead, Attributed leads (CRM)) so they're never confused with the platform's own Leads / Cost per lead. The Leads & Revenue panel headlines **Attributed revenue with ROAS beside it**; leads are in its list. Panel lengths are allowed to differ: each platform keeps the native metrics it supports. A bar that splits a total (e.g. conversions by platform) always has a legend underneath (Google Ads X% · Meta Ads Y%) so it doesn't read as progress; cost per conversion / cost per lead sit in the metric list, not the caption. **Ad-only (no CRM)** / **CRM connected**: CRM columns and the Leads & Revenue section. **No ad accounts linked**: empty state. **Single platform (Google only)**: workspaces with both platforms show only the Google Ads view.
+- **Viewing as Agency Admin / Client User** (shared). **KPI cards / KPI panels** (26/10/2026, prototyping): switches the KPI layout on All Platforms, Google Ads and Meta Ads between the card rows and one card with three panels (Spend & Traffic · Conversions · Leads & Revenue; each a headline metric, a bar, a caption and a metric list, in that tab's own metric names). In panels mode the Leads & Revenue section becomes the third panel, with the attribution model in the section header. Each panel names its source on the heading (Conversions: "Reported by Google / Meta"; Leads & Revenue: "Verified in {CRM}"), and CRM metrics are labelled as such (Cost per CRM lead, Attributed leads (CRM)) so they're never confused with the platform's own Leads / Cost per lead. The Leads & Revenue panel headlines **Attributed revenue with ROAS beside it**; leads are in its list. Panel lengths are allowed to differ: each platform keeps the native metrics it supports. **Bars are only used for budget progress (All Platforms spend vs budget) or for a split with a legend** (conversions by platform; on the Google / Meta tabs, that platform's share of workspace spend vs the other). A bar that splits a total always has a legend underneath (Google Ads X% · Meta Ads Y%) so it doesn't read as progress; cost per conversion / cost per lead sit in the metric list, not the caption. **Ad-only (no CRM)** / **CRM connected**: CRM columns and the Leads & Revenue section. **No ad accounts linked**: empty state. **Single platform (Google only)**: workspaces with both platforms show only the Google Ads view.
 `;
 }
 Object.assign(screenSpecs, {

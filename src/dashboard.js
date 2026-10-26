@@ -370,7 +370,7 @@ function dashAttentionItems() {
     svcs.filter(x => x.daysLeft !== null && x.daysLeft <= 30 && !(atRisk && x === seoSvc)).forEach(x => items.push({
       client: w.name, type: 'Contract Ending', priority: 'Medium',
       desc: `${x.type} contract ${x.contractNo || ''} ends in ${x.daysLeft} day${x.daysLeft === 1 ? '' : 's'} (${fmtDate(x.end)}).`,
-      cta: 'View Account', action: `openWorkspace('${w.id}','organisation',{tab:'business'})`
+      cta: 'View Contract', action: `openWorkspace('${w.id}','organisation',{tab:'billing'})`
     }));
     const pace = dashPacing(w.id, dashMetrics(w.id, 'agency').total.spend, dateRangeDays('agency'));
     if (pace && pace.key === 'ahead') items.push({

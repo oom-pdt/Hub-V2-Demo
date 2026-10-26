@@ -3552,7 +3552,7 @@ function dashAttentionItems() {
     svcs.filter(x => x.daysLeft !== null && x.daysLeft <= 30 && !(atRisk && x === seoSvc)).forEach(x => items.push({
       client: w.name, type: 'Contract Ending', priority: 'Medium',
       desc: `${x.type} contract ${x.contractNo || ''} ends in ${x.daysLeft} day${x.daysLeft === 1 ? '' : 's'} (${fmtDate(x.end)}).`,
-      cta: 'View Account', action: `openWorkspace('${w.id}','organisation',{tab:'business'})`
+      cta: 'View Contract', action: `openWorkspace('${w.id}','organisation',{tab:'billing'})`
     }));
     const pace = dashPacing(w.id, dashMetrics(w.id, 'agency').total.spend, dateRangeDays('agency'));
     if (pace && pace.key === 'ahead') items.push({
@@ -6461,7 +6461,7 @@ function orgRender() {
   orgSyncEditScope();
   const tab = orgTab();
   const tabs = ORG_TABS.map(t => `<button type="button" class="page-tab ${t.id === tab ? 'active' : ''}" onclick="navigate('organisation', { tab: '${t.id}' })"><i data-lucide="${t.icon}"></i>${esc(t.label)}</button>`).join('');
-  const body = tab === 'brand' ? orgBrandHTML() : tab === 'billing' ? orgBillingHTML() : orgBusinessHTML() + (isAgency() ? '' : orgServicesHTML());
+  const body = tab === 'brand' ? orgBrandHTML() : tab === 'billing' ? orgBillingHTML() : orgBusinessHTML();
   return `<div class="page-tabs" role="tablist">${tabs}</div>
     <div class="stack">${orgHeaderCard()}${body}</div>`;
 }
@@ -6725,7 +6725,8 @@ function orgBillingHTML() {
       ${card ? '<button type="button" class="btn btn-primary" onclick="orgOpenCardModal(true)">Update Card</button>' : ''}
     </div>
   </section>`;
-  return subscription + payment + orgBillingContactHTML() + `<section class="card org-section">
+  // Client workspaces: Services & Contract (contracts and payments) sits above Billing History (26/10/2026).
+  return subscription + payment + orgBillingContactHTML() + (isAgency() ? '' : orgServicesHTML()) + `<section class="card org-section">
     ${orgCardHead('Billing History', 'Download past invoices and receipts.')}
     <div id="org-invoice-region">${orgInvoiceTableHTML()}</div>
     <div class="field-hint" style="margin-top:12px">All plans, amounts and invoices on this page are [PLACEHOLDER] demo data.</div>
@@ -7049,21 +7050,6 @@ ${common}
   - Contact email must be a valid email; phone numbers allow digits, spaces, + and -.
 - Saving updates the organisation everywhere (workspace switcher, header card, Client Organisation list) and shows a toast.
 ${ctx === 'client' ? `
-## Services & Contract card (client workspace, Draft, 22/10/2026)
-- Read-only card below Business Information, from the workspace's agency CRM record. Labelled "Synced from Agency CRM" with the last sync time.
-- Summary: total monthly budget (live services), monthly ad-spend budget (SEM + Google Ads + Facebook Ads, the same figure as the dashboard's ad budget), CRM ID with conversion date, account manager.
-- Table: Service, Monthly budget (SGD), Start date, End date, Status (Live / Upcoming / Ended, from the dates).
-- **View in CRM ↗** (agency persona only) opens the account in the agency CRM (toast in the demo).
-- Empty state when the workspace has no CRM record (created manually): "No CRM record linked".
-- Open questions: what happens when a service ends or the account churns; is the ad budget taken from the CRM or set per workspace; should client users see budgets at all?
-
-- **Galaxis CRM contract (26/10/2026)**: Galaxis CRM is a contracted service, so a workspace with Galaxis CRM connected has its own Galaxis CRM contract (service, monthly fee, dates, payment term) in the services table, Contracts & Payments and Billing History. [PLACEHOLDER] fees.
-- **Paused for non-payment (23/10/2026)**: a live service whose contract has an unpaid invoice (pending or failed in Billing History) shows **Paused** (orange) with "$X unpaid" underneath, and the contract shows a Paused tag in Contracts & Payments. It returns to Live as soon as the invoice is paid (e.g. Retry payment). Display only in the prototype: whether pausing also stops delivery, and whether it should wait for the credit term (CRM default 14 days) before pausing, is for Finance to confirm.
-- **Contracts & Payments (23/10/2026)**: below the services, one row per contract: Contract (no. and dates), Services, **Billing schedule**, **Contract value**, **Paid to date** (amount, % of contract value, a bar showing paid in green and invoiced-but-unpaid in amber, and the unpaid amount) and **Next payment** (amount, date, instalment n of N; "Fully invoiced" when nothing is left to bill). A line above totals paid vs value across contracts.
-  - **Billing schedules follow the Agency CRM revamp's payment terms**: 100% (one-time), Pre-Paid, 50-50%, 60-20-20%, 50-30-20% (upfront, then at one third and two thirds of the term), Monthly, Quarterly, Quarterly Pre-Paid, Bi-Annual, or a **Customised** schedule (non-standard terms, approved in the CRM). Instalment timing uses the CRM's rules.
-  - **Ad contracts**: the agency fee bills by the contract's payment term; the media budget is billed monthly via OOm, or paid by the client's card and not billed by OOm (CRM "Pay via OOm" / "Pay via client card"), so it's excluded from the contract value.
-  - **Paid** comes from the same invoices as Billing History (each invoice = one instalment), so the two always agree; official payment status lives in QBB.
-  - [PLACEHOLDER] amounts: ad agency fees are 15% of the media budget (min. $800/month) until the CRM provides the real fees.
 ## Primary Business Contact (client workspace)
 - Synced with the workspace **Primary Contact** in Team & Access.
 - In edit mode, Contact Person is a member picker; Email follows the chosen member.
@@ -7098,6 +7084,21 @@ ${common}
 - Legal Entity Name, Invoice Email, Contact Person, Contact Number, Billing Address, Postal Code.
 - ✎ edit mode with validation (required fields, email format, 6-digit postal code).
 
+## Services & Contract card (client workspace, Draft, 22/10/2026)
+- Read-only card on the **Billing Information** tab, above Billing History (moved from Business Information on 26/10/2026), from the workspace's agency CRM record. Labelled "Synced from Agency CRM" with the last sync time.
+- Summary: total monthly budget (live services), monthly ad-spend budget (SEM + Google Ads + Facebook Ads, the same figure as the dashboard's ad budget), CRM ID with conversion date, account manager.
+- Table: Service, Monthly budget (SGD), Start date, End date, Status (Live / Upcoming / Ended, from the dates).
+- **View in CRM ↗** (agency persona only) opens the account in the agency CRM (toast in the demo).
+- Empty state when the workspace has no CRM record (created manually): "No CRM record linked".
+- Open questions: what happens when a service ends or the account churns; is the ad budget taken from the CRM or set per workspace; should client users see budgets at all?
+
+- **Galaxis CRM contract (26/10/2026)**: Galaxis CRM is a contracted service, so a workspace with Galaxis CRM connected has its own Galaxis CRM contract (service, monthly fee, dates, payment term) in the services table, Contracts & Payments and Billing History. [PLACEHOLDER] fees.
+- **Paused for non-payment (23/10/2026)**: a live service whose contract has an unpaid invoice (pending or failed in Billing History) shows **Paused** (orange) with "$X unpaid" underneath, and the contract shows a Paused tag in Contracts & Payments. It returns to Live as soon as the invoice is paid (e.g. Retry payment). Display only in the prototype: whether pausing also stops delivery, and whether it should wait for the credit term (CRM default 14 days) before pausing, is for Finance to confirm.
+- **Contracts & Payments (23/10/2026)**: below the services, one row per contract: Contract (no. and dates), Services, **Billing schedule**, **Contract value**, **Paid to date** (amount, % of contract value, a bar showing paid in green and invoiced-but-unpaid in amber, and the unpaid amount) and **Next payment** (amount, date, instalment n of N; "Fully invoiced" when nothing is left to bill). A line above totals paid vs value across contracts.
+  - **Billing schedules follow the Agency CRM revamp's payment terms**: 100% (one-time), Pre-Paid, 50-50%, 60-20-20%, 50-30-20% (upfront, then at one third and two thirds of the term), Monthly, Quarterly, Quarterly Pre-Paid, Bi-Annual, or a **Customised** schedule (non-standard terms, approved in the CRM). Instalment timing uses the CRM's rules.
+  - **Ad contracts**: the agency fee bills by the contract's payment term; the media budget is billed monthly via OOm, or paid by the client's card and not billed by OOm (CRM "Pay via OOm" / "Pay via client card"), so it's excluded from the contract value.
+  - **Paid** comes from the same invoices as Billing History (each invoice = one instalment), so the two always agree; official payment status lives in QBB.
+  - [PLACEHOLDER] amounts: ad agency fees are 15% of the media budget (min. $800/month) until the CRM provides the real fees.
 ## Billing History
 - Columns Invoice, **Contract**, **Service**, Date, Amount, Status (Paid green / Pending orange / Failed red dot), Action.
 - **Billing is per contract (23/10/2026).** A contract covers one or more services (e.g. Google Ads + Facebook Ads on one contract); a client can have several contracts running at once; each service has at most one active contract at a time, so contracts for the same service never overlap. Each invoice belongs to one contract, and **Service** lists every service on that contract (never "+N").

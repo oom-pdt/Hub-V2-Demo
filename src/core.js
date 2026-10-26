@@ -58,7 +58,8 @@ function wsAdBudget(wsId) {
 // CRM services that are live today (started and not yet ended), each with daysLeft until its contract ends.
 function crmLiveServices(wsId) {
   const today = toDateInput(new Date());
-  return (crmAccounts[wsId]?.services || []).filter(x => (!x.start || x.start <= today) && (!x.end || x.end >= today))
+  // Cancelled services (cancelledOn) stop being live from their cancellation date.
+  return (crmAccounts[wsId]?.services || []).filter(x => (!x.start || x.start <= today) && (!x.end || x.end >= today) && !(x.cancelledOn && x.cancelledOn <= today))
     .map(x => ({ ...x, daysLeft: x.end ? Math.round((new Date(x.end + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000) : null }));
 }
 // ---------- Contract billing schedules (Agency CRM) ----------

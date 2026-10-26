@@ -66,22 +66,72 @@
 }
 
 /* Services & Contract (agency CRM) */
-.org-svc-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 24px; }
-.org-svc-kpis > div { padding: 0 24px; border-left: 1px solid var(--border); min-width: 0; }
-.org-svc-kpis > div:first-child { padding-left: 0; border-left: 0; }
-.org-svc-kpis .kv-label { margin-bottom: 8px; }
-.org-svc-kpis .org-plan-value { overflow-wrap: anywhere; }
 .org-svc-table { margin-top: 24px; }
 .org-svc-sync { margin-top: 14px; }
 @media (max-width: 960px) {
-  .org-svc-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 0; }
-  .org-svc-kpis > div:nth-child(3) { padding-left: 0; border-left: 0; }
 }
 /* Contracts & Payments (Services & Contract card) */
-.org-contracts-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 28px 0 10px; }
-.org-contracts-head .form-section-title { margin: 0; }
-.org-paid-cell { min-width: 170px; }
-.org-paid-bar { position: relative; height: 6px; border-radius: 99px; background: var(--grey-light); overflow: hidden; margin: 6px 0 4px auto; max-width: 160px; }
-.org-paid-bar span { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 99px; }
-.org-paid-inv { background: #F9C576; }
-.org-paid-fill { background: var(--success-pill); }
+
+/* ---------- Services & Contract status + Billing Tracking (Figma 6628:35585) ---------- */
+.org-svc-st { font-weight: 700; }
+.org-svc-st .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.org-svc-st.is-live { color: var(--success-pill); }
+.org-svc-st.is-paused { color: #E8CB5A; }
+.org-svc-st.is-cancelled { color: #F78483; }
+.org-svc-st.is-upcoming { color: var(--primary); }
+.org-svc-st.is-ended { color: var(--text-muted); }
+.org-bt-toolbar { display: flex; gap: 24px; align-items: center; margin-top: 8px; }
+.org-bt-toolbar .search .input { height: 48px; }
+.org-bt-range { display: inline-flex; align-items: center; justify-content: space-between; gap: 16px; width: 300px; height: 48px; padding: 0 14px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); font: inherit; font-size: 16px; letter-spacing: .5px; color: var(--text-secondary); cursor: pointer; }
+.org-bt-range svg.lucide { width: 20px; height: 20px; color: var(--text); }
+.org-bt-range-pop { right: 0; left: auto; width: 300px; padding: 14px; display: none; flex-direction: column; gap: 12px; }
+.org-bt-range-pop.open { display: flex; }
+.org-bt-range-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.org-bt-tabs { margin: 24px 0 24px; }
+.org-bt-table { border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; }
+.org-bt-line { display: grid; grid-template-columns: 1.05fr 1.6fr 1.1fr 1.6fr 1.15fr 1fr; gap: 16px; align-items: center; padding: 16px 18px; font-size: 13px; letter-spacing: .5px; }
+.org-bt-colhead { background: var(--tint); font-weight: 700; padding: 14px 18px; }
+.org-bt-row + .org-bt-row, .org-bt-colhead + .org-bt-row { border-top: 1px solid var(--border-light); }
+.org-bt-row > .org-bt-line { cursor: pointer; }
+.org-bt-row > .org-bt-line:hover { background: #F8FBFF; }
+.org-bt-contract { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; }
+.org-bt-contract svg.lucide { width: 14px; height: 14px; }
+.org-bt-progress { display: flex; flex-direction: column; gap: 6px; }
+.org-bt-progress-top { display: flex; justify-content: space-between; }
+.org-bt-bar { height: 10px; border-radius: 99px; background: var(--grey-light); overflow: hidden; }
+.org-bt-bar span { display: block; height: 100%; background: var(--success-pill); border-radius: 99px; }
+.org-bt-dates { line-height: 20px; }
+.org-st { display: inline-flex; align-items: center; justify-content: center; height: 24px; padding: 0 12px; border-radius: var(--r-pill); font-size: 12px; font-weight: 700; color: #fff; white-space: nowrap; }
+.org-st-lg { min-width: 116px; height: 26px; font-size: 13px; }
+.org-st-paid { background: var(--success-pill); }
+.org-st-pending { background: #E8CB5A; }
+.org-st-paused { background: #EEEA7A; color: #fff; }
+.org-st-cancelled { background: #F07E7E; }
+.org-st-upcoming { background: #ABABAB; }
+.org-bt-detail { padding: 0 18px 18px; background: var(--page); }
+.org-bt-breakdown { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: 18px; }
+.org-bt-bd-head { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; letter-spacing: .5px; }
+.org-bt-sub { font-size: 13px; color: var(--text-muted); margin-top: 18px; letter-spacing: .5px; }
+.org-bt-banner { display: flex; align-items: center; gap: 14px; margin: 18px 0; padding: 12px 24px; border: 1px solid; border-radius: var(--r-md); font-size: 13px; letter-spacing: .5px; }
+.org-bt-banner svg.lucide { width: 20px; height: 20px; flex-shrink: 0; }
+.org-bn-cancelled { background: #FBE3E3; border-color: #E44A4A; color: #C62828; }
+.org-bn-paused { background: #FAFBE3; border-color: #D9DD5F; color: #C7C93B; }
+.org-bn-pending { background: #FFF6E0; border-color: #E8C34A; color: #D4A517; }
+.org-bn-paid { background: #E9F8E9; border-color: #4CC255; color: #2E9E38; }
+.org-bt-periods { display: grid; gap: 18px; }
+.org-bt-period { border: 1px solid var(--border); border-radius: var(--r-md); padding: 12px 18px 14px; background: #FDFDFD; min-width: 0; }
+.org-bt-period-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; letter-spacing: .5px; }
+.org-bt-period-amt { font-size: 13px; margin: 8px 0 8px; letter-spacing: .5px; }
+.org-bt-period-line { display: flex; align-items: center; gap: 8px; font-size: 13px; letter-spacing: .5px; }
+.org-bt-period-line svg.lucide { width: 16px; height: 16px; flex-shrink: 0; }
+.org-tx-pending { color: #D4A517; }
+.org-tx-paused { color: #C7C93B; }
+.org-bt-all { margin-top: 18px; font-size: 13px; text-decoration: underline; }
+.org-bt-empty { padding: 24px; }
+.org-svc-pills .chip { color: var(--text); }
+@media (max-width: 1100px) {
+  .org-bt-line { grid-template-columns: 1fr 1fr; }
+  .org-bt-colhead { display: none; }
+  .org-bt-periods { grid-template-columns: 1fr 1fr !important; }
+  .org-bt-toolbar { flex-wrap: wrap; }
+}

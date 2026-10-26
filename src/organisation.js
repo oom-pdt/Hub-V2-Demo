@@ -69,24 +69,17 @@ function orgContracts(orgId) { return crmContracts(orgId); }
 function orgContractInvoices(contracts, seed) {
   const today = toDateInput(new Date());
   const list = [];
-  contracts.forEach(c => c.schedule.filter(x => x.date <= today).forEach(x => list.push({
+  contracts.forEach(c => c.schedule.filter(x => x.date <= today && !(c.cancelledOn && x.date > c.cancelledOn)).forEach(x => list.push({
     id: `INV-${c.contractNo}-${String(x.n).padStart(2, '0')}`, date: x.date, amount: x.amount, contractNo: c.contractNo, services: c.services,
     desc: x.parts.map(p => `${p.label} ${p.n} of ${p.of}`).join(' + ')
   })));
   // Demo variety: the newest invoice of some contracts is pending; one older invoice failed for some clients.
   contracts.forEach((c, ci) => {
     list.filter(i => i.contractNo === c.contractNo).sort((a, b) => b.date.localeCompare(a.date))
-      .forEach((i, k) => { i.status = k === 0 && (seed + ci) % 2 ? 'pending' : (k === 2 && ci === 0 && seed % 3 === 0) ? 'failed' : 'paid'; });
+      .forEach((i, k) => { i.status = c.cancelledOn || c.schedule.length === 1 ? 'paid' : k === 0 && (seed + ci) % 2 ? 'pending' : (k === 2 && ci === 0 && seed % 3 === 0) ? 'failed' : 'paid'; });
+    // Demo: invoices of cancelled contracts and one-time payments are settled.
   });
   return list;
-}
-// Payment position of one contract, from its invoices (so Billing History and Services & Contract always agree).
-function orgContractPayments(orgId, c) {
-  const inv = orgBilling(orgId).invoices.filter(i => i.contractNo === c.contractNo);
-  const sum = f => Math.round(inv.filter(f).reduce((t, i) => t + i.amount, 0) * 100) / 100;
-  const today = toDateInput(new Date());
-  return { paid: sum(i => i.status === 'paid'), outstanding: sum(i => i.status !== 'paid'), invoiced: sum(() => true),
-    next: c.schedule.find(x => x.date > today) || null, issued: inv.length };
 }
 
 const orgBillingStore = {};
@@ -357,74 +350,188 @@ function orgSaveBusiness() {
 function orgServicesHTML() {
   const id = currentOrgId();
   const acc = crmAccounts[id];
-  const crmLink = viewerIsAgency() && acc ? `<button type="button" class="org-link" onclick="showToast('Opening ${q(acc.crmId)} in the agency CRM (demo)', 'external-link')">View in CRM<i data-lucide="arrow-up-right"></i></button>` : '';
-  const head = orgCardHead('Services & Contract', 'Services, contracts and monthly budgets from the agency CRM. A contract can cover one or more services; each service has one active contract at a time. Read-only.', crmLink);
+  const head = orgCardHead('Services & Contract', 'Services, contract and monthly budgets from the agency CRM. A contract can cover one or more services. Each service has one active contract at a time.');
   if (!acc) {
     return `<section class="card org-section">${head}${emptyState('file-x', 'No CRM record linked', 'This workspace was created manually. Services and budgets appear here once the account is linked in the agency CRM.')}</section>`;
   }
   const today = toDateInput(new Date());
-  const live = x => (!x.start || x.start <= today) && (!x.end || x.end >= today);
-  const total = acc.services.filter(live).reduce((t, x) => t + x.monthlyBudget, 0);
-  const am = memberById(acc.accountManager);
+  const bt = orgBtRows(id);
   const daysLeft = x => Math.round((new Date(x.end + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000);
-  // Live services on a contract with an unpaid invoice show Paused (unpaid amount as the reason) until it's paid.
-  const contracts = orgContracts(id);
-  const unpaid = no => { const c = contracts.find(k => k.contractNo === no); return c ? orgContractPayments(id, c).outstanding : 0; };
-  const statusPill = x => {
-    if (!live(x)) return x.start > today ? '<span class="pill pill-sm pill-blue">Upcoming</span>' : '<span class="pill pill-sm pill-grey">Ended</span>';
-    const u = unpaid(x.contractNo);
-    return u ? `<span class="pill pill-sm pill-orange" title="Paused: ${esc(fmtMoney(u, 2))} unpaid on contract ${esc(x.contractNo)}">Paused</span><div class="cell-sub dash-nowrap"><span class="t-warning">${fmtMoney(u, 2)} unpaid</span></div>` : '<span class="pill pill-sm pill-green">Live</span>';
+  // Status (Figma 6628:35585): Live · Paused "On {date}" (overdue payment on its contract, see Billing Tracking) ·
+  // Cancelled "On {date}" · Upcoming / Ended from the dates.
+  const status = x => {
+    const row = bt.find(r => r.c.contractNo === x.contractNo);
+    const dot = (cls, label, on) => `<span class="dot-label org-svc-st ${cls}"><span class="dot"></span>${label}</span>${on ? `<div class="cell-sub">On ${fmtDate(on)}</div>` : ''}`;
+    if (x.cancelledOn && x.cancelledOn <= today) return dot('is-cancelled', 'Cancelled', x.cancelledOn);
+    if (x.start > today) return dot('is-upcoming', 'Upcoming');
+    if (x.end < today) return dot('is-ended', 'Ended');
+    if (row && row.status === 'paused') return dot('is-paused', 'Paused', row.pausedOn);
+    return dot('is-live', 'Live');
   };
-  const rows = [...acc.services].sort((a, b) => (a.end || '').localeCompare(b.end || '')).map(x => {
-    const d = x.end ? daysLeft(x) : null;
-    const left = live(x) && d !== null ? `<span class="${d <= 30 ? 't-error' : d <= 60 ? 't-warning' : 't-secondary'} t-bold">${d} day${d === 1 ? '' : 's'}</span>` : '<span class="t-muted">—</span>';
-    return `<tr><td class="t-bold">${esc(x.type)}${CRM_AD_SERVICES.includes(x.type) ? '<div class="cell-sub">Ad spend</div>' : ''}</td>
-      <td>${esc(x.contractNo || '—')}</td><td class="num">${fmtMoney(x.monthlyBudget)}</td><td>${fmtDate(x.start)}</td><td>${fmtDate(x.end)}</td><td>${left}</td>
-      <td>${statusPill(x)}</td></tr>`;
+  const rows = acc.services.map(x => {
+    const cancelled = x.cancelledOn && x.cancelledOn <= today;
+    const d = x.end && !cancelled && x.start <= today ? daysLeft(x) : null;
+    return `<tr><td class="t-bold">${esc(x.type)}</td><td>${esc(x.contractNo || '—')}</td>
+      <td>${CRM_AD_SERVICES.includes(x.type) ? fmtMoney(x.monthlyBudget, 2) : 'NA'}</td><td>${fmtDate(x.start)}</td><td>${fmtDate(x.end)}</td>
+      <td>${d !== null ? `${d} day${d === 1 ? '' : 's'}` : '-'}</td><td>${status(x)}</td></tr>`;
   }).join('');
   return `<section class="card org-section">${head}
-    <div class="org-svc-kpis">
-      <div><div class="kv-label">Total monthly budget</div><div class="org-plan-value">${fmtMoney(total)}</div><div class="org-plan-sub">Live services only</div></div>
-      <div><div class="kv-label">Monthly ad-spend budget</div><div class="org-plan-value">${fmtMoney(wsAdBudget(id))}</div><div class="org-plan-sub">${CRM_AD_SERVICES.join(' + ')}</div></div>
-      <div><div class="kv-label">CRM ID</div><div class="org-plan-value">${esc(acc.crmId)}</div><div class="org-plan-sub">Converted ${fmtDate(acc.convertedAt)}</div></div>
-      <div><div class="kv-label">Account manager</div><div class="org-plan-value">${esc(am?.name || '—')}</div><div class="org-plan-sub">${esc(am?.email || 'Not mapped to a Galaxis user')}</div></div>
-    </div>
     <div class="table-wrap org-svc-table"><table class="table">
-      <thead><tr><th>Service</th><th>Contract</th><th class="num">Monthly budget</th><th>Start date</th><th>End date</th><th>Days left</th><th>Status</th></tr></thead>
+      <thead><tr><th>Services</th><th>Contract</th><th>Monthly Budget</th><th>Start Date</th><th>End Date</th><th>Days Left</th><th>Status</th></tr></thead>
       <tbody>${rows || '<tr><td class="table-empty" colspan="7">No services in the CRM record.</td></tr>'}</tbody></table></div>
-    ${orgContractPaymentsHTML(id)}
-    <div class="org-sync-note org-svc-sync"><i data-lucide="refresh-cw"></i>Synced from Agency CRM · ${esc(fmtDateTime(agencyCrm.lastSynced))}${agencyCrm.status !== 'connected' ? ' · connection paused, figures may be out of date' : ''}</div>
   </section>`;
 }
 
-// Contracts & Payments: per contract, its billing schedule (payment term), total value, how much has been paid and
-// what's next. Payments come from the same invoices as Billing History. [PLACEHOLDER] amounts.
-function orgContractPaymentsHTML(id) {
-  const contracts = orgContracts(id);
-  if (!contracts.length) return '';
-  const rows = contracts.map(c => {
-    const p = orgContractPayments(id, c);
-    const pct = c.value ? Math.min(100, p.paid / c.value * 100) : 0;
-    const invPct = c.value ? Math.min(100, p.invoiced / c.value * 100) : 0;
-    const term = `${esc(CRM_PAY_TERM_LABEL[c.payTerm] || c.payTerm)}<div class="cell-sub">${c.payTerm === 'Customised' ? 'Non-standard terms, approved in the CRM · ' : ''}${c.schedule.length} instalment${c.schedule.length === 1 ? '' : 's'}${c.media ? ` · media ${c.mediaVia === 'OOm' ? 'billed monthly via OOm' : 'paid by client card (not billed)'}` : ''}</div>`;
-    return `<tr>
-      <td class="t-bold dash-nowrap">${esc(c.contractNo)}${p.outstanding ? ' <span class="pill pill-sm pill-orange">Paused</span>' : ''}<div class="cell-sub">${fmtDate(c.start)} – ${fmtDate(c.end)}</div></td>
-      <td><span class="chips org-inv-svcs">${c.services.map(x => `<span class="chip">${esc(x)}</span>`).join('')}</span></td>
-      <td>${term}</td>
-      <td class="num">${fmtMoney(c.value, 2)}${c.mediaTotal ? `<div class="cell-sub">Fees ${fmtMoney(c.feeTotal)} · media ${fmtMoney(c.mediaTotal)}</div>` : ''}</td>
-      <td class="num org-paid-cell"><div class="t-bold">${fmtMoney(p.paid, 2)}</div>
-        <div class="org-paid-bar" title="Paid ${pct.toFixed(0)}% · invoiced ${invPct.toFixed(0)}%"><span class="org-paid-inv" style="width:${invPct.toFixed(1)}%"></span><span class="org-paid-fill" style="width:${pct.toFixed(1)}%"></span></div>
-        <div class="cell-sub">${pct.toFixed(0)}% of contract value${p.outstanding ? ` · <span class="t-warning">${fmtMoney(p.outstanding, 2)} unpaid</span>` : ''}</div></td>
-      <td>${p.next ? `${fmtMoney(p.next.amount, 2)}<div class="cell-sub dash-nowrap">${fmtDate(p.next.date)}</div><div class="cell-sub">Instalment ${p.next.n} of ${p.next.of}</div>` : '<span class="t-muted">Fully invoiced</span>'}</td>
-    </tr>`;
+// ---------- Billing Tracking (client workspace; Figma 6628:35585, replaces Billing History) ----------
+// One row per contract (services as pills). Expanding a row shows the Contract Billing Breakdown: payment term, a status
+// banner and one card per instalment (T1, T2…). Rules: an instalment is due 14 days after it's billed (CRM default
+// credit term); unpaid past that = overdue, which pauses the contract. Contract status: Cancelled · Paused (overdue) ·
+// Paid (every instalment paid) · Pending (in good standing, next payment upcoming or due).
+Object.assign(state.ui, { orgBtTab: 'all', orgBtSearch: '', orgBtOpen: null, orgBtAll: {}, orgBtRange: null });
+const ORG_CREDIT_DAYS = 14;
+const ORG_BT_STATUS = { paid: ['Paid', 'org-st-paid'], pending: ['Pending', 'org-st-pending'], paused: ['Paused', 'org-st-paused'], cancelled: ['Cancelled', 'org-st-cancelled'], upcoming: ['Upcoming', 'org-st-upcoming'] };
+function orgSvcPills(list) { return `<span class="chips org-svc-pills">${list.map(x => `<span class="chip">${esc(x)}</span>`).join('')}</span>`; }
+function crmAddDays(iso, n) { const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + n); return toDateInput(d); }
+function orgMoney(v) { return fmtMoney(v, Math.round(v * 100) % 100 ? 2 : 0); }
+// Billing position of every contract: instalments with their state, contract status and the banner event.
+function orgBtRows(id) {
+  const b = orgBilling(id), today = toDateInput(new Date());
+  return orgContracts(id).map(c => {
+    const inv = b.invoices.filter(i => i.contractNo === c.contractNo);
+    let nextSet = false;
+    const periods = c.schedule.map(x => {
+      const i = inv.find(v => v.id === `INV-${c.contractNo}-${String(x.n).padStart(2, '0')}`);
+      const due = crmAddDays(x.date, ORG_CREDIT_DAYS);
+      let st;
+      if (i && i.status === 'paid') st = 'paid';
+      else if (c.cancelledOn && x.date > c.cancelledOn) st = 'cancelled';
+      else if (i && (i.status === 'failed' || today > due)) st = 'paused';
+      else if (!nextSet) { st = 'pending'; nextSet = true; }
+      else st = 'upcoming';
+      if (st === 'paused') nextSet = true;
+      // Paid date: a few days after billing (demo; official payment dates come from QBB).
+      const paidOn = st === 'paid' ? [crmAddDays(x.date, 1 + (x.n * 3) % 8), today].sort()[0] : null;
+      return { ...x, pct: c.value ? x.amount / c.value * 100 : 0, due, st, paidOn, invoice: i || null };
+    });
+    const overdue = periods.find(x => x.st === 'paused');
+    const status = c.cancelledOn ? 'cancelled' : overdue ? 'paused' : periods.every(x => x.st === 'paid') ? 'paid' : 'pending';
+    const paid = periods.filter(x => x.st === 'paid');
+    return { c, periods, status, overdue, pausedOn: overdue ? crmAddDays(overdue.due, 1) : null, next: periods.find(x => x.st === 'pending'),
+      paidAmount: paid.reduce((t, x) => t + x.amount, 0), paidCount: paid.length };
+  });
+}
+// Month range filter (Billing Tracking): contracts whose dates overlap the range. Default: January to the current month.
+function orgBtRange() {
+  if (!state.ui.orgBtRange) { const t = new Date(); state.ui.orgBtRange = { from: `${t.getFullYear()}-01`, to: toDateInput(t).slice(0, 7) }; }
+  return state.ui.orgBtRange;
+}
+function orgMonthLabel(ym) { const [y, m] = ym.split('-').map(Number); return new Date(y, m - 1, 1).toLocaleDateString('en-GB', { month: 'long' }); }
+function orgBtRangeLabel(r) {
+  const [fy] = r.from.split('-'), [ty] = r.to.split('-');
+  return fy === ty ? `${orgMonthLabel(r.from)} - ${orgMonthLabel(r.to)} ${ty}` : `${orgMonthLabel(r.from)} ${fy} - ${orgMonthLabel(r.to)} ${ty}`;
+}
+function orgBillingTrackingHTML() {
+  const id = currentOrgId();
+  const u = state.ui, r = orgBtRange();
+  const all = orgBtRows(id);
+  if (u.orgBtOpen === null) u.orgBtOpen = Object.fromEntries(all.map(x => [x.c.contractNo, true]));   // expanded by default, as in the design
+  const rangeEnd = toDateInput(new Date(+r.to.slice(0, 4), +r.to.slice(5, 7), 0));
+  const term = u.orgBtSearch.trim().toLowerCase();
+  const base = all.filter(x => x.c.start <= rangeEnd && x.c.end >= `${r.from}-01` && (!term || `${x.c.contractNo} ${x.c.services.join(' ')}`.toLowerCase().includes(term)));
+  const count = k => k === 'all' ? base.length : base.filter(x => x.status === k).length;
+  const rows = base.filter(x => u.orgBtTab === 'all' || x.status === u.orgBtTab);
+  const tabs = [['all', 'All'], ['paid', 'Paid'], ['pending', 'Pending'], ['paused', 'Paused'], ['cancelled', 'Cancelled']];
+  const head = orgCardHead('Billing Tracking', 'Track payments for contract billing periods and milestones. Unpaid invoice or milestone delays may temporarily pause your contract.');
+  const card = (row, x) => {
+    const st = ORG_BT_STATUS[x.st];
+    const line = { paid: ['circle-check', 't-success', `Paid on ${fmtDate(x.paidOn)}`], pending: ['clock', 'org-tx-pending', `Payment due on ${fmtDate(x.due)}`],
+      paused: ['triangle-alert', 'org-tx-paused', `Contract paused on ${fmtDate(row.pausedOn)}`], cancelled: ['circle-x', 't-error', `Contract cancelled on ${fmtDate(row.c.cancelledOn)}`],
+      upcoming: ['rotate-cw', 't-muted', 'Upcoming future payment'] }[x.st];
+    const title = row.c.payTerm === 'Monthly' ? `T${x.n}` : `T${x.n} (${Math.round(x.pct)}%)`;
+    return `<div class="org-bt-period">
+      <div class="org-bt-period-top"><span>${esc(title)}</span><span class="org-st ${st[1]}">${st[0]}</span></div>
+      <div class="org-bt-period-amt">${orgMoney(x.amount)}</div>
+      <div class="org-bt-period-line ${line[1]}"><i data-lucide="${line[0]}"></i>${esc(line[2])}</div>
+    </div>`;
+  };
+  const banner = row => {
+    if (row.status === 'cancelled') return ['org-bn-cancelled', 'circle-alert', `Contract has been cancelled by client on ${fmtDate(row.c.cancelledOn)}.`];
+    if (row.status === 'paused') return ['org-bn-paused', 'triangle-alert', `Contract paused on ${fmtDate(row.pausedOn)} due to overdue payment for T${row.overdue.n}.`];
+    if (row.status === 'paid') return ['org-bn-paid', 'circle-check', 'All payments have been made and completed.'];
+    return ['org-bn-pending', 'clock', `Upcoming payment due on ${fmtDate(row.next.due)}.`];
+  };
+  const terms = row => {
+    const t = row.c.payTerm;
+    const label = { '50-50%': '50% / 50%', '60-20-20%': '60% / 20% / 20%', '50-30-20%': '50% / 30% / 20%', '100%': '100%', 'Pre-Paid': 'Pre-paid', Customised: 'Customised' }[t] || t;
+    return `Payment Term (${label})`;
+  };
+  const body = rows.map(row => {
+    const open = !!u.orgBtOpen[row.c.contractNo];
+    const pct = row.c.value ? Math.round(row.paidAmount / row.c.value * 100) : 0;
+    const st = ORG_BT_STATUS[row.status];
+    // Long schedules (e.g. monthly) show four cards around the current one, with "View all Billing Period".
+    const showAll = !!u.orgBtAll[row.c.contractNo] || row.periods.length <= 4;
+    let shown = row.periods;
+    if (!showAll) {
+      const firstOpen = row.periods.findIndex(x => x.st !== 'paid');
+      const start = firstOpen < 0 ? row.periods.length - 4 : Math.max(0, Math.min(row.periods.length - 4, firstOpen - 1));
+      shown = row.periods.slice(start, start + 4);
+    }
+    const [bnCls, bnIcon, bnText] = banner(row);
+    const perMonth = row.c.payTerm === 'Monthly' ? `<div class="org-bt-sub">${row.periods.length} payments • ${orgMoney(row.c.value / row.periods.length)}/ month</div>` : '';
+    return `<div class="org-bt-row">
+      <div class="org-bt-line" role="button" tabindex="0" onclick="orgBtToggle('${q(row.c.contractNo)}')" onkeydown="if(event.key==='Enter')orgBtToggle('${q(row.c.contractNo)}')" aria-expanded="${open}">
+        <span class="org-bt-contract"><i data-lucide="${open ? 'chevron-up' : 'chevron-down'}"></i>${esc(row.c.contractNo)}</span>
+        <span>${orgSvcPills(row.c.services)}</span>
+        <span>${orgMoney(row.c.value)}</span>
+        <span class="org-bt-progress"><span class="org-bt-progress-top"><span>${pct}% Paid</span><span>(${row.paidCount} of ${row.periods.length})</span></span><span class="org-bt-bar"><span style="width:${pct}%"></span></span></span>
+        <span class="org-bt-dates">${fmtDate(row.c.start)} -<br>${fmtDate(row.c.end)}</span>
+        <span><span class="org-st org-st-lg ${st[1]}">${st[0]}</span></span>
+      </div>
+      ${open ? `<div class="org-bt-detail"><div class="org-bt-breakdown">
+        <div class="org-bt-bd-head"><span class="t-bold">Contract Billing Breakdown</span><span class="t-muted">${esc(terms(row))}</span></div>
+        ${perMonth}
+        <div class="org-bt-banner ${bnCls}"><i data-lucide="${bnIcon}"></i>${esc(bnText)}</div>
+        <div class="org-bt-periods" style="grid-template-columns:repeat(${Math.min(4, shown.length)}, minmax(0, 1fr))">${shown.map(x => card(row, x)).join('')}</div>
+        ${row.periods.length > 4 ? `<button type="button" class="t-link org-bt-all" onclick="state.ui.orgBtAll['${q(row.c.contractNo)}'] = ${!showAll}; orgBtRefresh()">${showAll ? 'Show fewer' : 'View all Billing Period'}</button>` : ''}
+      </div></div>` : ''}
+    </div>`;
   }).join('');
-  const tot = contracts.reduce((t, c) => { const p = orgContractPayments(id, c); return { value: t.value + c.value, paid: t.paid + p.paid }; }, { value: 0, paid: 0 });
-  return `<div class="org-contracts-head"><div class="form-section-title">Contracts &amp; Payments</div>
-      <span class="t-caption t-muted">${fmtMoney(tot.paid, 2)} paid of ${fmtMoney(tot.value, 2)} across ${contracts.length} contract${contracts.length === 1 ? '' : 's'} (${tot.value ? Math.round(tot.paid / tot.value * 100) : 0}%)</span></div>
-    <div class="table-wrap org-svc-table"><table class="table">
-      <thead><tr><th>Contract</th><th>Services</th><th>Billing schedule</th><th class="num">Contract value</th><th class="num">Paid to date</th><th>Next payment</th></tr></thead>
-      <tbody>${rows}</tbody></table></div>
-    <div class="field-hint" style="margin-top:8px">Billing schedules come from each contract's payment terms in the agency CRM. Paid amounts follow the invoices in Billing History (official payment status: QBB). [PLACEHOLDER] amounts.</div>`;
+  return `<section class="card org-section" id="org-bt">${head}
+    <div class="org-bt-toolbar">
+      <div class="search grow"><input class="input" placeholder="Search" value="${esc(u.orgBtSearch)}" oninput="state.ui.orgBtSearch = this.value; orgBtRefresh()" aria-label="Search contracts or services"></div>
+      <div class="menu-anchor">
+        <button type="button" class="org-bt-range" onclick="toggleMenu('org-bt-range-pop', event)"><span>${esc(orgBtRangeLabel(r))}</span><i data-lucide="calendar"></i></button>
+        <div class="menu org-bt-range-pop" id="org-bt-range-pop" onclick="event.stopPropagation()">
+          <label class="field"><span class="field-label">From</span><input class="input" type="month" id="org-bt-from" value="${r.from}"></label>
+          <label class="field"><span class="field-label">To</span><input class="input" type="month" id="org-bt-to" value="${r.to}"></label>
+          <div class="org-bt-range-actions"><button type="button" class="btn btn-ghost btn-sm" onclick="closeAllPopovers()">Cancel</button><button type="button" class="btn btn-primary btn-sm" onclick="orgBtApplyRange()">Apply</button></div>
+        </div>
+      </div>
+    </div>
+    <div class="seg org-bt-tabs" role="tablist">${tabs.map(([k, l]) => `<button type="button" role="tab" class="${u.orgBtTab === k ? 'active' : ''}" onclick="state.ui.orgBtTab='${k}'; orgBtRefresh()">${l} (${count(k)})</button>`).join('')}</div>
+    <div class="org-bt-table">
+      <div class="org-bt-line org-bt-colhead"><span>Contract</span><span>Services</span><span>Total Amount</span><span>Payment Progress</span><span>Start &amp; End Date</span><span>Status</span></div>
+      ${body || `<div class="org-bt-empty">${emptyState('search-x', 'No contracts found', 'Try another search, date range or status.')}</div>`}
+    </div>
+  </section>`;
+}
+function orgBtToggle(no) { state.ui.orgBtOpen[no] = !state.ui.orgBtOpen[no]; orgBtRefresh(); }
+function orgBtApplyRange() {
+  let from = document.getElementById('org-bt-from').value, to = document.getElementById('org-bt-to').value;
+  if (!from || !to) { showToast('Choose both months', 'calendar'); return; }
+  if (from > to) [from, to] = [to, from];
+  state.ui.orgBtRange = { from, to };
+  closeAllPopovers();
+  orgBtRefresh();
+}
+function orgBtRefresh() {
+  const el = document.getElementById('org-bt');
+  if (!el) return;
+  const inp = document.activeElement && document.activeElement.closest('#org-bt .search') ? document.activeElement.selectionStart : null;
+  el.outerHTML = orgBillingTrackingHTML();
+  refreshIcons();
+  if (inp !== null) { const i = document.querySelector('#org-bt .search input'); i.focus(); i.setSelectionRange(inp, inp); }
 }
 
 // ---------- Billing Information ----------
@@ -456,8 +563,9 @@ function orgBillingHTML() {
       ${card ? '<button type="button" class="btn btn-primary" onclick="orgOpenCardModal(true)">Update Card</button>' : ''}
     </div>
   </section>`;
-  // Client workspaces: Services & Contract (contracts and payments) sits above Billing History (26/10/2026).
-  return subscription + payment + orgBillingContactHTML() + (isAgency() ? '' : orgServicesHTML()) + `<section class="card org-section">
+  // Client workspaces (Figma 6628:35585): Subscription & Plan, Services & Contract, Billing Tracking.
+  if (!isAgency()) return subscription + orgServicesHTML() + orgBillingTrackingHTML();
+  return subscription + payment + orgBillingContactHTML() + `<section class="card org-section">
     ${orgCardHead('Billing History', 'Download past invoices and receipts.')}
     <div id="org-invoice-region">${orgInvoiceTableHTML()}</div>
     <div class="field-hint" style="margin-top:12px">All plans, amounts and invoices on this page are [PLACEHOLDER] demo data.</div>
@@ -559,7 +667,7 @@ function orgRetryInvoice(invId) {
   const card = orgBilling().cards.find(c => c.isDefault);
   if (!card) { showToast('Add a payment method first', 'triangle-alert'); return; }
   inv.status = 'paid';
-  orgRefreshInvoices();
+  if (document.getElementById('org-bt')) rerender(); else orgRefreshInvoices();
   showToast(`${inv.id} paid with ${card.brand} •••• ${card.last4}`);
 }
 
@@ -815,22 +923,27 @@ ${common}
 - Legal Entity Name, Invoice Email, Contact Person, Contact Number, Billing Address, Postal Code.
 - ✎ edit mode with validation (required fields, email format, 6-digit postal code).
 
-## Services & Contract card (client workspace, Draft, 22/10/2026)
-- Read-only card on the **Billing Information** tab, above Billing History (moved from Business Information on 26/10/2026), from the workspace's agency CRM record. Labelled "Synced from Agency CRM" with the last sync time.
-- Summary: total monthly budget (live services), monthly ad-spend budget (SEM + Google Ads + Facebook Ads, the same figure as the dashboard's ad budget), CRM ID with conversion date, account manager.
-- Table: Service, Monthly budget (SGD), Start date, End date, Status (Live / Upcoming / Ended, from the dates).
-- **View in CRM ↗** (agency persona only) opens the account in the agency CRM (toast in the demo).
-- Empty state when the workspace has no CRM record (created manually): "No CRM record linked".
-- Open questions: what happens when a service ends or the account churns; is the ad budget taken from the CRM or set per workspace; should client users see budgets at all?
+## Client workspace layout (Figma 6628:35585, 27/10/2026)
+- The client Billing Information tab is: **Subscription & Plan**, **Services & Contract**, **Billing Tracking**. Payment Method, Billing Contact & Address and Billing History are not part of the client design (the agency workspace keeps them).
 
-- **Galaxis CRM contract (26/10/2026)**: Galaxis CRM is a contracted service, so a workspace with Galaxis CRM connected has its own Galaxis CRM contract (service, monthly fee, dates, payment term) in the services table, Contracts & Payments and Billing History. [PLACEHOLDER] fees.
-- **Paused for non-payment (23/10/2026)**: a live service whose contract has an unpaid invoice (pending or failed in Billing History) shows **Paused** (orange) with "$X unpaid" underneath, and the contract shows a Paused tag in Contracts & Payments. It returns to Live as soon as the invoice is paid (e.g. Retry payment). Display only in the prototype: whether pausing also stops delivery, and whether it should wait for the credit term (CRM default 14 days) before pausing, is for Finance to confirm.
-- **Contracts & Payments (23/10/2026)**: below the services, one row per contract: Contract (no. and dates), Services, **Billing schedule**, **Contract value**, **Paid to date** (amount, % of contract value, a bar showing paid in green and invoiced-but-unpaid in amber, and the unpaid amount) and **Next payment** (amount, date, instalment n of N; "Fully invoiced" when nothing is left to bill). A line above totals paid vs value across contracts.
-  - **Billing schedules follow the Agency CRM revamp's payment terms**: 100% (one-time), Pre-Paid, 50-50%, 60-20-20%, 50-30-20% (upfront, then at one third and two thirds of the term), Monthly, Quarterly, Quarterly Pre-Paid, Bi-Annual, or a **Customised** schedule (non-standard terms, approved in the CRM). Instalment timing uses the CRM's rules.
-  - **Ad contracts**: the agency fee bills by the contract's payment term; the media budget is billed monthly via OOm, or paid by the client's card and not billed by OOm (CRM "Pay via OOm" / "Pay via client card"), so it's excluded from the contract value.
-  - **Paid** comes from the same invoices as Billing History (each invoice = one instalment), so the two always agree; official payment status lives in QBB.
-  - [PLACEHOLDER] amounts: ad agency fees are 15% of the media budget (min. $800/month) until the CRM provides the real fees.
-## Billing History
+## Services & Contract (client workspace)
+- Read-only, from the workspace's agency CRM record. "A contract can cover one or more services. Each service has one active contract at a time."
+- Table: **Services · Contract · Monthly Budget · Start Date · End Date · Days Left · Status**. Monthly Budget is the media budget for ad services and **NA** for the others. Days Left shows "-" for a cancelled service.
+- Status (dot + label): **Live** (green), **Paused** (amber, "On {date}": the contract has an overdue payment, see Billing Tracking), **Cancelled** (red, "On {date}"), plus Upcoming / Ended from the dates. Cancelled services stop counting as live everywhere (dashboards, renewals).
+
+## Billing Tracking (client workspace; replaces Billing History)
+- "Track payments for contract billing periods and milestones. Unpaid invoice or milestone delays may temporarily pause your contract."
+- Toolbar: **Search** (contract number or service) and a **month range** ("January - April 2026"; shows contracts whose dates overlap the range; default January to the current month).
+- Tabs with counts: **All · Paid · Pending · Paused · Cancelled**.
+- One row per **contract** (a contract can hold several services): Contract (expand / collapse) · **Services as pills** · Total Amount · **Payment Progress** ("X% Paid", "(n of N)" instalments, green bar) · Start & End Date · Status pill. Rows start expanded.
+- **Contract Billing Breakdown** (expanded): payment term on the right (e.g. "Payment Term (50% / 30% / 20%)", "Quarterly", "Monthly"); monthly contracts add "12 payments • $X/ month"; a status banner; one card per instalment **T1 (50%)…** (monthly: T1…T12) with amount, status pill and a status line. Long schedules show four cards around the current one, with **View all Billing Period**.
+- Rules (from the agency CRM's payment terms; official payment status from QBB):
+  - An instalment is billed on its schedule date and due **14 days** later (CRM default credit term).
+  - Instalment states: **Paid** ("Paid on {date}"), **Pending** (the next one due: "Payment due on {date}"), **Paused** (overdue: "Contract paused on {date}"), **Upcoming** ("Upcoming future payment"), **Cancelled** (after the cancellation date: "Contract cancelled on {date}").
+  - Contract status and banner: **Cancelled** (red, "Contract has been cancelled by client on {date}."), **Paused** (yellow, "Contract paused on {date} due to overdue payment for T{n}."; paused the day after the due date), **Paid** (green, every instalment paid: "All payments have been made and completed."), otherwise **Pending** (amber, "Upcoming payment due on {date}.").
+- Demo data: Visual Studio shows all four states (ads contract paused, SEO paid, Aurix cancelled, Galaxis CRM pending). [PLACEHOLDER] amounts.
+
+## Billing History (agency workspace)
 - Columns Invoice, **Contract**, **Service**, Date, Amount, Status (Paid green / Pending orange / Failed red dot), Action.
 - **Billing is per contract (23/10/2026).** A contract covers one or more services (e.g. Google Ads + Facebook Ads on one contract); a client can have several contracts running at once; each service has at most one active contract at a time, so contracts for the same service never overlap. Each invoice belongs to one contract, and **Service** lists every service on that contract (never "+N").
 - Client workspaces: one invoice per **instalment of the contract's billing schedule** (its payment term in the agency CRM: one-time, monthly, quarterly, 50-30-20% and so on), issued on or before today. The agency workspace, and clients without a CRM record, show the Galaxis Hub plan instalments (Service: Galaxis Hub plan, Contract: —).

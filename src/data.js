@@ -340,11 +340,13 @@ const CRM_DAYS_LEFT = { 'ws-visual': { ads: 72, seo: 41 }, 'ws-bright': { ads: 1
         if (wsId === 'ws-visual') Object.assign(c, { payTerm: 'Monthly', mediaVia: 'OOm' });
       } else if (x.type === 'SEO') c.payTerm = pick(['100%', '50-30-20%', '60-20-20%', 'Quarterly', 'Monthly']);
       else if (x.type === 'Aurix') c.payTerm = pick(['100%', 'Pre-Paid', 'Bi-Annual']);
-      else if (x.type === 'Galaxis CRM') c.payTerm = pick(['Monthly', '100%', 'Bi-Annual']);
+      else if (x.type === 'Galaxis CRM') c.payTerm = wsId === 'ws-visual' ? 'Quarterly' : pick(['Monthly', '100%', 'Bi-Annual']);   // Visual Studio: quarterly, next payment upcoming (demo: Pending)
       else if (x.type === 'Content Marketing') {
         // One customised schedule (non-standard terms, approved in the CRM): 40% upfront, 30% at month 2, 30% at the end.
         Object.assign(c, ws.seed % 2 ? { payTerm: 'Customised', custom: [[0, 0.4], [2, 0.3], [5, 0.3]] } : { payTerm: '50-50%' });
       } else c.payTerm = 'Monthly';
+      // Demo: Visual Studio's Aurix contract was cancelled by the client about 2.5 months in (Billing Tracking: Cancelled).
+      if (wsId === 'ws-visual' && x.type === 'Aurix') { c.payTerm = '50-50%'; const d = new Date(x.start + 'T00:00:00'); d.setDate(d.getDate() + 76); c.cancelledOn = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; x.cancelledOn = c.cancelledOn; }
     });
     // Monthly agency fee on ad contracts (the CRM's management fee), placeholder: 15% of media, at least $800.
     acc.services.filter(x => x.type === 'Google Ads' || x.type === 'Facebook Ads').forEach(x => {

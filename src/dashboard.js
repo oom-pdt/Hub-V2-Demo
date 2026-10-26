@@ -1413,11 +1413,14 @@ function dashKpiPanels(ws, p, m) {
     p1 = dashKpiPanel({ eyebrow: 'Spend & Traffic', label: 'Total ad spend', tip: 'Total advertising spend reported by connected ad platforms.', value: fmtMoney(t.spend, 2),
       bar: [[used, used >= 100 ? 'is-bad' : used >= 85 ? 'is-warn' : '']], caption: `<b>${Math.round(used)}%</b> of the ${fmtMoney(budget)} budget used`,
       rows: [['Impressions', fmtNum(t.impressions)], ['Unique users', fmtNum(unique)], ['Clicks', fmtNum(t.clicks)], ['CTR', fmtPct(t.ctr)], ['Avg. CPC', fmtMoney(t.cpc, 2)]] });
+    // The bar is a platform split, not progress, so it always carries a legend (Google Ads X% · Meta Ads Y%).
+    const legend = g && mt ? `<span class="dash-kp-legend"><span><i class="dash-kp-sw"></i>Google Ads <b>${Math.round(gShare)}%</b></span><span><i class="dash-kp-sw sw-b"></i>Meta Ads <b>${100 - Math.round(gShare)}%</b></span></span>`
+      : `<b>100%</b> from ${g ? 'Google' : 'Meta'} Ads`;
     p2 = dashKpiPanel({ eyebrow: 'Conversions', label: 'Platform conversions', tip: 'Platform-reported conversion actions.', value: fmtNum(t.conversions),
-      bar: g && mt ? [[gShare, ''], [100 - gShare, 'is-alt']] : null, caption: `<b>${t.conversions ? fmtMoney(t.cpa, 2) : '—'}</b> cost per conversion`,
-      rows: [['Conversion rate', t.clicks ? fmtPct(t.conversions / t.clicks * 100) : '—'],
-        ...(g ? [['Google Ads', `${fmtNum(g.conversions)} · ${fmtMoney(g.cpa, 2)}`, g && mt ? 'sw-a' : '']] : []),
-        ...(mt ? [['Meta Ads', `${fmtNum(mt.conversions)} · ${fmtMoney(mt.cpa, 2)}`, g && mt ? 'sw-b' : '']] : [])] });
+      bar: g && mt ? [[gShare, ''], [100 - gShare, 'is-alt']] : null, caption: legend,
+      rows: [['Cost per conversion', t.conversions ? fmtMoney(t.cpa, 2) : '—'], ['Conversion rate', t.clicks ? fmtPct(t.conversions / t.clicks * 100) : '—'],
+        ...(g ? [['Google Ads conversions', `${fmtNum(g.conversions)} · ${fmtMoney(g.cpa, 2)} each`]] : []),
+        ...(mt ? [['Meta Ads conversions', `${fmtNum(mt.conversions)} · ${fmtMoney(mt.cpa, 2)} each`]] : [])] });
     return `${head}<div class="card dash-kp">${p1}${p2}${dashKpiCrmPanel(t, crm)}</div>`;
   }
   const d = dashPfData(ws.id, p), t = d.total;
@@ -1428,14 +1431,14 @@ function dashKpiPanels(ws, p, m) {
   if (p === 'google') {
     p1 = dashKpiPanel({ eyebrow: 'Spend & Traffic', label: 'Cost', tip: DASH_SHEET.cost, value: fmtMoney(t.spend, 2), bar: share !== null ? [[share, '']] : null, caption: shareCap,
       rows: [['Impr.', fmtNum(t.impressions)], ['Avg. CPM', fmtMoney(t.cpm, 2)], ['Clicks', fmtNum(t.clicks)], ['CTR', fmtPct(t.ctr)], ['Avg. CPC', fmtMoney(t.cpc, 2)]] });
-    p2 = dashKpiPanel({ eyebrow: 'Conversions', label: 'Conversions', tip: DASH_SHEET.conversions, value: fmtNum(t.conversions), caption: `<b>${t.conversions ? fmtMoney(t.cpa, 2) : '—'}</b> cost per conversion`,
-      rows: [['Conv. rate', fmtPct(t.cvr)], ['All conv.', fmtNum(t.allConv)], ['Conv. value', fmtMoney(t.convValue)], ['Conv. value / cost', t.spend ? t.pRoas.toFixed(2) : '—']] });
+    p2 = dashKpiPanel({ eyebrow: 'Conversions', label: 'Conversions', tip: DASH_SHEET.conversions, value: fmtNum(t.conversions), caption: `Across <b>${d.campaign.length}</b> campaigns`,
+      rows: [['Cost / conv.', t.conversions ? fmtMoney(t.cpa, 2) : '—'], ['Conv. rate', fmtPct(t.cvr)], ['All conv.', fmtNum(t.allConv)], ['Conv. value', fmtMoney(t.convValue)], ['Conv. value / cost', t.spend ? t.pRoas.toFixed(2) : '—']] });
   } else {
     p1 = dashKpiPanel({ eyebrow: 'Spend & Traffic', label: 'Amount spent', tip: DASH_SHEET.cost, value: fmtMoney(t.spend, 2), bar: share !== null ? [[share, '']] : null, caption: shareCap,
       rows: [['Reach', fmtNum(t.reach)], ['Frequency', t.freq.toFixed(2)], ['Impressions', fmtNum(t.impressions)], ['CPM (cost per 1,000 impressions)', fmtMoney(t.cpm, 2)],
         ['Link clicks', fmtNum(t.clicks)], ['CTR (link click-through rate)', fmtPct(t.ctr)], ['CPC (cost per link click)', fmtMoney(t.cpc, 2)]] });
-    p2 = dashKpiPanel({ eyebrow: 'Conversions', label: 'Leads', tip: DASH_SHEET.leads, value: fmtNum(t.pLeads), caption: `<b>${t.pLeads ? fmtMoney(t.cpLead, 2) : '—'}</b> cost per lead`,
-      rows: [['Leads ÷ link clicks', t.clicks ? fmtPct(t.pLeads / t.clicks * 100) : '—'], ['Purchases', fmtNum(t.purchases || 0)], ['Purchases conversion value', fmtMoney(t.convValue)],
+    p2 = dashKpiPanel({ eyebrow: 'Conversions', label: 'Leads', tip: DASH_SHEET.leads, value: fmtNum(t.pLeads), caption: `Across <b>${d.campaign.length}</b> campaigns`,
+      rows: [['Cost per lead', t.pLeads ? fmtMoney(t.cpLead, 2) : '—'], ['Leads ÷ link clicks', t.clicks ? fmtPct(t.pLeads / t.clicks * 100) : '—'], ['Purchases', fmtNum(t.purchases || 0)], ['Purchases conversion value', fmtMoney(t.convValue)],
         ['Purchase ROAS (return on ad spend)', t.spend ? t.pRoas.toFixed(2) : '—']] });
   }
   return `${head}<div class="card dash-kp">${p1}${p2}${dashKpiCrmPanel(t, crm)}</div>`;
@@ -2813,7 +2816,7 @@ A dedicated **${name}** view inside the Ad Performance tab that replicates the n
 - Should CRM-attributed columns appear at Google keyword level (needs click-ID matching)?
 
 ### Dev toolbar states
-- **Viewing as Agency Admin / Client User** (shared). **KPI cards / KPI panels** (26/10/2026, prototyping): switches the KPI layout on All Platforms, Google Ads and Meta Ads between the card rows and one card with three panels (Spend & Traffic · Conversions · Leads & Revenue; each a headline metric, a bar, a caption and a metric list, in that tab's own metric names). In panels mode the Leads & Revenue section becomes the third panel, with the attribution model in the section header. **Ad-only (no CRM)** / **CRM connected**: CRM columns and the Leads & Revenue section. **No ad accounts linked**: empty state. **Single platform (Google only)**: workspaces with both platforms show only the Google Ads view.
+- **Viewing as Agency Admin / Client User** (shared). **KPI cards / KPI panels** (26/10/2026, prototyping): switches the KPI layout on All Platforms, Google Ads and Meta Ads between the card rows and one card with three panels (Spend & Traffic · Conversions · Leads & Revenue; each a headline metric, a bar, a caption and a metric list, in that tab's own metric names). In panels mode the Leads & Revenue section becomes the third panel, with the attribution model in the section header. A bar that splits a total (e.g. conversions by platform) always has a legend underneath (Google Ads X% · Meta Ads Y%) so it doesn't read as progress; cost per conversion / cost per lead sit in the metric list, not the caption. **Ad-only (no CRM)** / **CRM connected**: CRM columns and the Leads & Revenue section. **No ad accounts linked**: empty state. **Single platform (Google only)**: workspaces with both platforms show only the Google Ads view.
 `;
 }
 Object.assign(screenSpecs, {

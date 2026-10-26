@@ -404,3 +404,7 @@
 @media (max-width: 1100px) { .dash-kp { grid-template-columns: 1fr; } .dash-kp-panel + .dash-kp-panel { border-left: 0; border-top: 1px solid var(--border-light); } }
 .dash-kp-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; }
 .dash-kp-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.dash-kp-source { margin-left: auto; font-size: 10px; font-weight: 700; letter-spacing: .3px; text-transform: none; color: var(--text-secondary); background: var(--grey-light); padding: 2px 8px; border-radius: var(--r-pill); white-space: nowrap; }
+.dash-kp-value { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.dash-kp-value2 { font-size: 22px; color: var(--primary); }
+.dash-kp-value2 small { font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-left: 2px; }

@@ -1375,12 +1375,12 @@ function dashSetKpiLayout(v) {
   rerender();
 }
 // source: where the panel's numbers come from ("Reported by Meta", "Verified in Galaxis CRM"), so similar metrics in
-// neighbouring panels (e.g. Meta's leads vs CRM leads) are never confused. value2: a second headline figure.
-function dashKpiPanel({ eyebrow, source, label, tip, value, value2, caption, rows, body }) {
+// neighbouring panels (e.g. Meta's leads vs CRM leads) are never confused.
+function dashKpiPanel({ eyebrow, source, label, tip, value, caption, rows, body }) {
   return `<div class="dash-kp-panel">
     <div class="dash-kp-eyebrow">${esc(eyebrow)}${source ? `<span class="dash-kp-source">${esc(source)}</span>` : ''}</div>
     ${body || `<div class="dash-kp-label">${esc(label)} ${tip ? infoTip(tip) : ''}</div>
-    <div class="dash-kp-value">${value}${value2 ? `<span class="dash-kp-value2">${value2}</span>` : ''}</div>
+    <div class="dash-kp-value">${value}</div>
     <div class="dash-kp-caption">${caption}</div>`}
     <div class="dash-kp-rows">${rows.map(([k, v, sw]) => `<div class="dash-kp-row"><span>${sw ? `<i class="dash-kp-sw ${sw}"></i>` : ''}${k}</span><b>${v}</b></div>`).join('')}</div>
   </div>`;
@@ -1391,9 +1391,9 @@ function dashKpiCrmPanel(t, crm) {
     body: `<div class="dash-kp-locked"><i data-lucide="lock"></i><div><div class="t-bold">Connect a CRM to unlock leads, revenue and ROAS</div>
       <div class="dash-kp-caption">Lead and revenue attribution needs one connected CRM.</div>
       <button type="button" class="btn btn-primary btn-sm" onclick="navigate('integrations')"><i data-lucide="plug"></i>Connect CRM</button></div></div>` });
-  // Headline: the outcome (attributed revenue, with ROAS beside it); leads are in the list, labelled as CRM leads.
+  // Headline: the outcome (attributed revenue, ROAS on the caption line); leads are in the list, labelled as CRM leads.
   return dashKpiPanel({ eyebrow: 'Leads & Revenue', source: `Verified in ${crm.name}`, label: 'Attributed Revenue', tip: 'Closed revenue from converted leads in your CRM, credited to these ads by the selected attribution model.',
-    value: fmtMoney(t.revenue), value2: t.spend ? `${t.roas.toFixed(2)}x <small>ROAS</small>` : '', caption: `On <b>${fmtMoney(t.spend)}</b> ad spend`,
+    value: fmtMoney(t.revenue), caption: t.spend ? `<b>${t.roas.toFixed(2)}x</b> ROAS` : 'No ad spend in this period',
     rows: [['Attributed Leads (CRM)', fmtNum(t.leads)], ['Cost per CRM Lead', t.leads ? fmtMoney(t.cpl, 2) : '—'], ['Converted Leads', fmtNum(t.converted)],
       ['Lead-to-Customer Rate', fmtPct(t.convRate, 1)], ['Avg. Deal', t.converted ? fmtMoney(t.revenue / t.converted) : '—']] });
 }
@@ -2811,7 +2811,7 @@ A dedicated **${name}** view inside the Ad Performance tab that replicates the n
 - Should CRM-attributed columns appear at Google keyword level (needs click-ID matching)?
 
 ### Dev toolbar states
-- **Client user view** (shared on/off; off = viewing as Agency Admin). **KPI panels** (26/10/2026, prototyping, on/off): switches the KPI layout on All Platforms, Google Ads and Meta Ads between the card rows and one card with three panels (Spend & Traffic · Conversions · Leads & Revenue; each a headline metric, a bar, a caption and a metric list, in that tab's own metric names). In panels mode the Leads & Revenue section becomes the third panel, with the attribution model in the section header. Each panel names its source on the heading (Conversions: "Reported by Google / Meta"; Leads & Revenue: "Verified in {CRM}"), and CRM metrics are labelled as such (Cost per CRM lead, Attributed leads (CRM)) so they're never confused with the platform's own Leads / Cost per lead. The Leads & Revenue panel headlines **Attributed revenue with ROAS beside it**; leads are in its list. Panel lengths are allowed to differ: each platform keeps the native metrics it supports. **Look (26/10/2026)**: three separate cards: coloured uppercase eyebrow, bold label, large figure in the accent colour, a caption, one divider, then a compact metric list. **No bars**: budget use is a coloured % in the caption (amber from 85%, red from 100%) and platform splits are caption text (Google Ads X% · Meta Ads Y%). All Platforms uses Title Case labels; the Google / Meta tabs keep the native metric names. Cost per conversion / cost per lead sit in the metric list, not the caption. **CRM connected** (on/off; off = ad-only, no CRM): CRM columns and the Leads & Revenue section. **No ad accounts linked**: empty state. **Single platform (Google only)**: workspaces with both platforms show only the Google Ads view.
+- **Client user view** (shared on/off; off = viewing as Agency Admin). **KPI panels** (26/10/2026, prototyping, on/off): switches the KPI layout on All Platforms, Google Ads and Meta Ads between the card rows and one card with three panels (Spend & Traffic · Conversions · Leads & Revenue; each a headline metric, a bar, a caption and a metric list, in that tab's own metric names). In panels mode the Leads & Revenue section becomes the third panel, with the attribution model in the section header. Each panel names its source on the heading (Conversions: "Reported by Google / Meta"; Leads & Revenue: "Verified in {CRM}"), and CRM metrics are labelled as such (Cost per CRM lead, Attributed leads (CRM)) so they're never confused with the platform's own Leads / Cost per lead. The Leads & Revenue panel headlines **Attributed revenue**, with **ROAS** on the caption line beneath it; leads are in its list. Panel lengths are allowed to differ: each platform keeps the native metrics it supports. **Look (26/10/2026)**: three separate cards: coloured uppercase eyebrow, bold label, large figure in the accent colour, a caption, one divider, then a compact metric list. **No bars**: budget use is a coloured % in the caption (amber from 85%, red from 100%) and platform splits are caption text (Google Ads X% · Meta Ads Y%). All Platforms uses Title Case labels; the Google / Meta tabs keep the native metric names. Cost per conversion / cost per lead sit in the metric list, not the caption. **CRM connected** (on/off; off = ad-only, no CRM): CRM columns and the Leads & Revenue section. **No ad accounts linked**: empty state. **Single platform (Google only)**: workspaces with both platforms show only the Google Ads view.
 `;
 }
 Object.assign(screenSpecs, {

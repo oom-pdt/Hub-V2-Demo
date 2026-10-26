@@ -2309,9 +2309,11 @@ function dashPfLevelCols(p, level) {
   collapsible: true,
   note: 'Name and Action are always shown',
   onChange: DASH_PF_FN[p],
-  defaultHidden: [],
+  // Google: Competitive metrics (Search impr. share etc.) are not in Google Ads' default column set, so they start
+  // hidden (switch them on in the column picker). Key bumped (v4) so every viewer gets this default.
+  defaultHidden: p === 'google' ? DASH_PF_COLS.google.filter(c => c.group === 'comp').map(c => c.key) : [],
   defaultCollapsed: DASH_PF_GROUPS[p].map(g => g[0]).filter(k => k !== 'attr'),
-  storageKey: `galaxis-demo:pf-${p}-columns-hidden-v3`,
+  storageKey: `galaxis-demo:pf-${p}-columns-hidden-v4`,
   collapsedKey: `galaxis-demo:pf-${p}-groups-collapsed-v2`
 }));
 // Filters: Status + Campaign type (Google), Delivery + Objective (Meta). Lower levels filter by their campaign's type.
@@ -2346,22 +2348,27 @@ function dashPfKpis(ws, p, d, m) {
   const S = DASH_SHEET;
   const accts = wsAdAccounts(ws.id).filter(a => a.platform === p);
   const share = dashPlatforms(ws.id).length > 1 && m.total.spend ? `<b>${Math.round(t.spend / m.total.spend * 100)}%</b> of workspace ad spend` : `Across <b>${d.campaign.length}</b> campaigns`;
+  // KPI rows mirror each platform's own overview (26/10/2026). Google: the Ads overview scorecards (Clicks, Impr.,
+  // Avg. CPC, Cost) plus the conversion trio. Meta: Ads Manager's account-level delivery metrics plus Leads and Cost
+  // per lead. Left out on purpose: Search impr. share (Search campaigns only, not additive, not a default scorecard),
+  // Meta "Results" (each campaign's result type differs by objective, so a summed total is meaningless) and the ROAS
+  // metrics (only meaningful for e-commerce). All of them stay available in the report table.
   const cards = p === 'google' ? [
+    dashKpi('Clicks', S.clicks, fmtNum(t.clicks), `CTR <b>${fmtPct(t.ctr)}</b>`),
+    dashKpi('Impr.', S.impressions, fmtNum(t.impressions), `Avg. CPM <b>${fmtMoney(t.cpm, 2)}</b>`),
+    dashKpi('Avg. CPC', 'Cost divided by clicks.', t.clicks ? fmtMoney(t.cpc, 2) : '—', 'Cost ÷ clicks'),
     dashKpi('Cost', S.cost, fmtMoney(t.spend, 2), share),
-    dashKpi('Impressions', S.impressions, fmtNum(t.impressions), `Avg. CPM <b>${fmtMoney(t.cpm, 2)}</b>`),
-    dashKpi('Clicks', S.clicks, fmtNum(t.clicks), `CTR <b>${fmtPct(t.ctr)}</b> • Avg. CPC <b>${fmtMoney(t.cpc, 2)}</b>`),
-    dashKpi('Conversions', S.conversions, fmtNum(t.conversions), `Conv. rate <b>${fmtPct(t.cvr)}</b>`),
-    dashKpi('Cost / conv.', 'Cost divided by conversions.', t.conversions ? fmtMoney(t.cpa, 2) : '—', `All conv. <b>${fmtNum(t.allConv)}</b>`),
-    dashKpi('Conv. value / cost', S.roas, t.spend ? t.pRoas.toFixed(2) : '—', `Conv. value <b>${fmtMoney(t.convValue)}</b>`),
-    dashKpi('Search impr. share', S.is, t.siElig ? fmtPct(t.is, 1) : '—', t.siElig ? `Lost (budget) <b>${fmtPct(t.lostBudget, 1)}</b>` : 'No Search campaigns')
+    dashKpi('Conversions', S.conversions, fmtNum(t.conversions), `All conv. <b>${fmtNum(t.allConv)}</b>`),
+    dashKpi('Cost / conv.', 'Cost divided by conversions.', t.conversions ? fmtMoney(t.cpa, 2) : '—', 'Cost ÷ conversions'),
+    dashKpi('Conv. rate', 'Conversions divided by interactions (clicks).', t.clicks ? fmtPct(t.cvr) : '—', 'Conversions ÷ clicks')
   ] : [
     dashKpi('Amount spent', S.cost, fmtMoney(t.spend, 2), share),
     dashKpi('Reach', S.reach, fmtNum(t.reach), `Frequency <b>${t.freq.toFixed(2)}</b>`),
-    dashKpi('Impressions', S.impressions, fmtNum(t.impressions), `CPM <b>${fmtMoney(t.cpm, 2)}</b>`),
-    dashKpi('Link clicks', S.clicks, fmtNum(t.clicks), `CTR (link) <b>${fmtPct(t.ctr)}</b> • CPC (link) <b>${fmtMoney(t.cpc, 2)}</b>`),
-    dashKpi('Results', S.conversions, fmtNum(t.conversions), `Result rate <b>${fmtPct(t.cvr)}</b>`),
-    dashKpi('Cost per result', 'Amount spent divided by results.', t.conversions ? fmtMoney(t.cpa, 2) : '—', t.pLeads ? `Cost per lead <b>${fmtMoney(t.cpLead, 2)}</b>` : 'No leads yet'),
-    dashKpi('Purchase ROAS', S.roas, t.spend ? t.pRoas.toFixed(2) : '—', `<b>${fmtMoney(t.convValue)}</b> purchase value`)
+    dashKpi('Impressions', S.impressions, fmtNum(t.impressions), `CPM (cost per 1,000 impressions) <b>${fmtMoney(t.cpm, 2)}</b>`),
+    dashKpi('Link clicks', S.clicks, fmtNum(t.clicks), `CPC (cost per link click) <b>${fmtMoney(t.cpc, 2)}</b>`),
+    dashKpi('CTR (link click-through rate)', S.ctr, t.impressions ? fmtPct(t.ctr) : '—', 'Link clicks ÷ impressions'),
+    dashKpi('Leads', S.leads, fmtNum(t.pLeads), t.clicks && t.pLeads ? `<b>${fmtPct(t.pLeads / t.clicks * 100)}</b> of link clicks` : 'No leads yet'),
+    dashKpi('Cost per lead', S.cpLead, t.pLeads ? fmtMoney(t.cpLead, 2) : '—', 'Amount spent ÷ leads')
   ];
   const acct = accts.map(a => `${esc(a.name)} (${esc(a.id)})`).join(', ');
   return `<div class="dash-section-head"><div><h2 class="h-card">${DASH_VIEW_LABEL[p]}</h2>
@@ -2927,7 +2934,7 @@ Client-facing workspace dashboard giving a simplified, unified view of Meta and 
     updatedAt: '22/10/2026',
     notes: dashPfSpecCommon('Google Ads') + `
 ### Google Ads specifics
-- **KPI row** (native names, ⓘ = sheet definition): Cost (share of workspace ad spend when both platforms are linked) · Impressions (Avg. CPM) · Clicks (CTR, Avg. CPC) · Conversions (Conv. rate) · Cost / conv. (All conv.) · Conv. value / cost (Conv. value) · Search impr. share (Lost IS (budget); "—" and "No Search campaigns" without Search campaigns).
+- **KPI row (26/10/2026: mirrors the Google Ads overview scorecards)**, native names, ⓘ = sheet definition: **Clicks** (CTR) · **Impr.** (Avg. CPM) · **Avg. CPC** · **Cost** (share of workspace ad spend when both platforms are linked) · **Conversions** (All conv.) · **Cost / conv.** · **Conv. rate**. Removed from the KPI row: Search impr. share (Search campaigns only, not additive across campaign types, not a default scorecard) and Conv. value / cost (only meaningful for e-commerce). Both remain in the report table.
 - **Levels**: Campaigns | Ad groups | Ads | Keywords. Clicking a campaign opens its ad groups; clicking an ad group opens its ads; the ⋮ menu of a Search ad group (or campaign) also offers **View keywords (N)**.
   - **Keywords** exist only under Search campaigns: 3–6 per ad group, each with Match type (Exact shown as [keyword], Phrase as "keyword", Broad plain), Quality Score 1–10 (coloured dot: 7+ green, 5–6 orange, below 5 red) and Max. CPC. Keyword metrics split their ad group's totals exactly; impression share varies per keyword.
 - **Columns** (native names; levels in brackets where a column does not exist at every level):
@@ -2940,6 +2947,7 @@ Client-facing workspace dashboard giving a simplified, unified view of Meta and 
   - **Store visits** [not keywords]: Store visits (Shop Visits in the sheet). Sparse: most rows are 0.
   - **CRM** (CRM mode, not keywords): CRM Leads, CRM CPL, CRM Revenue, CRM ROAS.
 - **Collapsed defaults (primary field)**: Attributes → Status (expanded by default), Performance → Cost, Conversions → Cost / conv., Competitive metrics → Search impr. share, Reach metrics → Unique reach, Video → Video views, Store visits → Store visits, CRM → CRM ROAS.
+- **Competitive metrics hidden by default (26/10/2026)**: Search impr. share, Search top IS, Search abs. top IS and the lost-IS columns are not in Google Ads' default column set and apply to Search only, so the group starts hidden; viewers can switch it on in the column picker.
 - **Filter**: Status (Enabled / Limited / Paused) and Campaign type. Ad groups, ads and keywords filter by their campaign's type.
 - **Google-only metrics** (N/A for Meta in the sheet): All conv., Search impr. share, Search top IS, Search abs. top IS, Search lost IS (rank), Search lost IS (budget), Shop visits (Store visits), ThruView views (Video views).
 - **Not separate columns in Google**: the sheet's Leads, Purchases, Adds to cart and Initiate checkout map to Google's Conversions *for that conversion action*. They need a "Conversion action" segment, not extra columns (open question below). Cost per lead / cost per purchase likewise come from Cost / conv.
@@ -2960,7 +2968,7 @@ Client-facing workspace dashboard giving a simplified, unified view of Meta and 
     updatedAt: '22/10/2026',
     notes: dashPfSpecCommon('Meta Ads') + `
 ### Meta Ads specifics
-- **KPI row** (native names, ⓘ = sheet definition): Amount spent (share of workspace ad spend) · Reach (Frequency) · Impressions (CPM) · Link clicks (CTR (link), CPC (link)) · Results (Result rate) · Cost per result (Cost per lead) · Purchase ROAS (purchase value).
+- **KPI row (26/10/2026: Ads Manager's account-level metrics)**, native names: **Amount spent** (share of workspace ad spend) · **Reach** (Frequency) · **Impressions** (CPM (cost per 1,000 impressions)) · **Link clicks** (CPC (cost per link click)) · **CTR (link click-through rate)** · **Leads** (% of link clicks) · **Cost per lead**. Removed from the KPI row: Results and Cost per result (each campaign's result type depends on its objective, e.g. reach, link clicks or leads, so an account-wide sum is meaningless) and Purchase ROAS (e-commerce only). All remain in the report table.
 - **Levels**: Campaigns | Ad sets | Ads. Meta ad sets are the hierarchy's ad groups. Clicking a campaign opens its ad sets; clicking an ad set opens its ads.
 - **Columns** (native names):
   - **Settings**: Delivery (Active / Learning / Learning limited / Paused), Objective (Leads / Sales / Traffic / Awareness / Engagement, from the campaign) [campaigns], Budget (daily or lifetime; "Using ad set budget" / "Using campaign budget" when the budget sits at the other level) [campaigns, ad sets], Optimisation goal [ad sets], Ad format (Single image / Single video / Carousel) [ads], Attribution setting ("7-day click, 1-day view").

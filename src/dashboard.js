@@ -938,8 +938,7 @@ function dashRenderClient() {
   const crm = activeCrm(ws.id);
   return `${header}
     ${switcher}
-    ${dashClientKpis(ws, m)}
-    ${dashCrmSection(m, crm)}
+    ${state.flags.dashKpiLayout === 'panels' ? dashKpiPanels(ws, 'all', m) : dashClientKpis(ws, m) + dashCrmSection(m, crm)}
     <div class="card dash-ct-card" id="dash-campaigns">${dashCampaignCard()}</div>
     <div class="dash-charts">
       <div class="card" id="dash-daily-card">
@@ -1366,6 +1365,82 @@ function dashNoAccountsCard() {
 function dashKpi(title, tip, value, sub, extra = '') {
   return `<div class="kpi-card"><div class="kpi-title">${esc(title)} ${infoTip(tip)}</div><div class="kpi-value">${value}</div><div class="kpi-sub">${sub}</div>${extra}</div>`;
 }
+// ---------- KPI layout variant: three panels (prototype toggle in the dev toolbar) ----------
+// 'cards' = the KPI card rows (+ the Leads & Revenue section); 'panels' = one card with three panels:
+// Spend & Traffic · Conversions · Leads & Revenue. Each panel: headline metric, optional bar, caption, metric list.
+try { state.flags.dashKpiLayout = localStorage.getItem('galaxis-demo:kpi-layout') || 'cards'; } catch (e) { state.flags.dashKpiLayout = 'cards'; }
+function dashSetKpiLayout(v) {
+  state.flags.dashKpiLayout = v;
+  try { localStorage.setItem('galaxis-demo:kpi-layout', v); } catch (e) { /* storage unavailable: keep in memory */ }
+  rerender();
+}
+function dashKpiPanel({ eyebrow, label, tip, value, bar, caption, rows, body }) {
+  return `<div class="dash-kp-panel">
+    <div class="dash-kp-eyebrow"><span class="dot"></span>${esc(eyebrow)}</div>
+    ${body || `<div class="dash-kp-label">${esc(label)} ${tip ? infoTip(tip) : ''}</div>
+    <div class="dash-kp-value">${value}</div>
+    ${bar ? `<div class="dash-kp-bar">${bar.map(([pct, cls]) => `<span class="${cls}" style="width:${Math.max(0, Math.min(100, pct)).toFixed(1)}%"></span>`).join('')}</div>` : ''}
+    <div class="dash-kp-caption">${caption}</div>`}
+    <div class="dash-kp-rows">${rows.map(([k, v, sw]) => `<div class="dash-kp-row"><span>${sw ? `<i class="dash-kp-sw ${sw}"></i>` : ''}${k}</span><b>${v}</b></div>`).join('')}</div>
+  </div>`;
+}
+// Leads & Revenue panel (CRM), from the same totals as the Leads & Revenue section.
+function dashKpiCrmPanel(t, crm) {
+  if (!crm) return dashKpiPanel({ eyebrow: 'Leads & Revenue', rows: [['Attributed leads', '—'], ['Cost per lead', '—'], ['Converted leads', '—'], ['Attributed revenue', '—'], ['ROAS', '—']],
+    body: `<div class="dash-kp-locked"><i data-lucide="lock"></i><div><div class="t-bold">Connect a CRM to unlock leads, revenue and ROAS</div>
+      <div class="dash-kp-caption">Lead and revenue attribution needs one connected CRM.</div>
+      <button type="button" class="btn btn-primary btn-sm" onclick="navigate('integrations')"><i data-lucide="plug"></i>Connect CRM</button></div></div>` });
+  const conv = t.leads ? t.converted / t.leads * 100 : 0;
+  return dashKpiPanel({ eyebrow: 'Leads & Revenue', label: 'Attributed leads', tip: 'Leads in your CRM attributed to these ads under the selected attribution model.', value: fmtNum(t.leads),
+    bar: [[conv, 'is-good']], caption: `<b>${fmtPct(t.convRate, 1)}</b> converted to customers`,
+    rows: [['Cost per lead', t.leads ? fmtMoney(t.cpl, 2) : '—'], ['Converted leads', fmtNum(t.converted)], ['Attributed revenue', fmtMoney(t.revenue)],
+      ['Avg. deal', t.converted ? fmtMoney(t.revenue / t.converted) : '—'], ['ROAS', t.spend ? `${t.roas.toFixed(2)}x` : '—']] });
+}
+// p: 'all' (All Platforms) | 'google' | 'meta'. Each tab keeps its own metric names.
+function dashKpiPanels(ws, p, m) {
+  const crm = activeCrm(ws.id);
+  const both = dashPlatforms(ws.id).length > 1;
+  const model = state.ui.dashModel;
+  const modelSel = crm ? `<label class="dash-model"><span>Attribution model</span>
+      <select class="select" onchange="dashSetModel(this.value)" aria-label="Attribution model">${DASH_MODELS.map(([v, l]) => `<option value="${v}" ${v === model ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>` : '';
+  let head, p1, p2;
+  if (p === 'all') {
+    const t = m.total, g = m.byPlatform.google, mt = m.byPlatform.meta;
+    const budget = Math.round(wsAdBudget(ws.id) * m.days / 30), used = budget ? t.spend / budget * 100 : 0;
+    const unique = Math.round(t.impressions * (0.6 + dashRng(`${ws.id}:reach`)() * 0.12));
+    const gShare = g && t.conversions ? g.conversions / t.conversions * 100 : 0;
+    head = dashSectionHead('Ad Performance', `Platform-reported results from ${dashPlatforms(ws.id).map(x => PLATFORM_NAME[x]).join(' and ')} Ads for the selected dates.`, modelSel);
+    p1 = dashKpiPanel({ eyebrow: 'Spend & Traffic', label: 'Total ad spend', tip: 'Total advertising spend reported by connected ad platforms.', value: fmtMoney(t.spend, 2),
+      bar: [[used, used >= 100 ? 'is-bad' : used >= 85 ? 'is-warn' : '']], caption: `<b>${Math.round(used)}%</b> of the ${fmtMoney(budget)} budget used`,
+      rows: [['Impressions', fmtNum(t.impressions)], ['Unique users', fmtNum(unique)], ['Clicks', fmtNum(t.clicks)], ['CTR', fmtPct(t.ctr)], ['Avg. CPC', fmtMoney(t.cpc, 2)]] });
+    p2 = dashKpiPanel({ eyebrow: 'Conversions', label: 'Platform conversions', tip: 'Platform-reported conversion actions.', value: fmtNum(t.conversions),
+      bar: g && mt ? [[gShare, ''], [100 - gShare, 'is-alt']] : null, caption: `<b>${t.conversions ? fmtMoney(t.cpa, 2) : '—'}</b> cost per conversion`,
+      rows: [['Conversion rate', t.clicks ? fmtPct(t.conversions / t.clicks * 100) : '—'],
+        ...(g ? [['Google Ads', `${fmtNum(g.conversions)} · ${fmtMoney(g.cpa, 2)}`, g && mt ? 'sw-a' : '']] : []),
+        ...(mt ? [['Meta Ads', `${fmtNum(mt.conversions)} · ${fmtMoney(mt.cpa, 2)}`, g && mt ? 'sw-b' : '']] : [])] });
+    return `${head}<div class="card dash-kp">${p1}${p2}${dashKpiCrmPanel(t, crm)}</div>`;
+  }
+  const d = dashPfData(ws.id, p), t = d.total;
+  const share = both && m.total.spend ? t.spend / m.total.spend * 100 : null;
+  const shareCap = share !== null ? `<b>${Math.round(share)}%</b> of workspace ad spend` : `Across <b>${d.campaign.length}</b> campaigns`;
+  const acct = wsAdAccounts(ws.id).filter(a => a.platform === p).map(a => `${esc(a.name)} (${esc(a.id)})`).join(', ');
+  head = dashSectionHead(DASH_VIEW_LABEL[p], `Platform-reported results from ${acct} for the selected dates, under ${PLATFORM_NAME[p]}'s own metric names. SGD · Asia/Singapore.`, modelSel);
+  if (p === 'google') {
+    p1 = dashKpiPanel({ eyebrow: 'Spend & Traffic', label: 'Cost', tip: DASH_SHEET.cost, value: fmtMoney(t.spend, 2), bar: share !== null ? [[share, '']] : null, caption: shareCap,
+      rows: [['Impr.', fmtNum(t.impressions)], ['Avg. CPM', fmtMoney(t.cpm, 2)], ['Clicks', fmtNum(t.clicks)], ['CTR', fmtPct(t.ctr)], ['Avg. CPC', fmtMoney(t.cpc, 2)]] });
+    p2 = dashKpiPanel({ eyebrow: 'Conversions', label: 'Conversions', tip: DASH_SHEET.conversions, value: fmtNum(t.conversions), caption: `<b>${t.conversions ? fmtMoney(t.cpa, 2) : '—'}</b> cost per conversion`,
+      rows: [['Conv. rate', fmtPct(t.cvr)], ['All conv.', fmtNum(t.allConv)], ['Conv. value', fmtMoney(t.convValue)], ['Conv. value / cost', t.spend ? t.pRoas.toFixed(2) : '—']] });
+  } else {
+    p1 = dashKpiPanel({ eyebrow: 'Spend & Traffic', label: 'Amount spent', tip: DASH_SHEET.cost, value: fmtMoney(t.spend, 2), bar: share !== null ? [[share, '']] : null, caption: shareCap,
+      rows: [['Reach', fmtNum(t.reach)], ['Frequency', t.freq.toFixed(2)], ['Impressions', fmtNum(t.impressions)], ['CPM (cost per 1,000 impressions)', fmtMoney(t.cpm, 2)],
+        ['Link clicks', fmtNum(t.clicks)], ['CTR (link click-through rate)', fmtPct(t.ctr)], ['CPC (cost per link click)', fmtMoney(t.cpc, 2)]] });
+    p2 = dashKpiPanel({ eyebrow: 'Conversions', label: 'Leads', tip: DASH_SHEET.leads, value: fmtNum(t.pLeads), caption: `<b>${t.pLeads ? fmtMoney(t.cpLead, 2) : '—'}</b> cost per lead`,
+      rows: [['Leads ÷ link clicks', t.clicks ? fmtPct(t.pLeads / t.clicks * 100) : '—'], ['Purchases', fmtNum(t.purchases || 0)], ['Purchases conversion value', fmtMoney(t.convValue)],
+        ['Purchase ROAS (return on ad spend)', t.spend ? t.pRoas.toFixed(2) : '—']] });
+  }
+  return `${head}<div class="card dash-kp">${p1}${p2}${dashKpiCrmPanel(t, crm)}</div>`;
+}
+
 function dashClientKpis(ws, m) {
   const t = m.total;
   const budget = Math.round(wsAdBudget(ws.id) * m.days / 30);
@@ -2332,8 +2407,7 @@ function dashRenderPlatform(ws, p) {
   const m = dashMetrics(ws.id, 'client');
   const d = dashPfData(ws.id, p);
   const chart = { google: 'Daily cost, conversions and clicks from Google Ads.', meta: 'Daily amount spent, results and link clicks from Meta Ads.' }[p];
-  return `${dashPfKpis(ws, p, d, m)}
-    ${dashCrmSection({ total: m.byPlatform[p] }, activeCrm(ws.id))}
+  return `${state.flags.dashKpiLayout === 'panels' ? dashKpiPanels(ws, p, m) : dashPfKpis(ws, p, d, m) + dashCrmSection({ total: m.byPlatform[p] }, activeCrm(ws.id))}
     <div class="card dash-ct-card" id="dash-pf-card">${dashPfReportCard(p)}</div>
     <div class="card dash-pf-daily-card">
       <div class="card-header">
@@ -2687,7 +2761,10 @@ function dashAdsDevToggles() {
     { label: 'Ad-only (no CRM)', active: !crm, run: dashSetAdOnly },
     { label: 'CRM connected', active: crm, run: dashSetCrmConnected },
     { label: 'No ad accounts linked', active: !!state.flags.dashNoAccounts, run: () => { state.flags.dashNoAccounts = !state.flags.dashNoAccounts; rerender(); } },
-    ...(plats.includes('google') && plats.length > 1 ? [{ label: 'Single platform (Google only)', active: !!state.flags.dashGoogleOnly, run: () => { state.flags.dashGoogleOnly = !state.flags.dashGoogleOnly; rerender(); } }] : [])
+    ...(plats.includes('google') && plats.length > 1 ? [{ label: 'Single platform (Google only)', active: !!state.flags.dashGoogleOnly, run: () => { state.flags.dashGoogleOnly = !state.flags.dashGoogleOnly; rerender(); } }] : []),
+    'sep',
+    { label: 'KPI cards', active: state.flags.dashKpiLayout !== 'panels', run: () => dashSetKpiLayout('cards') },
+    { label: 'KPI panels', active: state.flags.dashKpiLayout === 'panels', run: () => dashSetKpiLayout('panels') }
   ];
 }
 ['client-dashboard-ads', 'client-dashboard-ads-google', 'client-dashboard-ads-meta'].forEach(k => registerDevToggles(k, dashAdsDevToggles));
@@ -2736,7 +2813,7 @@ A dedicated **${name}** view inside the Ad Performance tab that replicates the n
 - Should CRM-attributed columns appear at Google keyword level (needs click-ID matching)?
 
 ### Dev toolbar states
-- **Viewing as Agency Admin / Client User** (shared). **Ad-only (no CRM)** / **CRM connected**: CRM columns and the Leads & Revenue section. **No ad accounts linked**: empty state. **Single platform (Google only)**: workspaces with both platforms show only the Google Ads view.
+- **Viewing as Agency Admin / Client User** (shared). **KPI cards / KPI panels** (26/10/2026, prototyping): switches the KPI layout on All Platforms, Google Ads and Meta Ads between the card rows and one card with three panels (Spend & Traffic · Conversions · Leads & Revenue; each a headline metric, a bar, a caption and a metric list, in that tab's own metric names). In panels mode the Leads & Revenue section becomes the third panel, with the attribution model in the section header. **Ad-only (no CRM)** / **CRM connected**: CRM columns and the Leads & Revenue section. **No ad accounts linked**: empty state. **Single platform (Google only)**: workspaces with both platforms show only the Google Ads view.
 `;
 }
 Object.assign(screenSpecs, {

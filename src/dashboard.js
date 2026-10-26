@@ -2751,10 +2751,9 @@ function dashSimulateCrm() {
 }
 
 registerDevToggles('agency-dashboard', () => [
-  { label: 'Alerts on', active: !state.flags.dashAlertsOff, run: () => { state.flags.dashAlertsOff = false; rerender(); } },
-  { label: 'Alerts off', active: !!state.flags.dashAlertsOff, run: () => { state.flags.dashAlertsOff = true; rerender(); } },
+  { label: 'Alerts', active: !state.flags.dashAlertsOff, run: () => { state.flags.dashAlertsOff = !state.flags.dashAlertsOff; rerender(); } },
   'sep',
-  { label: 'Simulate CRM conversion', active: false, run: dashSimulateCrm }
+  { label: 'Simulate CRM conversion', action: true, run: dashSimulateCrm }
 ]);
 // Shared by All Platforms, Google Ads and Meta Ads. "Single platform (Google only)" hides Meta for a workspace
 // that has both, so the single-platform behaviour (no All Platforms, Google view only) can be demoed.
@@ -2762,13 +2761,11 @@ function dashAdsDevToggles() {
   const crm = !!activeCrm(state.ctx);
   const plats = wsPlatforms(state.ctx);
   return [
-    { label: 'Ad-only (no CRM)', active: !crm, run: dashSetAdOnly },
-    { label: 'CRM connected', active: crm, run: dashSetCrmConnected },
+    { label: 'CRM connected', active: crm, run: () => crm ? dashSetAdOnly() : dashSetCrmConnected() },
     { label: 'No ad accounts linked', active: !!state.flags.dashNoAccounts, run: () => { state.flags.dashNoAccounts = !state.flags.dashNoAccounts; rerender(); } },
     ...(plats.includes('google') && plats.length > 1 ? [{ label: 'Single platform (Google only)', active: !!state.flags.dashGoogleOnly, run: () => { state.flags.dashGoogleOnly = !state.flags.dashGoogleOnly; rerender(); } }] : []),
     'sep',
-    { label: 'KPI cards', active: state.flags.dashKpiLayout !== 'panels', run: () => dashSetKpiLayout('cards') },
-    { label: 'KPI panels', active: state.flags.dashKpiLayout === 'panels', run: () => dashSetKpiLayout('panels') }
+    { label: 'KPI panels', active: state.flags.dashKpiLayout === 'panels', run: () => dashSetKpiLayout(state.flags.dashKpiLayout === 'panels' ? 'cards' : 'panels') }
   ];
 }
 ['client-dashboard-ads', 'client-dashboard-ads-google', 'client-dashboard-ads-meta'].forEach(k => registerDevToggles(k, dashAdsDevToggles));
@@ -2776,12 +2773,9 @@ registerDevToggles('client-dashboard-seo', () => {
   const on = seoConnected(state.ctx);
   const key = on ? dashSeoStats().status.key : null;
   return [
-    ...(on ? [
-      { label: 'On track', active: key === 'on', run: () => dashSeoScenario('on') },
-      { label: 'Off track', active: key === 'off', run: () => dashSeoScenario('off') },
-      { label: 'Critical', active: key === 'critical', run: () => dashSeoScenario('critical') },
-      'sep'] : []),
-    { label: 'SEO Cloud not connected', active: !on, run: dashSeoToggleConnected }
+    { label: 'SEO Cloud connected', active: on, run: dashSeoToggleConnected },
+    // Status cycles On track → Off track → Critical.
+    ...(on ? [{ label: `SEO status: ${{ on: 'On track', off: 'Off track', critical: 'Critical' }[key]}`, cycle: true, run: () => dashSeoScenario({ on: 'off', off: 'critical', critical: 'on' }[key]) }] : [])
   ];
 });
 
@@ -2817,7 +2811,7 @@ A dedicated **${name}** view inside the Ad Performance tab that replicates the n
 - Should CRM-attributed columns appear at Google keyword level (needs click-ID matching)?
 
 ### Dev toolbar states
-- **Viewing as Agency Admin / Client User** (shared). **KPI cards / KPI panels** (26/10/2026, prototyping): switches the KPI layout on All Platforms, Google Ads and Meta Ads between the card rows and one card with three panels (Spend & Traffic · Conversions · Leads & Revenue; each a headline metric, a bar, a caption and a metric list, in that tab's own metric names). In panels mode the Leads & Revenue section becomes the third panel, with the attribution model in the section header. Each panel names its source on the heading (Conversions: "Reported by Google / Meta"; Leads & Revenue: "Verified in {CRM}"), and CRM metrics are labelled as such (Cost per CRM lead, Attributed leads (CRM)) so they're never confused with the platform's own Leads / Cost per lead. The Leads & Revenue panel headlines **Attributed revenue with ROAS beside it**; leads are in its list. Panel lengths are allowed to differ: each platform keeps the native metrics it supports. **Look (26/10/2026)**: three separate cards: coloured uppercase eyebrow, bold label, large figure in the accent colour, a caption, one divider, then a compact metric list. **No bars**: budget use is a coloured % in the caption (amber from 85%, red from 100%) and platform splits are caption text (Google Ads X% · Meta Ads Y%). All Platforms uses Title Case labels; the Google / Meta tabs keep the native metric names. Cost per conversion / cost per lead sit in the metric list, not the caption. **Ad-only (no CRM)** / **CRM connected**: CRM columns and the Leads & Revenue section. **No ad accounts linked**: empty state. **Single platform (Google only)**: workspaces with both platforms show only the Google Ads view.
+- **Client user view** (shared on/off; off = viewing as Agency Admin). **KPI panels** (26/10/2026, prototyping, on/off): switches the KPI layout on All Platforms, Google Ads and Meta Ads between the card rows and one card with three panels (Spend & Traffic · Conversions · Leads & Revenue; each a headline metric, a bar, a caption and a metric list, in that tab's own metric names). In panels mode the Leads & Revenue section becomes the third panel, with the attribution model in the section header. Each panel names its source on the heading (Conversions: "Reported by Google / Meta"; Leads & Revenue: "Verified in {CRM}"), and CRM metrics are labelled as such (Cost per CRM lead, Attributed leads (CRM)) so they're never confused with the platform's own Leads / Cost per lead. The Leads & Revenue panel headlines **Attributed revenue with ROAS beside it**; leads are in its list. Panel lengths are allowed to differ: each platform keeps the native metrics it supports. **Look (26/10/2026)**: three separate cards: coloured uppercase eyebrow, bold label, large figure in the accent colour, a caption, one divider, then a compact metric list. **No bars**: budget use is a coloured % in the caption (amber from 85%, red from 100%) and platform splits are caption text (Google Ads X% · Meta Ads Y%). All Platforms uses Title Case labels; the Google / Meta tabs keep the native metric names. Cost per conversion / cost per lead sit in the metric list, not the caption. **CRM connected** (on/off; off = ad-only, no CRM): CRM columns and the Leads & Revenue section. **No ad accounts linked**: empty state. **Single platform (Google only)**: workspaces with both platforms show only the Google Ads view.
 `;
 }
 Object.assign(screenSpecs, {
@@ -2879,7 +2873,7 @@ Central command dashboard for agency administrators managing many client workspa
 - **Period-over-period comparison (deferred).** Cost Per Conversion is coloured against the portfolio average because ad data is a live API call with no stored history. Comparing each client with its own previous period would be more meaningful; it could also come from a second live query for the previous date range rather than storage (to confirm with engineering: extra API calls and rate limits).
 
 ### Dev toolbar states
-- **Alerts on / Alerts off**: Off clears every issue: no banner, Attention Required 0, every account On Track (the healthy state).
+- **Alerts** (on/off): off clears every issue: no banner, Attention Required 0, every account On Track (the healthy state).
 - **Simulate CRM conversion**: runs the Agency CRM auto set-up (owned by the CRM module). Shows "CRM module not loaded" when that module is missing.
 `
   },
@@ -2919,9 +2913,9 @@ Read-only SEO Cloud results inside the client workspace, next to ad performance,
 - Should clients see keyword groups that are marked internal-only in SEO Cloud? The prototype shows every group.
 
 ### Dev toolbar states
-- **Viewing as Agency Admin / Client User** (shared). Client users do not see "Manage in SEO Cloud".
-- **On track / Off track / Critical**: sets this workspace's mock top-10 share to target +3, -2 or -8 points; the keyword data regenerates.
-- **SEO Cloud not connected**: removes SEO Cloud from the workspace (or adds it back) to show the not-connected state.
+- **Client user view** (shared on/off; off = viewing as Agency Admin). Client users do not see "Manage in SEO Cloud".
+- **SEO status: …** (one cycle button: On track → Off track → Critical): sets this workspace's mock top-10 share to target +3, -2 or -8 points; the keyword data regenerates.
+- **SEO Cloud connected** (on/off): off removes SEO Cloud from the workspace to show the not-connected state; on adds it back.
 `
   },
   'client-dashboard-ads': {
@@ -3001,8 +2995,8 @@ Client-facing workspace dashboard giving a simplified, unified view of Meta and 
 - Whether the heatmap should show local ad-account time or SGT when the accounts use different time zones.
 
 ### Dev toolbar states
-- **Viewing as Agency Admin / Client User** (shared).
-- **Ad-only (no CRM)**: deactivates every CRM for this workspace, which also hides the Leads nav item.
+- **Client user view** (shared on/off; off = viewing as Agency Admin).
+- **CRM connected** (on/off): off deactivates every CRM for this workspace (ad-only), which also hides the Leads nav item.
 - **CRM connected**: makes Galaxis CRM connected and active, and every other CRM inactive.
 - **No ad accounts linked**: simulates the empty state without changing ad-account data.
 - **Single platform (Google only)**: hides Meta for a workspace with both platforms, so only the Google Ads view shows (no All Platforms). Shared with the platform views.

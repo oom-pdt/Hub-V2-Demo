@@ -755,7 +755,7 @@ const ORG_DEV_EDIT = { business: ['business'], billing: ['billing'], brand: ['lo
         sections.forEach(s => { state.ui.orgEdit[s] = on; });
         rerender();
       };
-      return [{ label: 'View mode', active: !editing, run: set(false) }, { label: 'Edit mode', active: editing, run: set(true) }];
+      return [{ label: 'Edit mode', active: editing, run: set(!editing) }];
     });
   });
 });

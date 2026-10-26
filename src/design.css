@@ -525,3 +525,7 @@ svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
 .dp-day:not(:disabled):not(.is-edge):hover { background: var(--grey-light); }
 .dp-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
 @media (max-width: 720px) { .dp-grid { grid-template-columns: 1fr; } .dp-presets { border-right: 0; border-bottom: 1px solid var(--border-light); max-height: 220px; } }
+.dev-toggle.dev-cycle { border-style: dashed; color: #E2E8F0; }
+.dev-toggle.dev-action { background: transparent; color: #94A3B8; }
+.dev-toggle:not(.dev-cycle):not(.dev-action)::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 6px; background: #475569; vertical-align: 1px; }
+.dev-toggle.active::before { background: #fff; }

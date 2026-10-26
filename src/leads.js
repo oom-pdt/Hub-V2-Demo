@@ -496,11 +496,10 @@ registerDevScreen('Client workspace', 'client-lead-profile', 'Lead Profile', () 
 function leadDevToggles() {
   const f = state.flags.leadAuthority;
   const set = v => () => { state.flags.leadAuthority = v; rerender(); };
-  return [
-    { label: 'Auto (from CRM)', active: !f, run: set(undefined) },
-    { label: 'Read-only mirror', active: f === 'mirror', run: set('mirror') },
-    { label: 'Galaxis CRM (full edit)', active: f === 'full', run: set('full') }
-  ];
+  // One on/off button: Read-only mirror on = third-party CRM mirror, off = Galaxis CRM full edit.
+  // The default follows the workspace's CRM (HubSpot / Salesforce … = mirror).
+  const mirror = leadAuthority() === 'mirror';
+  return [{ label: 'Read-only mirror', active: mirror, run: set(mirror ? 'full' : 'mirror') }];
 }
 registerDevToggles('client-leads', leadDevToggles);
 registerDevToggles('client-lead-profile', leadDevToggles);
@@ -519,7 +518,7 @@ Ported from V2. Lists leads synchronised from the workspace's active CRM and con
 ## Authority banner
 - Third-party CRM (HubSpot, Salesforce, Zoho, Dynamics): **"Managed in {CRM} — Read-only mirror"**. No add or edit controls.
 - OOm CRM (Galaxis CRM, Institute CRM): **"Galaxis CRM active — full edit"**. Add Lead and Edit status are available.
-- Dev toggles override the authority for the demo: Auto / Read-only mirror / Galaxis CRM (full edit).
+- Dev toggle **Read-only mirror** (on/off) overrides the authority for the demo; by default it follows the workspace's CRM.
 
 ## Table
 - Search by name, email or source (agency users: name or source only).

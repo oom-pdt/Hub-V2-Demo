@@ -537,6 +537,10 @@ svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
 .dp-day:not(:disabled):not(.is-edge):hover { background: var(--grey-light); }
 .dp-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
 @media (max-width: 720px) { .dp-grid { grid-template-columns: 1fr; } .dp-presets { border-right: 0; border-bottom: 1px solid var(--border-light); max-height: 220px; } }
+.dev-toggle.dev-cycle { border-style: dashed; color: #E2E8F0; }
+.dev-toggle.dev-action { background: transparent; color: #94A3B8; }
+.dev-toggle:not(.dev-cycle):not(.dev-action)::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 6px; background: #475569; vertical-align: 1px; }
+.dev-toggle.active::before { background: #fff; }
 
 /* dashboard module styles — component-specific only; shared components live in design.css */
 
@@ -914,7 +918,7 @@ svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
 .drawer-footer .dash-sp-view { flex: 1; justify-content: center; }
 
 /* ---------- KPI layout variant: three panels (26/10/2026 look: separate cards, no bars) ---------- */
-.dash-kp { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin-bottom: 32px; align-items: start; }
+.dash-kp { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin-bottom: 32px; align-items: stretch; }
 .dash-kp-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 22px 18px 18px; min-width: 0; }
 .dash-kp-eyebrow { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--primary); margin-bottom: 18px; height: 20px; }
 .dash-kp-label { font-size: 13px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 6px; letter-spacing: .3px; }
@@ -2984,9 +2988,10 @@ function renderDevBar() {
     `<option value="${s.key}" ${s.key === key ? 'selected' : ''}>${esc(s.label)}</option>`).join('')}</optgroup>`).join('');
 
   const toggles = [];
+  // Every option is one button: on/off toggles (highlighted when on), cycle buttons for 3+ states
+  // ({ cycle: true }, label "Name: value"), and one-shot actions ({ action: true }).
   if (!isAgency()) {
-    toggles.push({ label: 'Viewing as Agency Admin', active: state.persona === 'agency', run: () => { state.persona = 'agency'; render(); } });
-    toggles.push({ label: 'Viewing as Client User', active: state.persona === 'client', run: () => { state.persona = 'client'; render(); } });
+    toggles.push({ label: 'Client user view', active: state.persona === 'client', run: () => { state.persona = state.persona === 'client' ? 'agency' : 'client'; render(); } });
   }
   const own = devToggleRegistry[key] ? devToggleRegistry[key]() : [];
   if (own.length && toggles.length) toggles.push('sep');
@@ -2999,7 +3004,7 @@ function renderDevBar() {
     <div class="devbar-toggles">
       <span class="lbl">States:</span>
       ${toggles.length ? toggles.map((t, i) => t === 'sep' ? '<span class="lbl">|</span>' :
-        `<button type="button" class="dev-toggle ${t.active ? 'active' : ''}" onclick="window.__devToggles[${i}].run()">${esc(t.label)}</button>`).join('') : '<span class="lbl">Default state only</span>'}
+        `<button type="button" class="dev-toggle ${t.cycle ? 'dev-cycle' : t.action ? 'dev-action' : t.active ? 'active' : ''}" ${t.cycle || t.action ? '' : `aria-pressed="${!!t.active}"`} title="${t.cycle ? 'Click to cycle' : t.action ? 'Run once' : 'Click to turn on / off'}" onclick="window.__devToggles[${i}].run()">${t.cycle ? '<span aria-hidden="true">↻ </span>' : t.action ? '<span aria-hidden="true">▶ </span>' : ''}${esc(t.label)}</button>`).join('') : '<span class="lbl">Default state only</span>'}
     </div>`;
 }
 
@@ -5920,10 +5925,9 @@ function dashSimulateCrm() {
 }
 
 registerDevToggles('agency-dashboard', () => [
-  { label: 'Alerts on', active: !state.flags.dashAlertsOff, run: () => { state.flags.dashAlertsOff = false; rerender(); } },
-  { label: 'Alerts off', active: !!state.flags.dashAlertsOff, run: () => { state.flags.dashAlertsOff = true; rerender(); } },
+  { label: 'Alerts', active: !state.flags.dashAlertsOff, run: () => { state.flags.dashAlertsOff = !state.flags.dashAlertsOff; rerender(); } },
   'sep',
-  { label: 'Simulate CRM conversion', active: false, run: dashSimulateCrm }
+  { label: 'Simulate CRM conversion', action: true, run: dashSimulateCrm }
 ]);
 // Shared by All Platforms, Google Ads and Meta Ads. "Single platform (Google only)" hides Meta for a workspace
 // that has both, so the single-platform behaviour (no All Platforms, Google view only) can be demoed.
@@ -5931,13 +5935,11 @@ function dashAdsDevToggles() {
   const crm = !!activeCrm(state.ctx);
   const plats = wsPlatforms(state.ctx);
   return [
-    { label: 'Ad-only (no CRM)', active: !crm, run: dashSetAdOnly },
-    { label: 'CRM connected', active: crm, run: dashSetCrmConnected },
+    { label: 'CRM connected', active: crm, run: () => crm ? dashSetAdOnly() : dashSetCrmConnected() },
     { label: 'No ad accounts linked', active: !!state.flags.dashNoAccounts, run: () => { state.flags.dashNoAccounts = !state.flags.dashNoAccounts; rerender(); } },
     ...(plats.includes('google') && plats.length > 1 ? [{ label: 'Single platform (Google only)', active: !!state.flags.dashGoogleOnly, run: () => { state.flags.dashGoogleOnly = !state.flags.dashGoogleOnly; rerender(); } }] : []),
     'sep',
-    { label: 'KPI cards', active: state.flags.dashKpiLayout !== 'panels', run: () => dashSetKpiLayout('cards') },
-    { label: 'KPI panels', active: state.flags.dashKpiLayout === 'panels', run: () => dashSetKpiLayout('panels') }
+    { label: 'KPI panels', active: state.flags.dashKpiLayout === 'panels', run: () => dashSetKpiLayout(state.flags.dashKpiLayout === 'panels' ? 'cards' : 'panels') }
   ];
 }
 ['client-dashboard-ads', 'client-dashboard-ads-google', 'client-dashboard-ads-meta'].forEach(k => registerDevToggles(k, dashAdsDevToggles));
@@ -5945,12 +5947,9 @@ registerDevToggles('client-dashboard-seo', () => {
   const on = seoConnected(state.ctx);
   const key = on ? dashSeoStats().status.key : null;
   return [
-    ...(on ? [
-      { label: 'On track', active: key === 'on', run: () => dashSeoScenario('on') },
-      { label: 'Off track', active: key === 'off', run: () => dashSeoScenario('off') },
-      { label: 'Critical', active: key === 'critical', run: () => dashSeoScenario('critical') },
-      'sep'] : []),
-    { label: 'SEO Cloud not connected', active: !on, run: dashSeoToggleConnected }
+    { label: 'SEO Cloud connected', active: on, run: dashSeoToggleConnected },
+    // Status cycles On track → Off track → Critical.
+    ...(on ? [{ label: `SEO status: ${{ on: 'On track', off: 'Off track', critical: 'Critical' }[key]}`, cycle: true, run: () => dashSeoScenario({ on: 'off', off: 'critical', critical: 'on' }[key]) }] : [])
   ];
 });
 
@@ -5986,7 +5985,7 @@ A dedicated **${name}** view inside the Ad Performance tab that replicates the n
 - Should CRM-attributed columns appear at Google keyword level (needs click-ID matching)?
 
 ### Dev toolbar states
-- **Viewing as Agency Admin / Client User** (shared). **KPI cards / KPI panels** (26/10/2026, prototyping): switches the KPI layout on All Platforms, Google Ads and Meta Ads between the card rows and one card with three panels (Spend & Traffic · Conversions · Leads & Revenue; each a headline metric, a bar, a caption and a metric list, in that tab's own metric names). In panels mode the Leads & Revenue section becomes the third panel, with the attribution model in the section header. Each panel names its source on the heading (Conversions: "Reported by Google / Meta"; Leads & Revenue: "Verified in {CRM}"), and CRM metrics are labelled as such (Cost per CRM lead, Attributed leads (CRM)) so they're never confused with the platform's own Leads / Cost per lead. The Leads & Revenue panel headlines **Attributed revenue with ROAS beside it**; leads are in its list. Panel lengths are allowed to differ: each platform keeps the native metrics it supports. **Look (26/10/2026)**: three separate cards: coloured uppercase eyebrow, bold label, large figure in the accent colour, a caption, one divider, then a compact metric list. **No bars**: budget use is a coloured % in the caption (amber from 85%, red from 100%) and platform splits are caption text (Google Ads X% · Meta Ads Y%). All Platforms uses Title Case labels; the Google / Meta tabs keep the native metric names. Cost per conversion / cost per lead sit in the metric list, not the caption. **Ad-only (no CRM)** / **CRM connected**: CRM columns and the Leads & Revenue section. **No ad accounts linked**: empty state. **Single platform (Google only)**: workspaces with both platforms show only the Google Ads view.
+- **Client user view** (shared on/off; off = viewing as Agency Admin). **KPI panels** (26/10/2026, prototyping, on/off): switches the KPI layout on All Platforms, Google Ads and Meta Ads between the card rows and one card with three panels (Spend & Traffic · Conversions · Leads & Revenue; each a headline metric, a bar, a caption and a metric list, in that tab's own metric names). In panels mode the Leads & Revenue section becomes the third panel, with the attribution model in the section header. Each panel names its source on the heading (Conversions: "Reported by Google / Meta"; Leads & Revenue: "Verified in {CRM}"), and CRM metrics are labelled as such (Cost per CRM lead, Attributed leads (CRM)) so they're never confused with the platform's own Leads / Cost per lead. The Leads & Revenue panel headlines **Attributed revenue with ROAS beside it**; leads are in its list. Panel lengths are allowed to differ: each platform keeps the native metrics it supports. **Look (26/10/2026)**: three separate cards: coloured uppercase eyebrow, bold label, large figure in the accent colour, a caption, one divider, then a compact metric list. **No bars**: budget use is a coloured % in the caption (amber from 85%, red from 100%) and platform splits are caption text (Google Ads X% · Meta Ads Y%). All Platforms uses Title Case labels; the Google / Meta tabs keep the native metric names. Cost per conversion / cost per lead sit in the metric list, not the caption. **CRM connected** (on/off; off = ad-only, no CRM): CRM columns and the Leads & Revenue section. **No ad accounts linked**: empty state. **Single platform (Google only)**: workspaces with both platforms show only the Google Ads view.
 `;
 }
 Object.assign(screenSpecs, {
@@ -6048,7 +6047,7 @@ Central command dashboard for agency administrators managing many client workspa
 - **Period-over-period comparison (deferred).** Cost Per Conversion is coloured against the portfolio average because ad data is a live API call with no stored history. Comparing each client with its own previous period would be more meaningful; it could also come from a second live query for the previous date range rather than storage (to confirm with engineering: extra API calls and rate limits).
 
 ### Dev toolbar states
-- **Alerts on / Alerts off**: Off clears every issue: no banner, Attention Required 0, every account On Track (the healthy state).
+- **Alerts** (on/off): off clears every issue: no banner, Attention Required 0, every account On Track (the healthy state).
 - **Simulate CRM conversion**: runs the Agency CRM auto set-up (owned by the CRM module). Shows "CRM module not loaded" when that module is missing.
 `
   },
@@ -6088,9 +6087,9 @@ Read-only SEO Cloud results inside the client workspace, next to ad performance,
 - Should clients see keyword groups that are marked internal-only in SEO Cloud? The prototype shows every group.
 
 ### Dev toolbar states
-- **Viewing as Agency Admin / Client User** (shared). Client users do not see "Manage in SEO Cloud".
-- **On track / Off track / Critical**: sets this workspace's mock top-10 share to target +3, -2 or -8 points; the keyword data regenerates.
-- **SEO Cloud not connected**: removes SEO Cloud from the workspace (or adds it back) to show the not-connected state.
+- **Client user view** (shared on/off; off = viewing as Agency Admin). Client users do not see "Manage in SEO Cloud".
+- **SEO status: …** (one cycle button: On track → Off track → Critical): sets this workspace's mock top-10 share to target +3, -2 or -8 points; the keyword data regenerates.
+- **SEO Cloud connected** (on/off): off removes SEO Cloud from the workspace to show the not-connected state; on adds it back.
 `
   },
   'client-dashboard-ads': {
@@ -6170,8 +6169,8 @@ Client-facing workspace dashboard giving a simplified, unified view of Meta and 
 - Whether the heatmap should show local ad-account time or SGT when the accounts use different time zones.
 
 ### Dev toolbar states
-- **Viewing as Agency Admin / Client User** (shared).
-- **Ad-only (no CRM)**: deactivates every CRM for this workspace, which also hides the Leads nav item.
+- **Client user view** (shared on/off; off = viewing as Agency Admin).
+- **CRM connected** (on/off): off deactivates every CRM for this workspace (ad-only), which also hides the Leads nav item.
 - **CRM connected**: makes Galaxis CRM connected and active, and every other CRM inactive.
 - **No ad accounts linked**: simulates the empty state without changing ad-account data.
 - **Single platform (Google only)**: hides Meta for a workspace with both platforms, so only the Google Ads view shows (no All Platforms). Shared with the platform views.
@@ -7006,7 +7005,7 @@ const ORG_DEV_EDIT = { business: ['business'], billing: ['billing'], brand: ['lo
         sections.forEach(s => { state.ui.orgEdit[s] = on; });
         rerender();
       };
-      return [{ label: 'View mode', active: !editing, run: set(false) }, { label: 'Edit mode', active: editing, run: set(true) }];
+      return [{ label: 'Edit mode', active: editing, run: set(!editing) }];
     });
   });
 });
@@ -8338,15 +8337,14 @@ registerScreen('team', {
     registerDevToggles(`${ctx}-team-role-editor`, () => {
       const sys = ctx === 'agency' ? 'r-a-admin' : 'r-c-super';
       const custom = ctx === 'agency' ? 'r-a-am' : 'r-c-hom';
-      return [
-        { label: 'New role', active: state.params.edit === 'new', run: () => teamOpenRoleEditor('new') },
-        { label: 'Edit custom role', active: state.params.edit === custom, run: () => teamOpenRoleEditor(custom) },
-        { label: 'System role (view only)', active: state.params.edit === sys, run: () => teamOpenRoleEditor(sys) }
-      ];
+      // One cycle button: New role → Edit custom role → System role (view only).
+      const modes = [['new', 'New role'], [custom, 'Edit custom role'], [sys, 'System role (view only)']];
+      const i = Math.max(0, modes.findIndex(m => m[0] === state.params.edit));
+      return [{ label: `Editor: ${modes[i][1]}`, cycle: true, run: () => teamOpenRoleEditor(modes[(i + 1) % modes.length][0]) }];
     });
   });
   registerDevToggles('agency-team-clients', () => [emptyToggle('clients', 'Empty state (no client organisations)'),
-    { label: 'Simulate CRM conversion', active: false, run: () => crmSimulateConversion() }]);
+    { label: 'Simulate CRM conversion', action: true, run: () => crmSimulateConversion() }]);
   registerDevToggles('client-team-agency', () => [emptyToggle('agency', 'Empty state (no agency access)')]);
 })();
 
@@ -9576,23 +9574,32 @@ const INTEG_SCENARIOS = {
   'Routing Choice': () => ({ hubspot: { status: 'connected', active: true, lastSynced: INTEG_SYNC } })
 };
 function integApplyScenario(name) {
+  const prev = state.flags.integScenario;
+  const snapshot = prev && prev.ws === state.ctx && prev.snapshot ? prev.snapshot : JSON.parse(JSON.stringify(wsProducts(state.ctx)));
   workspaceProducts[state.ctx] = INTEG_SCENARIOS[name]();
-  state.flags.integScenario = { name, ws: state.ctx };
+  state.flags.integScenario = { name, ws: state.ctx, snapshot };
   closeDrawer(); closeModal();
   render();
   if (name === 'Routing Choice') integConnect('sleekflow');
 }
-registerDevToggles('client-integrations', () => Object.keys(INTEG_SCENARIOS).map(name => ({
-  label: name,
-  active: state.flags.integScenario?.name === name && state.flags.integScenario?.ws === state.ctx,
-  run: () => integApplyScenario(name)
-})));
+// Each scenario is on/off: turning one on keeps the workspace's own products to restore when it's turned off again.
+registerDevToggles('client-integrations', () => Object.keys(INTEG_SCENARIOS).map(name => {
+  const on = state.flags.integScenario?.name === name && state.flags.integScenario?.ws === state.ctx;
+  return { label: name, active: on, run: () => on ? integClearScenario() : integApplyScenario(name) };
+}));
+function integClearScenario() {
+  const sc = state.flags.integScenario;
+  if (sc && sc.snapshot) workspaceProducts[sc.ws] = sc.snapshot;
+  state.flags.integScenario = null;
+  closeDrawer(); closeModal();
+  render();
+}
 registerDevToggles('agency-integrations', () => [
-  { label: 'Healthy tokens', active: state.flags.integToken === 'healthy', run: () => { masterTokens.google.status = 'valid'; masterTokens.meta.status = 'valid'; if (masterTokens.meta.expires < '2026-10-21') masterTokens.meta.expires = '2026-12-01'; state.flags.integToken = 'healthy'; render(); } },
-  { label: 'Meta token expired', active: state.flags.integToken === 'expired', run: () => { masterTokens.meta.status = 'expired'; masterTokens.meta.expires = '2026-10-14'; state.flags.integToken = 'expired'; render(); } },
-  'sep',
-  { label: 'Agency CRM connected', active: agencyCrm.status === 'connected', run: () => { agencyCrm.status = 'connected'; state.flags.integCrm = 'connected'; render(); } },
-  { label: 'Agency CRM disconnected', active: agencyCrm.status !== 'connected', run: () => { agencyCrm.status = 'disconnected'; state.flags.integCrm = 'disconnected'; render(); } }
+  { label: 'Meta token expired', active: state.flags.integToken === 'expired', run: () => {
+    if (state.flags.integToken === 'expired') { masterTokens.google.status = 'valid'; masterTokens.meta.status = 'valid'; if (masterTokens.meta.expires < '2026-10-21') masterTokens.meta.expires = '2026-12-01'; state.flags.integToken = 'healthy'; }
+    else { masterTokens.meta.status = 'expired'; masterTokens.meta.expires = '2026-10-14'; state.flags.integToken = 'expired'; }
+    render(); } },
+  { label: 'Agency CRM connected', active: agencyCrm.status === 'connected', run: () => { agencyCrm.status = agencyCrm.status === 'connected' ? 'disconnected' : 'connected'; state.flags.integCrm = agencyCrm.status; render(); } }
 ]);
 
 // ---------- Specs ----------
@@ -10211,11 +10218,10 @@ registerDevScreen('Client workspace', 'client-lead-profile', 'Lead Profile', () 
 function leadDevToggles() {
   const f = state.flags.leadAuthority;
   const set = v => () => { state.flags.leadAuthority = v; rerender(); };
-  return [
-    { label: 'Auto (from CRM)', active: !f, run: set(undefined) },
-    { label: 'Read-only mirror', active: f === 'mirror', run: set('mirror') },
-    { label: 'Galaxis CRM (full edit)', active: f === 'full', run: set('full') }
-  ];
+  // One on/off button: Read-only mirror on = third-party CRM mirror, off = Galaxis CRM full edit.
+  // The default follows the workspace's CRM (HubSpot / Salesforce … = mirror).
+  const mirror = leadAuthority() === 'mirror';
+  return [{ label: 'Read-only mirror', active: mirror, run: set(mirror ? 'full' : 'mirror') }];
 }
 registerDevToggles('client-leads', leadDevToggles);
 registerDevToggles('client-lead-profile', leadDevToggles);
@@ -10234,7 +10240,7 @@ Ported from V2. Lists leads synchronised from the workspace's active CRM and con
 ## Authority banner
 - Third-party CRM (HubSpot, Salesforce, Zoho, Dynamics): **"Managed in {CRM} — Read-only mirror"**. No add or edit controls.
 - OOm CRM (Galaxis CRM, Institute CRM): **"Galaxis CRM active — full edit"**. Add Lead and Edit status are available.
-- Dev toggles override the authority for the demo: Auto / Read-only mirror / Galaxis CRM (full edit).
+- Dev toggle **Read-only mirror** (on/off) overrides the authority for the demo; by default it follows the workspace's CRM.
 
 ## Table
 - Search by name, email or source (agency users: name or source only).

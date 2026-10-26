@@ -1212,15 +1212,14 @@ registerScreen('team', {
     registerDevToggles(`${ctx}-team-role-editor`, () => {
       const sys = ctx === 'agency' ? 'r-a-admin' : 'r-c-super';
       const custom = ctx === 'agency' ? 'r-a-am' : 'r-c-hom';
-      return [
-        { label: 'New role', active: state.params.edit === 'new', run: () => teamOpenRoleEditor('new') },
-        { label: 'Edit custom role', active: state.params.edit === custom, run: () => teamOpenRoleEditor(custom) },
-        { label: 'System role (view only)', active: state.params.edit === sys, run: () => teamOpenRoleEditor(sys) }
-      ];
+      // One cycle button: New role → Edit custom role → System role (view only).
+      const modes = [['new', 'New role'], [custom, 'Edit custom role'], [sys, 'System role (view only)']];
+      const i = Math.max(0, modes.findIndex(m => m[0] === state.params.edit));
+      return [{ label: `Editor: ${modes[i][1]}`, cycle: true, run: () => teamOpenRoleEditor(modes[(i + 1) % modes.length][0]) }];
     });
   });
   registerDevToggles('agency-team-clients', () => [emptyToggle('clients', 'Empty state (no client organisations)'),
-    { label: 'Simulate CRM conversion', active: false, run: () => crmSimulateConversion() }]);
+    { label: 'Simulate CRM conversion', action: true, run: () => crmSimulateConversion() }]);
   registerDevToggles('client-team-agency', () => [emptyToggle('agency', 'Empty state (no agency access)')]);
 })();
 

@@ -1067,23 +1067,32 @@ const INTEG_SCENARIOS = {
   'Routing Choice': () => ({ hubspot: { status: 'connected', active: true, lastSynced: INTEG_SYNC } })
 };
 function integApplyScenario(name) {
+  const prev = state.flags.integScenario;
+  const snapshot = prev && prev.ws === state.ctx && prev.snapshot ? prev.snapshot : JSON.parse(JSON.stringify(wsProducts(state.ctx)));
   workspaceProducts[state.ctx] = INTEG_SCENARIOS[name]();
-  state.flags.integScenario = { name, ws: state.ctx };
+  state.flags.integScenario = { name, ws: state.ctx, snapshot };
   closeDrawer(); closeModal();
   render();
   if (name === 'Routing Choice') integConnect('sleekflow');
 }
-registerDevToggles('client-integrations', () => Object.keys(INTEG_SCENARIOS).map(name => ({
-  label: name,
-  active: state.flags.integScenario?.name === name && state.flags.integScenario?.ws === state.ctx,
-  run: () => integApplyScenario(name)
-})));
+// Each scenario is on/off: turning one on keeps the workspace's own products to restore when it's turned off again.
+registerDevToggles('client-integrations', () => Object.keys(INTEG_SCENARIOS).map(name => {
+  const on = state.flags.integScenario?.name === name && state.flags.integScenario?.ws === state.ctx;
+  return { label: name, active: on, run: () => on ? integClearScenario() : integApplyScenario(name) };
+}));
+function integClearScenario() {
+  const sc = state.flags.integScenario;
+  if (sc && sc.snapshot) workspaceProducts[sc.ws] = sc.snapshot;
+  state.flags.integScenario = null;
+  closeDrawer(); closeModal();
+  render();
+}
 registerDevToggles('agency-integrations', () => [
-  { label: 'Healthy tokens', active: state.flags.integToken === 'healthy', run: () => { masterTokens.google.status = 'valid'; masterTokens.meta.status = 'valid'; if (masterTokens.meta.expires < '2026-10-21') masterTokens.meta.expires = '2026-12-01'; state.flags.integToken = 'healthy'; render(); } },
-  { label: 'Meta token expired', active: state.flags.integToken === 'expired', run: () => { masterTokens.meta.status = 'expired'; masterTokens.meta.expires = '2026-10-14'; state.flags.integToken = 'expired'; render(); } },
-  'sep',
-  { label: 'Agency CRM connected', active: agencyCrm.status === 'connected', run: () => { agencyCrm.status = 'connected'; state.flags.integCrm = 'connected'; render(); } },
-  { label: 'Agency CRM disconnected', active: agencyCrm.status !== 'connected', run: () => { agencyCrm.status = 'disconnected'; state.flags.integCrm = 'disconnected'; render(); } }
+  { label: 'Meta token expired', active: state.flags.integToken === 'expired', run: () => {
+    if (state.flags.integToken === 'expired') { masterTokens.google.status = 'valid'; masterTokens.meta.status = 'valid'; if (masterTokens.meta.expires < '2026-10-21') masterTokens.meta.expires = '2026-12-01'; state.flags.integToken = 'healthy'; }
+    else { masterTokens.meta.status = 'expired'; masterTokens.meta.expires = '2026-10-14'; state.flags.integToken = 'expired'; }
+    render(); } },
+  { label: 'Agency CRM connected', active: agencyCrm.status === 'connected', run: () => { agencyCrm.status = agencyCrm.status === 'connected' ? 'disconnected' : 'connected'; state.flags.integCrm = agencyCrm.status; render(); } }
 ]);
 
 // ---------- Specs ----------

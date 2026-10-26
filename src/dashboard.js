@@ -916,6 +916,9 @@ function dashRenderClient() {
   dashSyncClientState();
   const tab = dashTab();
   if (state.params.tab) state.ui.dashTab = state.params.tab;
+  // Date range (Google Ads-style presets): on the campaign tables for Ad Performance, in the header on the SEO tab.
+  // It drives the whole tab (KPIs, charts, tables). "All time" starts at the workspace's creation date.
+  state.dateFilters.client.allFrom = ws.createdAt;
   const hasAds = tab === 'ads' && dashPlatforms(ws.id).length > 0;
   const view = hasAds ? dashAdView(ws) : 'all';
   if (hasAds && state.params.view === view) state.ui.dashAdView = view;
@@ -923,7 +926,7 @@ function dashRenderClient() {
     : view === 'all' ? 'Google and Meta advertising performance for this workspace.' : `${DASH_VIEW_LABEL[view]} performance for this workspace, with the full ${DASH_VIEW_LABEL[view]} report.`;
   const header = `<div class="dash-welcome">
       <div><h2 class="h-welcome">Welcome Back, ${esc(ws.name)}</h2><p class="dash-welcome-sub">${sub}</p></div>
-      ${dateFilterHTML('client', 'dashRerender')}
+      ${tab === 'seo' ? datePresetHTML('client', 'dashRerender') : ''}
     </div>
     ${dashHubPanel(ws)}
     ${dashTabBar(tab, ws)}`;
@@ -1302,7 +1305,7 @@ function dashHubPanel(ws) {
   const live = e => !!e && e.status === 'connected' && e.active;
   const needsFix = e => !!e && (e.status === 'error' || e.status === 'pending');
   // Same parts as the Integrations cards: round product logo, card title, sub-line, status dot.
-  const card = ({ key, name, logo, sub, e, open, openTitle, manage, desc }) => {
+  const card = ({ key, name, logo, sub, e, open, openTitle, manage, desc, connected = '' }) => {
     const [color, label] = dashEntryStatus(e);
     return `<div class="dash-hub-card">
       <div class="dash-hub-card-top">
@@ -1313,7 +1316,7 @@ function dashHubPanel(ws) {
           <button type="button" class="kebab dash-hub-icon-btn" onclick="${manage}" title="Manage ${esc(name)}" aria-label="Manage ${esc(name)}"><i data-lucide="settings"></i></button>
         </span>
       </div>
-      <div class="dot-label dash-hub-status dash-hub-status-${color}"><span class="dot dot-${color}${color === 'grey' ? '' : '-strong'}"></span>${esc(label)}${needsFix(e) ? `<button type="button" class="t-link dash-hub-fix" onclick="${manage.replace("'about'", "'config'")}">Fix now</button>` : ''}</div>
+      <div class="dot-label dash-hub-status dash-hub-status-${color}"><span class="dot dot-${color}${color === 'grey' ? '' : '-strong'}"></span>${esc(label)}${connected}${needsFix(e) ? `<button type="button" class="t-link dash-hub-fix" onclick="${manage.replace("'about'", "'config'")}">Fix now</button>` : ''}</div>
       <div class="dash-hub-meta">${color === 'green' ? 'Connected' : 'Added'} on: ${esc(fmtDate(dashHubSince(ws.id, key, e)))}</div>
       <div class="dash-hub-desc">${desc}</div>
     </div>`;
@@ -1329,9 +1332,10 @@ function dashHubPanel(ws) {
   // Ads Performance: the linked platforms (Google Ads, Meta Ads or both) as pills under the name.
   const plats = dashPlatforms(ws.id);
   if (plats.length) {
-    const sub = `<span class="dash-hub-plats">${plats.map(p => `<span class="chip dash-hub-plat">${platformLogo(p)}${esc(DASH_VIEW_LABEL[p])}</span>`).join('')}</span>`;
-    cards.push(card({ key: 'ads', name: 'Ads Performance', logo: dashServiceIcon('ads', 32), sub, e: { status: 'connected', active: true }, open: 'dashOpenAds()', openTitle: 'View Ad Performance',
-      manage: "navigate('integrations')", desc: 'Google and Meta ad results for this workspace, in one view.' }));
+    // The linked platforms sit on the status line ("● Connected: Google Ads · Meta Ads"), so they read as what's connected.
+    const connected = `<span class="dash-hub-plats">${plats.map(p => `<span class="chip dash-hub-plat">${platformLogo(p)}${esc(DASH_VIEW_LABEL[p])}</span>`).join('')}</span>`;
+    cards.push(card({ key: 'ads', name: 'Ads Performance', logo: dashServiceIcon('ads', 32), sub: 'Ad platforms', connected, e: { status: 'connected', active: true }, open: 'dashOpenAds()', openTitle: 'View Ad Performance',
+      manage: "navigate('integrations')", desc: `Results from the connected ${plats.length === 2 ? 'Google Ads and Meta Ads accounts' : `${DASH_VIEW_LABEL[plats[0]]} account`}, in one view.` }));
   }
   const connected = dashHubProductIds().filter(pid => live(entries[pid])).length + (plats.length ? 1 : 0);
 
@@ -1438,6 +1442,7 @@ function dashCampaignCard() {
       <div class="seg" role="tablist">${DASH_LEVELS.map(l => `<button type="button" role="tab" class="${l === level ? 'active' : ''}" onclick="dashSetLevel('${l}')">${DASH_LEVEL_TAB[l]}</button>`).join('')}</div>
     </div>
     <div class="dash-ct-toolbar">
+      ${datePresetHTML('client', 'dashRerender')}
       <div class="menu-anchor dash-entity">
         <button type="button" class="dash-entity-trigger" onclick="dashEntityOpen(event)" aria-haspopup="true"><i data-lucide="layers"></i><span class="grow" id="dash-ent-label">${dashEntityLabel()}</span><i data-lucide="chevron-down"></i></button>
         <div class="filter-panel dash-entity-panel" id="dash-entity-pop" onclick="event.stopPropagation()">
@@ -2371,6 +2376,7 @@ function dashPfReportCard(p) {
       <div class="seg" role="tablist" aria-label="${DASH_VIEW_LABEL[p]} level">${tabs}</div>
     </div>
     <div class="dash-ct-toolbar">
+      ${datePresetHTML('client', 'dashRerender')}
       <div class="search grow"><input class="input" placeholder="Search ${DASH_PF_LEVEL_TAB[p][s.level].toLowerCase()}" value="${esc(s.search)}" oninput="dashPfSearch('${p}', this.value)" aria-label="Search ${DASH_PF_LEVEL_TAB[p][s.level].toLowerCase()}"><i data-lucide="search"></i></div>
       ${dashFilterButton(`pf-${p}`)}
       ${colPickerButton(`pf-${p}`)}
@@ -2738,7 +2744,7 @@ Central command dashboard for agency administrators managing many client workspa
 
 ### Key Functional Specifications
 - **Workspace Switcher**: The workspace dropdown in the top bar switches between the agency view ("My Workspace") and individual client workspaces. There is no separate My/Agency toggle.
-- **Date Filter (Past / Current / Date Range)**: Applies to every spend and cost metric on this page. Total Accounts Managed is not date-dependent.
+- **Date Filter (Past / Current / Date Range)**: Applies to every spend and cost metric on this page. Total Accounts Managed is not date-dependent. **"Past N <unit>" is calendar-aligned (26/10/2026)**: it covers the last N complete periods before the current one. Past 1 week = Monday to Sunday of last week; past 1 month = the whole of last month (e.g. 1–30 Sep); past N years = whole calendar years; past N days = N days up to yesterday. "Current" still runs from the start of the current period to today.
   - **Prototype note:** the date filter scales mock 30-day data to the selected range. It does **not** yet filter by event date. Real behaviour must use the event date (click / conversion date), as in the client dashboard spec.
 - **Layout (new agency dashboard design, 22/10/2026)**: banner → four KPI cards → Total Accounts Managed + Your Products → Managed Accounts. The dashboard is a performance indicator: each account shows its health and issue count, and users click through for the specifics.
 - **Attention Required banner**: "N account issues need your attention across …", naming the three areas with the most issues (Ads Performance, SEO Cloud, Aurix, Integrations, Contracts, Agency CRM) and summarising the rest ("and 2 other areas"). It counts the same issues as the Attention Required KPI and the Issues Count column, so the numbers always agree. **View Issues** opens the all-issues slide-over. Hidden when there are no issues.
@@ -2849,11 +2855,12 @@ Client-facing workspace dashboard giving a simplified, unified view of Meta and 
   - The view is in the route (\`view: 'all' | 'google' | 'meta'\`) and the last one used is remembered when switching workspace; a remembered view the new workspace does not have falls back to its first available view.
 - **Tabs**: Ad Performance | SEO Performance (page tabs with icons). The active tab is in the route (\`tab: 'ads' | 'seo'\`) and is remembered when switching workspace; a remembered SEO tab falls back to Ad Performance in a workspace without SEO Cloud. Without SEO Cloud the SEO tab is greyed out, with a "Connect SEO Cloud" link to Integrations.
 - **Global Event-Based Date Filter**: Filters all dashboard data by the exact date the action (e.g. click or conversion) happened within the selected timeframe, independent of events higher up the funnel.
+  - **Placement and picker (26/10/2026)**: on Ad Performance the date range sits in the **campaign table toolbars** (Campaigns and Ads, and the Google Ads / Meta Ads reports), not the page header, and still drives the whole tab (KPIs, charts, tables). The SEO tab keeps it in the header. The picker follows the native Google Ads date picker: presets **Custom, Today, Yesterday, This week (Mon – Today), Last 7 days, Last week (Mon – Sun), Last 14 days, This month, Last 30 days, Last month, All time**, plus **N days up to today** and **N days up to yesterday**; on the right, Start / End date fields and a month calendar (click a start, then an end; future dates disabled). "Last N days" presets end yesterday, as in Google Ads. All time starts at the workspace's creation date. **Compare** is not offered: ad data is a live API call with no stored history (see the agency dashboard's open question on period comparison).
   - **Prototype note:** the date filter scales mock data to the selected range, and the Daily Performance chart plots one point per day of the range. It does **not** yet filter by event date.
 - **CRM mode (from V2)**: shown when the workspace has a connected, active CRM.
   - **Products & Connections** (top of the page; Figma 6371:9127, 23/10/2026): one card of the products this workspace uses, **four cards per row** (two below 1280 px, one below 720 px). Replaces the earlier three-section panel (OOm Products / Quick Links / Connections). Header: "Products & Connections", "Active products connected to {workspace}", and "**N** Connected Products" on the right.
     - **Each card** (same parts as the Integrations cards: round product logo, card title, grey sub-line, status dot): name with its lane underneath (CRM / Automated Chat / Call Tracking / SEO), an **external-link icon** (Open) and a **settings icon** (Manage; not in the Figma yet, added 23/10/2026), then status (green dot "Connected"; red Error / amber Pending setup with **Fix now**), "Connected on: {date}" ("Added on" when not live; [PLACEHOLDER] mock dates until the integration records them), and a short description.
-    - **Products in use**: OOm products (Galaxis CRM, Aurix, SEO Cloud), then the one product per lane (CRM, Automated Chat, Call Tracking; one-per-lane rule). Disabled products are left out. **Ads Performance** comes last, as in the Figma, with the linked platforms as **pills under its name** (Google Ads, Meta Ads, or both, each with its logo).
+    - **Products in use**: OOm products (Galaxis CRM, Aurix, SEO Cloud), then the one product per lane (CRM, Automated Chat, Call Tracking; one-per-lane rule). Disabled products are left out. **Ads Performance** comes last, as in the Figma, with the linked platforms as **pills on its status line** ("● Connected" followed by Google Ads, Meta Ads, or both, each with its logo), so they read as the connected accounts rather than supported platforms.
     - **Open** opens the product's web app in a new tab (Galaxis CRM: https://crm.oomdigital.com/, Aurix: https://app.aurix.com.sg/dashboard, SEO Cloud: https://oomdigital.com/dashboard; third-party products: their own app). For Ads Performance it goes to the Ad Performance tab. **Manage** opens the product's settings drawer in Integrations (Ads Performance: Integrations, where ad accounts are linked).
     - Not in the Figma, so dropped: the collapse toggle, header alert pills and outstanding-work badges (Aurix escalations, SEO Cloud approvals). Built from the same data as Integrations.
   - Each KPI row has a section header (title + one-line description): **Ad Performance** for the platform metrics, **Leads & Revenue** for the CRM metrics (with the attribution model on the right).

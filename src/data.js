@@ -321,6 +321,14 @@ const CRM_DAYS_LEFT = { 'ws-visual': { ads: 72, seo: 41 }, 'ws-bright': { ads: 1
     const ws = workspaces.find(w => w.id === wsId);
     const r = seededRandom(ws.seed * 31 + 11);
     const pick = list => list[Math.floor(r() * list.length)];
+    // Galaxis CRM is a contracted service too: a workspace with Galaxis CRM connected has its own CRM contract.
+    if (workspaceProducts[wsId]?.['crm-lite']?.status === 'connected' && !acc.services.some(x => x.type === 'Galaxis CRM')) {
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const end = new Date(today); end.setDate(end.getDate() + pick([95, 180, 240]));
+      const start = new Date(end); start.setMonth(start.getMonth() - 12);
+      const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      acc.services.push({ type: 'Galaxis CRM', monthlyBudget: pick([300, 450, 600]), contractNo: `${ws.createdAt.slice(2, 4)}${ws.createdAt.slice(5, 7)}-${String(ws.seed + 60).padStart(3, '0')}`, start: iso(start), end: iso(end) });
+    }
     acc.contracts = {};
     acc.services.forEach(x => {
       const c = acc.contracts[x.contractNo] = acc.contracts[x.contractNo] || {};
@@ -332,6 +340,7 @@ const CRM_DAYS_LEFT = { 'ws-visual': { ads: 72, seo: 41 }, 'ws-bright': { ads: 1
         if (wsId === 'ws-visual') Object.assign(c, { payTerm: 'Monthly', mediaVia: 'OOm' });
       } else if (x.type === 'SEO') c.payTerm = pick(['100%', '50-30-20%', '60-20-20%', 'Quarterly', 'Monthly']);
       else if (x.type === 'Aurix') c.payTerm = pick(['100%', 'Pre-Paid', 'Bi-Annual']);
+      else if (x.type === 'Galaxis CRM') c.payTerm = pick(['Monthly', '100%', 'Bi-Annual']);
       else if (x.type === 'Content Marketing') {
         // One customised schedule (non-standard terms, approved in the CRM): 40% upfront, 30% at month 2, 30% at the end.
         Object.assign(c, ws.seed % 2 ? { payTerm: 'Customised', custom: [[0, 0.4], [2, 0.3], [5, 0.3]] } : { payTerm: '50-50%' });

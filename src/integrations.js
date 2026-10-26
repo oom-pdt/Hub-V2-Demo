@@ -208,11 +208,16 @@ function integReadinessHTML() {
     ${items.map(([label, lv, t]) => `<span class="integ-ready integ-ready-${lv}" title="${esc(t || tip[lv])}"><i data-lucide="${icon[lv]}"></i>${label}</span>`).join('')}</div>`;
 }
 
+// Products offered in a client workspace's Integrations (26/10/2026). Plato (medical CRM) is shown as Coming Soon.
+// OOm products outside this list (Aurix, SEO Cloud…) are still reached from the dashboard's Products & Connections.
+const INTEG_CLIENT_PRODUCTS = ['crm-lite', 'salesforce', 'hubspot', 'sleekflow', 'wati', 'delacon'];
+const INTEG_COMING_SOON = [{ name: 'Plato', category: 'Medical CRM', initials: 'P', color: '#0F9D8A', desc: 'Patient, appointment and clinic CRM for medical practices.' }];
 function integGridsHTML() {
   const entries = wsProducts(state.ctx);
-  const active = products.filter(p => integInActiveSection(entries[p.id]) && integMatches(p));
-  const activeCount = products.filter(p => entries[p.id]?.status === 'connected' && entries[p.id]?.active).length;
-  const avail = products.filter(p => !integInActiveSection(entries[p.id]) && integMatches(p));
+  const offered = products.filter(p => INTEG_CLIENT_PRODUCTS.includes(p.id));
+  const active = offered.filter(p => integInActiveSection(entries[p.id]) && integMatches(p));
+  const activeCount = offered.filter(p => entries[p.id]?.status === 'connected' && entries[p.id]?.active).length;
+  const avail = offered.filter(p => !integInActiveSection(entries[p.id]) && integMatches(p));
   const cat = state.ui.integCat;
   const shown = avail.filter(p => cat === 'all' || p.category === cat);
   const count = c => avail.filter(p => c === 'all' || p.category === c).length;
@@ -227,9 +232,11 @@ function integGridsHTML() {
     <section class="integ-section">
       <h2 class="h-section">Available Products</h2>
       <div class="integ-sub">Browse and manage all available products and providers.</div>
-      <div class="cat-tabs" role="tablist">${INTEG_CATS.map(c => `<button type="button" role="tab" class="cat-tab ${cat === c.id ? 'active' : ''}" onclick="state.ui.integCat='${c.id}'; integRenderGrids()"><i data-lucide="${c.icon}"></i>${c.label} (${count(c.id)})</button>`).join('')}</div>
+      <div class="cat-tabs" role="tablist">${INTEG_CATS.filter(c => c.id === 'all' || offered.some(p => p.category === c.id)).map(c => `<button type="button" role="tab" class="cat-tab ${cat === c.id ? 'active' : ''}" onclick="state.ui.integCat='${c.id}'; integRenderGrids()"><i data-lucide="${c.icon}"></i>${c.label} (${count(c.id)})</button>`).join('')}</div>
       <div class="integ-grid-4">${shown.map(integAvailCard).join('')}
-        ${!searching ? `<div class="card integ-card integ-coming"><div class="integ-card-head"><span class="product-logo integ-oom-logo">OOm</span><div class="grow"><div class="h-card">Coming Soon</div></div></div><div class="integ-desc">More products coming your way.</div></div>` : ''}
+        ${INTEG_COMING_SOON.filter(x => (cat === 'all' || cat === 'CRM') && (!searching || `${x.name} ${x.category}`.toLowerCase().includes(state.ui.integSearch.trim().toLowerCase()))).map(x => `<div class="card integ-card integ-coming">
+          <div class="integ-card-head"><span class="product-logo" style="width:32px;height:32px;background:${x.color}">${esc(x.initials)}</span><div class="grow"><div class="h-card">${esc(x.name)}</div><div class="integ-cat">${esc(x.category)}</div></div><span class="integ-tag">Coming Soon</span></div>
+          <div class="integ-desc">${esc(x.desc)}</div></div>`).join('')}
       </div>
       ${!shown.length && searching ? emptyState('search-x', 'No products found', `Nothing matches “${state.ui.integSearch}” in this category.`) : ''}
     </section>`;
@@ -735,8 +742,12 @@ function integSaveConfig() {
 function integAdsHTML() {
   return `<section class="integ-section">
     <h2 class="h-section">Ad Platforms</h2>
-    <div class="integ-sub">Link one Google Ads and one Meta Ads account to this workspace.</div>
+    <div class="integ-sub">Link one Google Ads and one Meta Ads account to this workspace. LinkedIn Ads and TikTok Ads are coming soon.</div>
     <div class="integ-grid-2">${['google', 'meta'].map(integAdCard).join('')}</div>
+    <div class="integ-grid-2 integ-mt-24">${[['linkedin', 'Campaign, spend and lead-gen form data from LinkedIn Ads.'], ['tiktok', 'Campaign, spend and conversion data from TikTok Ads.']].map(([plat, desc]) => `<div class="card integ-card integ-coming" data-platform="${plat}">
+      <div class="integ-card-head"><span class="integ-plat-logo">${platformLogo(plat)}</span>
+        <div class="grow"><div class="h-card">${PLATFORM_NAME[plat]} Ads</div><div class="integ-cat">Ad Platform</div></div><span class="integ-tag">Coming Soon</span></div>
+      <div class="integ-desc">${desc}</div></div>`).join('')}</div>
   </section>`;
 }
 
@@ -825,7 +836,6 @@ function integRenderAgency() {
         <div class="search integ-dir-search"><input class="input" placeholder="Search workspace or account" value="${esc(state.ui.integDirSearch)}" oninput="state.ui.integDirSearch = this.value; pager('integ-dir').page = 1; integRenderDir()" aria-label="Search linked accounts"><i data-lucide="search"></i></div></div>
       <div id="integ-dir">${integDirHTML()}</div>
     </section>
-    <section class="integ-section card">${integOverviewHTML()}</section>
   </div>`;
 }
 
@@ -1039,42 +1049,6 @@ function integDirHTML() {
     ${paginationBar('integ-dir', list.length, 'integRenderDir')}`;
 }
 
-// ---- Products across clients (agency-wide integration health; the V2 gap) ----
-function integOverviewHTML() {
-  const wss = activeWorkspaces();
-  const stat = (pid, test) => wss.filter(w => { const e = wsProducts(w.id)[pid]; return e && test(e); });
-  const cell = (pid, kind, list, cls) => list.length ? `<button type="button" class="integ-count ${cls}" onclick="integDrill('${pid}','${kind}')">${list.length}</button>` : '<span class="t-muted">0</span>';
-  const rows = products.map(p => {
-    const conn = stat(p.id, e => e.status === 'connected');
-    const act = stat(p.id, e => e.status === 'connected' && e.active);
-    const err = stat(p.id, e => e.status === 'error' || e.status === 'pending');
-    return `<tr><td><div class="integ-dir-cell">${productLogo(p.id, 24)}<div><div class="t-bold">${esc(p.name)}</div><div class="cell-sub">${esc(p.category)} · ${integIsOom(p) ? 'OOm' : 'Third-party'}</div></div></div></td>
-      <td class="num">${cell(p.id, 'connected', conn, '')}</td><td class="num">${cell(p.id, 'active', act, '')}</td><td class="num">${cell(p.id, 'error', err, 'integ-count-err')}</td></tr>`;
-  }).join('');
-  return `<div class="card-header"><div><h2 class="h-section">Products across clients</h2><div class="card-sub">How many client workspaces have each product connected, active or needing attention. Select a count to see the workspaces.</div></div></div>
-    <div class="table-wrap"><table class="table integ-table">
-      <thead><tr><th>Product</th><th class="num">Connected</th><th class="num">Active</th><th class="num">Error / pending</th></tr></thead><tbody>${rows}</tbody></table></div>`;
-}
-
-function integDrill(pid, kind) {
-  const p = productById(pid);
-  const test = { connected: e => e.status === 'connected', active: e => e.status === 'connected' && e.active, error: e => e.status === 'error' || e.status === 'pending' }[kind];
-  const list = activeWorkspaces().filter(w => { const e = wsProducts(w.id)[pid]; return e && test(e); });
-  const label = { connected: 'connected', active: 'active', error: 'with errors or pending set-up' }[kind];
-  openModal({
-    title: `${p.name} — workspaces ${label}`,
-    desc: `${list.length} client workspace${list.length === 1 ? '' : 's'}`,
-    size: 'lg',
-    body: `<div class="integ-drill">${list.map(w => {
-      const e = wsProducts(w.id)[pid];
-      return `<div class="integ-drill-row"><div class="grow"><div class="t-bold">${esc(w.name)}</div>
-        <div class="integ-dots">${integStatusDots(pid, w.id)}</div>${e.error ? `<div class="t-caption t-secondary">${esc(e.error)}</div>` : ''}</div>
-        <button type="button" class="btn btn-outline btn-sm" onclick="closeModal(); openWorkspace('${w.id}','integrations')">Open workspace</button></div>`;
-    }).join('')}</div>`,
-    actions: [{ label: 'Close', kind: 'outline' }]
-  });
-}
-
 // ---------- Dev toggles ----------
 const INTEG_SYNC = '2026-10-21T11:32:00';
 const INTEG_SCENARIOS = {
@@ -1153,9 +1127,8 @@ Agency-level integrations page ("My Workspace"). Bridges the external ad platfor
 - One row per active workspace, with Google and Meta cells (account name and ID, or a "Not linked" warning).
 - Search, sort and pagination. "Manage" opens that workspace's Integrations page.
 
-### Products across clients (new, Draft)
-- One row per product: how many workspaces have it connected, active, or in error / pending set-up.
-- Selecting a count lists the affected workspaces, each with "Open workspace". This fills V2's gap of having no agency-wide integration health view.
+### Products across clients (removed 26/10/2026)
+- The per-product roll-up (connected / active / error counts per workspace) was removed from agency Integrations. Integration problems still surface per client in the agency dashboard's issues (Integration Error).
 
 ### Open questions
 - Should re-authenticating a master token need a specific permission (e.g. Agency Admin only)?
@@ -1178,6 +1151,7 @@ Agency-level integrations page ("My Workspace"). Bridges the external ad platfor
 The workspace's integrations hub, built from the Figma "Integrations" frames with V2's configuration depth and V1's ad-account linking. The product hub is **Draft**; the Ad Platforms section is ported from V1 \`client-profile\` and is **In Review**.
 
 ### Product hub (V2 + Figma, Draft)
+- **Products offered (26/10/2026)**: client Integrations lists only **Galaxis CRM, Salesforce, HubSpot, SleekFlow, Wati and Delacon**, plus **Plato** (medical CRM) as a Coming Soon card. Other products (Aurix, SEO Cloud, CDP, Institute CRM, Zoho, Dynamics, Slack, Mailchimp) are not shown here; OOm products are still reached from the dashboard's Products & Connections. Category tabs only show categories that have products.
 - **Search** filters both grids. A **pipeline readiness** strip (Ads, CRM, Messaging, Calls) shows active / needs attention / not connected, computed from the data.
 - **Active Products** ("N Active"): logo, name, category, status (Connected · Active, Pending Setup, Error, Disabled), description, Data shared, Last synced and **Open**.
   - Open launches OOm products and shows the details slide-over for third-party products.
@@ -1207,6 +1181,7 @@ The workspace's integrations hub, built from the Figma "Integrations" frames wit
 - The active CRM drives the Leads nav item and the dashboard's CRM mode.
 
 ### Ad Platforms (V1 client-profile ad linking, In Review)
+- **LinkedIn Ads** and **TikTok Ads** cards are shown as Coming Soon below Google Ads and Meta Ads (26/10/2026).
 - One Google Ads and one Meta Ads card, each showing the linked account name and ID with "Synced", or "Not connected".
 - **Agency persona**
   - Unlink shows V1's warning: data is not stored in Galaxis and disappears from Workspace Analytics immediately.

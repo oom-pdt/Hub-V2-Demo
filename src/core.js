@@ -261,9 +261,12 @@ function emptyState(icon, title, text) {
 const PLATFORM_SVG = {
   google: `<svg class="logo" viewBox="0 0 24 24" aria-label="Google Ads"><path fill="#FBBC04" d="M2.3 17.3 9 5.7a3.4 3.4 0 0 1 5.9 3.4L8.2 20.7a3.4 3.4 0 1 1-5.9-3.4z"/><path fill="#4285F4" d="M21.7 17.3 15 5.7a3.4 3.4 0 0 0-5.9 3.4l6.7 11.6a3.4 3.4 0 1 0 5.9-3.4z"/><circle fill="#34A853" cx="5.2" cy="19" r="3.4"/></svg>`,
   // Meta mark: the official symbol path (Simple Icons, CC0), in Meta blue.
-  meta: `<svg class="logo" viewBox="0 0 24 24" aria-label="Meta"><path fill="#0866FF" d="M6.915 4.03c-1.968 0-3.683 1.28-4.871 3.113C.704 9.208 0 11.883 0 14.449c0 .706.07 1.369.21 1.973a6.624 6.624 0 0 0 .265.86 5.297 5.297 0 0 0 .371.761c.696 1.159 1.818 1.927 3.593 1.927 1.497 0 2.633-.671 3.965-2.444.76-1.012 1.144-1.626 2.663-4.32l.756-1.339.186-.325c.061.1.121.196.183.3l2.152 3.595c.724 1.21 1.665 2.556 2.47 3.314 1.046.987 1.992 1.22 3.06 1.22 1.075 0 1.876-.355 2.455-.843a3.743 3.743 0 0 0 .81-.973c.542-.939.861-2.127.861-3.745 0-2.72-.681-5.357-2.084-7.45-1.282-1.912-2.957-2.93-4.716-2.93-1.047 0-2.088.467-3.053 1.308-.652.57-1.257 1.29-1.82 2.05-.69-.875-1.335-1.547-1.958-2.056-1.182-.966-2.315-1.303-3.454-1.303zm10.16 2.053c1.147 0 2.188.758 2.992 1.999 1.132 1.748 1.647 4.195 1.647 6.4 0 1.548-.368 2.9-1.839 2.9-.58 0-1.027-.23-1.664-1.004-.496-.601-1.343-1.878-2.832-4.358l-.617-1.028a44.908 44.908 0 0 0-1.255-1.98c.07-.109.141-.224.211-.327 1.12-1.667 2.118-2.602 3.358-2.602zm-10.201.553c1.265 0 2.058.791 2.675 1.446.307.327.737.871 1.234 1.579l-1.02 1.566c-.757 1.163-1.882 3.017-2.837 4.338-1.191 1.649-1.81 1.817-2.486 1.817-.524 0-1.038-.237-1.383-.794-.263-.426-.464-1.13-.464-2.046 0-2.221.63-4.535 1.66-6.088.454-.687.964-1.226 1.533-1.533a2.264 2.264 0 0 1 1.088-.285z"/></svg>`
+  meta: `<svg class="logo" viewBox="0 0 24 24" aria-label="Meta"><path fill="#0866FF" d="M6.915 4.03c-1.968 0-3.683 1.28-4.871 3.113C.704 9.208 0 11.883 0 14.449c0 .706.07 1.369.21 1.973a6.624 6.624 0 0 0 .265.86 5.297 5.297 0 0 0 .371.761c.696 1.159 1.818 1.927 3.593 1.927 1.497 0 2.633-.671 3.965-2.444.76-1.012 1.144-1.626 2.663-4.32l.756-1.339.186-.325c.061.1.121.196.183.3l2.152 3.595c.724 1.21 1.665 2.556 2.47 3.314 1.046.987 1.992 1.22 3.06 1.22 1.075 0 1.876-.355 2.455-.843a3.743 3.743 0 0 0 .81-.973c.542-.939.861-2.127.861-3.745 0-2.72-.681-5.357-2.084-7.45-1.282-1.912-2.957-2.93-4.716-2.93-1.047 0-2.088.467-3.053 1.308-.652.57-1.257 1.29-1.82 2.05-.69-.875-1.335-1.547-1.958-2.056-1.182-.966-2.315-1.303-3.454-1.303zm10.16 2.053c1.147 0 2.188.758 2.992 1.999 1.132 1.748 1.647 4.195 1.647 6.4 0 1.548-.368 2.9-1.839 2.9-.58 0-1.027-.23-1.664-1.004-.496-.601-1.343-1.878-2.832-4.358l-.617-1.028a44.908 44.908 0 0 0-1.255-1.98c.07-.109.141-.224.211-.327 1.12-1.667 2.118-2.602 3.358-2.602zm-10.201.553c1.265 0 2.058.791 2.675 1.446.307.327.737.871 1.234 1.579l-1.02 1.566c-.757 1.163-1.882 3.017-2.837 4.338-1.191 1.649-1.81 1.817-2.486 1.817-.524 0-1.038-.237-1.383-.794-.263-.426-.464-1.13-.464-2.046 0-2.221.63-4.535 1.66-6.088.454-.687.964-1.226 1.533-1.533a2.264 2.264 0 0 1 1.088-.285z"/></svg>`,
+  // Coming-soon ad platforms (official marks, Simple Icons, CC0).
+  linkedin: `<svg class="logo" viewBox="0 0 24 24" aria-label="LinkedIn"><path fill="#0A66C2" d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>`,
+  tiktok: `<svg class="logo" viewBox="0 0 24 24" aria-label="TikTok"><path fill="#000000" d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>`
 };
-const PLATFORM_NAME = { google: 'Google', meta: 'Meta' };
+const PLATFORM_NAME = { google: 'Google', meta: 'Meta', linkedin: 'LinkedIn', tiktok: 'TikTok' };
 function platformLogo(p) { return PLATFORM_SVG[p] || ''; }
 function platformBadge(p, plain) { return `<span class="platform ${plain ? 'platform-plain' : ''}">${platformLogo(p)}${PLATFORM_NAME[p] || esc(p)}</span>`; }
 function productLogo(pid, size = 32) {
@@ -457,7 +460,8 @@ function setPerPage(table, n, fn) { const p = pager(table); p.perPage = Number(n
 // ---------- Date filter (ported from V1: Past / Current / Date Range) ----------
 state.dateFilters = {
   agency: { mode: 'past', pastNumber: 30, pastUnit: 'days', currentUnit: 'month', start: '', end: '', label: 'Past 30 days' },
-  client: { mode: 'past', pastNumber: 30, pastUnit: 'days', currentUnit: 'month', start: '', end: '', label: 'Past 30 days' }
+  // Client: Google Ads-style presets (datePresetHTML), shown on the campaign tables and the SEO tab.
+  client: { mode: 'preset', preset: 'last30', n: 30, pastNumber: 30, pastUnit: 'days', currentUnit: 'month', start: '', end: '', label: 'Last 30 days' }
 };
 function toDateInput(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
 function subtractDate(d, n, unit) {
@@ -470,10 +474,34 @@ function subtractDate(d, n, unit) {
 }
 function resolveDateRange(cfg) {
   const today = new Date(); today.setHours(0, 0, 0, 0);
+  const day = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+  const monday = d => day(d, -((d.getDay() + 6) % 7));
+  const out = (a, b) => ({ start: toDateInput(a), end: toDateInput(b) });
   if (cfg.mode === 'past') {
-    const start = subtractDate(today, Math.max(1, Number(cfg.pastNumber) || 30), cfg.pastUnit);
-    start.setDate(start.getDate() + 1);
-    return { start: toDateInput(start), end: toDateInput(today) };
+    // "Past N <unit>" = the last N complete periods before the current one (calendar-aligned):
+    // past 1 week = Mon–Sun of last week, past 1 month = the whole of last month, past N days = N days up to yesterday.
+    const n = Math.max(1, Number(cfg.pastNumber) || 30);
+    if (cfg.pastUnit === 'weeks') { const end = day(monday(today), -1); return out(day(end, -7 * n + 1), end); }
+    if (cfg.pastUnit === 'months') return out(new Date(today.getFullYear(), today.getMonth() - n, 1), new Date(today.getFullYear(), today.getMonth(), 0));
+    if (cfg.pastUnit === 'years') return out(new Date(today.getFullYear() - n, 0, 1), new Date(today.getFullYear() - 1, 11, 31));
+    return out(day(today, -n), day(today, -1));
+  }
+  if (cfg.mode === 'preset') {
+    const n = Math.max(1, Number(cfg.n) || 30);
+    switch (cfg.preset) {
+      case 'today': return out(today, today);
+      case 'yesterday': return out(day(today, -1), day(today, -1));
+      case 'thisWeek': return out(monday(today), today);
+      case 'last7': return out(day(today, -7), day(today, -1));
+      case 'lastWeek': { const end = day(monday(today), -1); return out(day(end, -6), end); }
+      case 'last14': return out(day(today, -14), day(today, -1));
+      case 'thisMonth': return out(new Date(today.getFullYear(), today.getMonth(), 1), today);
+      case 'last30': return out(day(today, -30), day(today, -1));
+      case 'lastMonth': return out(new Date(today.getFullYear(), today.getMonth() - 1, 1), new Date(today.getFullYear(), today.getMonth(), 0));
+      case 'all': return out(new Date(cfg.allFrom ? cfg.allFrom + 'T00:00:00' : today.getFullYear() - 1 + '-01-01T00:00:00'), today);
+      case 'upToToday': return out(day(today, -n + 1), today);
+      case 'upToYesterday': return out(day(today, -n), day(today, -1));
+    }
   }
   if (cfg.mode === 'current') {
     const start = new Date(today);
@@ -550,6 +578,107 @@ function applyDateFilter(scope, onApply) {
   state.dateFilters[scope] = c;
   closeAllPopovers();
   if (onApply && window[onApply]) window[onApply]();
+}
+
+// ---------- Date presets (Google Ads-style picker, client campaign tables) ----------
+// Left: presets (incl. "N days up to today / yesterday"); right: start and end dates plus a month calendar for a custom
+// range. Compare is not offered: ad data is a live API call with no stored history.
+const DATE_PRESETS = [['today', 'Today'], ['yesterday', 'Yesterday'], ['thisWeek', 'This week (Mon – Today)'], ['last7', 'Last 7 days'], ['lastWeek', 'Last week (Mon – Sun)'],
+  ['last14', 'Last 14 days'], ['thisMonth', 'This month'], ['last30', 'Last 30 days'], ['lastMonth', 'Last month'], ['all', 'All time']];
+state.ui.dpDraft = {};
+function dpLabel(c) {
+  if (c.mode === 'range') return 'Custom';
+  if (c.preset === 'upToToday') return `${c.n} days up to today`;
+  if (c.preset === 'upToYesterday') return `${c.n} days up to yesterday`;
+  return (DATE_PRESETS.find(p => p[0] === c.preset) || [, 'Last 30 days'])[1];
+}
+function datePresetHTML(scope, onApply) {
+  const c = state.dateFilters[scope];
+  const r = resolveDateRange(c) || {};
+  return `<div class="date-filter dp" id="dp-${scope}" data-apply="${onApply}" onclick="event.stopPropagation()">
+    <button type="button" class="date-trigger dp-trigger" onclick="dpToggle('${scope}')"><span class="dp-trigger-label"><b>${esc(dpLabel(c))}</b><span>${r.start ? `${esc(fmtDate(r.start))} – ${esc(fmtDate(r.end))}` : ''}</span></span><i data-lucide="calendar"></i></button>
+    <div class="date-popover dp-popover" id="dp-${scope}-pop"></div>
+  </div>`;
+}
+function dpToggle(scope) {
+  const el = document.getElementById(`dp-${scope}`);
+  const open = !el.classList.contains('open');
+  closeAllPopovers();
+  if (!open) return;
+  const c = state.dateFilters[scope];
+  const r = resolveDateRange(c) || resolveDateRange({ mode: 'preset', preset: 'last30' });
+  const m = new Date(r.end + 'T00:00:00');
+  state.ui.dpDraft[scope] = { mode: c.mode === 'range' ? 'range' : 'preset', preset: c.preset || 'last30', n: c.n || 30, start: r.start, end: r.end, pick: null, month: new Date(m.getFullYear(), m.getMonth(), 1), allFrom: c.allFrom };
+  dpRender(scope);
+  el.classList.add('open');
+}
+function dpRender(scope) {
+  const d = state.ui.dpDraft[scope];
+  const sel = (mode, preset) => d.mode === mode && (mode === 'range' || d.preset === preset) ? 'is-active' : '';
+  const today = toDateInput(new Date());
+  // Month calendar (the current draft month); click a start then an end date. Future dates are disabled.
+  const y = d.month.getFullYear(), mo = d.month.getMonth();
+  const first = (new Date(y, mo, 1).getDay() + 6) % 7, dim = new Date(y, mo + 1, 0).getDate();
+  const cells = Array.from({ length: first }, () => '<span></span>').concat(Array.from({ length: dim }, (_, i) => {
+    const iso = toDateInput(new Date(y, mo, i + 1));
+    const inR = d.start && d.end && iso >= d.start && iso <= d.end;
+    const edge = iso === d.start || iso === d.end;
+    return `<button type="button" class="dp-day ${inR ? 'in-range' : ''} ${edge ? 'is-edge' : ''}" ${iso > today ? 'disabled' : ''} onclick="dpPickDay('${scope}','${iso}')">${i + 1}</button>`;
+  })).join('');
+  const monthName = d.month.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  document.getElementById(`dp-${scope}-pop`).innerHTML = `
+    <div class="dp-grid">
+      <div class="dp-presets">
+        <button type="button" class="dp-preset ${sel('range')}" onclick="dpCustom('${scope}')">Custom</button>
+        <div class="dp-sep"></div>
+        ${DATE_PRESETS.map(([k, l]) => `<button type="button" class="dp-preset ${sel('preset', k)}" onclick="dpPreset('${scope}','${k}')">${esc(l)}</button>`).join('')}
+        <div class="dp-sep"></div>
+        <label class="dp-n ${sel('preset', 'upToToday')}"><input class="input" type="number" min="1" max="999" value="${d.preset === 'upToToday' ? d.n : 30}" onchange="dpN('${scope}','upToToday',this.value)" onclick="dpN('${scope}','upToToday',this.value)">days up to today</label>
+        <label class="dp-n ${sel('preset', 'upToYesterday')}"><input class="input" type="number" min="1" max="999" value="${d.preset === 'upToYesterday' ? d.n : 30}" onchange="dpN('${scope}','upToYesterday',this.value)" onclick="dpN('${scope}','upToYesterday',this.value)">days up to yesterday</label>
+      </div>
+      <div class="dp-cal">
+        <div class="dp-dates">
+          <label class="field"><span class="field-label">Start date<span class="req">*</span></span><input class="input" type="date" max="${today}" value="${d.start}" onchange="dpDate('${scope}','start',this.value)"></label>
+          <span class="dp-dash">–</span>
+          <label class="field"><span class="field-label">End date<span class="req">*</span></span><input class="input" type="date" max="${today}" value="${d.end}" onchange="dpDate('${scope}','end',this.value)"></label>
+        </div>
+        <div class="dp-month"><span class="t-bold">${esc(monthName)}</span><span>
+          <button type="button" class="kebab" onclick="dpMonth('${scope}',-1)" aria-label="Previous month"><i data-lucide="chevron-left"></i></button>
+          <button type="button" class="kebab" onclick="dpMonth('${scope}',1)" aria-label="Next month"><i data-lucide="chevron-right"></i></button></span></div>
+        <div class="dp-week">${['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(x => `<span>${x}</span>`).join('')}</div>
+        <div class="dp-days">${cells}</div>
+        <div class="dp-actions"><button type="button" class="btn btn-ghost btn-sm" onclick="closeAllPopovers()">Cancel</button><button type="button" class="btn btn-primary btn-sm" onclick="dpApply('${scope}')">Apply</button></div>
+      </div>
+    </div>`;
+  refreshIcons();
+}
+function dpSet(scope, patch) {
+  const d = state.ui.dpDraft[scope];
+  Object.assign(d, patch);
+  if (d.mode === 'preset') { const r = resolveDateRange({ mode: 'preset', preset: d.preset, n: d.n, allFrom: d.allFrom }); d.start = r.start; d.end = r.end; const m = new Date(r.end + 'T00:00:00'); d.month = new Date(m.getFullYear(), m.getMonth(), 1); }
+  dpRender(scope);
+}
+function dpPreset(scope, k) { dpSet(scope, { mode: 'preset', preset: k, pick: null }); }
+function dpN(scope, k, v) { dpSet(scope, { mode: 'preset', preset: k, n: Math.max(1, Math.min(999, Number(v) || 30)), pick: null }); }
+function dpCustom(scope) { dpSet(scope, { mode: 'range', pick: null }); }
+function dpDate(scope, which, v) { if (v) dpSet(scope, { mode: 'range', [which]: v }); }
+function dpMonth(scope, step) { const d = state.ui.dpDraft[scope]; d.month = new Date(d.month.getFullYear(), d.month.getMonth() + step, 1); dpRender(scope); }
+// Calendar clicks: first click sets the start (and end), the second sets the end (swapped if earlier).
+function dpPickDay(scope, iso) {
+  const d = state.ui.dpDraft[scope];
+  if (!d.pick) dpSet(scope, { mode: 'range', start: iso, end: iso, pick: iso });
+  else dpSet(scope, { mode: 'range', start: iso < d.pick ? iso : d.pick, end: iso < d.pick ? d.pick : iso, pick: null });
+}
+function dpApply(scope) {
+  const d = state.ui.dpDraft[scope];
+  const c = state.dateFilters[scope];
+  if (d.mode === 'range') Object.assign(c, { mode: 'range', start: d.start <= d.end ? d.start : d.end, end: d.start <= d.end ? d.end : d.start });
+  else Object.assign(c, { mode: 'preset', preset: d.preset, n: d.n });
+  const r = resolveDateRange(c);
+  c.label = c.mode === 'range' ? `${fmtDate(r.start)} – ${fmtDate(r.end)}` : dpLabel(c);
+  closeAllPopovers();
+  const fn = document.getElementById(`dp-${scope}`)?.dataset.apply;
+  if (fn && window[fn]) window[fn]();
 }
 
 // ---------- Column picker (show / hide table columns) ----------

@@ -6338,13 +6338,15 @@ const ORG_PLANS = [
 ];
 const ORG_DEMO_TODAY = '2026-10-21';
 
-state.ui.orgEdit = state.ui.orgEdit || {};   // { business, billing, logo, colours, type, assets }
+state.ui.orgEdit = state.ui.orgEdit || {};   // { business }
 state.ui.orgEditFor = null;                   // org id the edit state belongs to
 state.ui.orgDraft = null;                     // form values kept across a failed validation
 state.ui.orgErrors = {};
 
 // ---------- Data accessors ----------
-function orgTab() { return ORG_TABS.some(t => t.id === state.params.tab) ? state.params.tab : 'business'; }
+// The agency's own organisation has no Billing Information tab.
+function orgTabs(agency = isAgency()) { return agency ? ORG_TABS.filter(t => t.id !== 'billing') : ORG_TABS; }
+function orgTab() { return orgTabs().some(t => t.id === state.params.tab) ? state.params.tab : 'business'; }
 function orgEntity(orgId = currentOrgId()) { return orgId === 'agency' ? AGENCY_ORG : wsById(orgId); }
 function orgPad2(n) { return String(n).padStart(2, '0'); }
 
@@ -6506,7 +6508,7 @@ function orgVal(id) { const el = document.getElementById(id); return el ? el.val
 function orgRender() {
   orgSyncEditScope();
   const tab = orgTab();
-  const tabs = ORG_TABS.map(t => `<button type="button" class="page-tab ${t.id === tab ? 'active' : ''}" onclick="navigate('organisation', { tab: '${t.id}' })"><i data-lucide="${t.icon}"></i>${esc(t.label)}</button>`).join('');
+  const tabs = orgTabs().map(t => `<button type="button" class="page-tab ${t.id === tab ? 'active' : ''}" onclick="navigate('organisation', { tab: '${t.id}' })"><i data-lucide="${t.icon}"></i>${esc(t.label)}</button>`).join('');
   const body = tab === 'brand' ? orgBrandHTML() : tab === 'billing' ? orgBillingHTML() : orgBusinessHTML();
   return `<div class="page-tabs" role="tablist">${tabs}</div>
     <div class="stack">${orgHeaderCard()}${body}</div>`;
@@ -6862,8 +6864,6 @@ function orgBillingHTML() {
   const b = orgBilling(id);
   const plan = ORG_PLANS.find(p => p.id === b.plan);
   const used = orgSeatsUsed(id), total = orgSeatTotal(id);
-  const card = b.cards.find(c => c.isDefault) || b.cards[0];
-  const others = b.cards.filter(c => c !== card);
   const subscription = `<section class="card org-section">
     ${orgCardHead('Subscription & Plan', 'Your current plan and billing cycle.', '<button type="button" class="btn btn-outline" onclick="orgOpenPlanModal()">Configure Plan</button>')}
     <div class="org-plan-grid">
@@ -6872,125 +6872,9 @@ function orgBillingHTML() {
       <div><div class="kv-label">Next Billing Date</div><div class="org-plan-value">${esc(fmtDate(b.nextBilling))}</div><div class="org-plan-sub">Auto-renews</div></div>
     </div>
   </section>`;
-  const payment = `<section class="card org-section">
-    ${orgCardHead('Payment Method', 'Manage the card used for automatic billing.')}
-    ${card ? `<div class="kv-grid org-kv">${orgKV('Card Details', `${card.brand} •••• ${card.last4}`)}${orgKV('Expiry', card.expiry)}${orgKV('Billing Email', b.billingEmail)}</div>`
-      : `<div class="banner banner-warning"><i data-lucide="credit-card"></i><div><div class="banner-title">No payment method</div><div class="banner-text">Add a card to keep your subscription active.</div></div></div>`}
-    ${others.length ? `<div class="form-section-title">Other cards</div><div class="org-card-list">${others.map(c => `
-      <div class="org-card-row"><i data-lucide="credit-card"></i><span class="grow">${esc(c.brand)} •••• ${esc(c.last4)} <span class="t-muted">· Expires ${esc(c.expiry)}</span></span>
-        <button type="button" class="org-link" onclick="orgMakeDefaultCard('${c.id}')">Make default</button>
-        <button type="button" class="org-link t-error" onclick="orgRemoveCard('${c.id}')">Remove</button></div>`).join('')}</div>` : ''}
-    <div class="org-form-actions">
-      <button type="button" class="btn btn-outline" onclick="orgOpenCardModal(false)">Add Payment Method</button>
-      ${card ? '<button type="button" class="btn btn-primary" onclick="orgOpenCardModal(true)">Update Card</button>' : ''}
-    </div>
-  </section>`;
-  // Client workspaces (Figma 6628:35585): Subscription & Plan, Services & Contract, Billing Tracking.
-  if (!isAgency()) return subscription + orgServicesHTML() + orgBillingTrackingHTML();
-  return subscription + payment + orgBillingContactHTML() + `<section class="card org-section">
-    ${orgCardHead('Billing History', 'Download past invoices and receipts.')}
-    <div id="org-invoice-region">${orgInvoiceTableHTML()}</div>
-    <div class="field-hint" style="margin-top:12px">All plans, amounts and invoices on this page are [PLACEHOLDER] demo data.</div>
-  </section>`;
-}
-
-function orgBillingContactHTML() {
-  const b = orgBilling();
-  const editing = !!state.ui.orgEdit.billing;
-  const c = editing && state.ui.orgDraft ? state.ui.orgDraft : b.contact;
-  const head = orgCardHead('Billing Contact & Address', 'Where invoices and receipts are sent.', orgEditBtn('billing', 'billing contact'));
-  if (!editing) {
-    return `<section class="card org-section">${head}
-      <div class="kv-grid org-kv">${orgKV('Legal Entity Name', c.legal)}${orgKV('Invoice Email', c.invoiceEmail)}${orgKV('Contact Person', c.person)}${orgKV('Contact Number', c.number)}${orgKV('Billing Address', c.address)}${orgKV('Postal Code', c.postal)}</div>
-    </section>`;
-  }
-  return `<section class="card org-section">${head}
-    <div class="kv-grid org-form">
-      ${orgField('org-b-legal', 'Legal Entity Name', c.legal, { required: true })}
-      ${orgField('org-b-invoiceEmail', 'Invoice Email', c.invoiceEmail, { required: true, placeholder: 'finance@example.com' })}
-      ${orgField('org-b-person', 'Contact Person', c.person, { required: true })}
-      ${orgField('org-b-number', 'Contact Number', c.number, { placeholder: '+65 0000 0000' })}
-      ${orgField('org-b-address', 'Billing Address', c.address, { required: true })}
-      ${orgField('org-b-postal', 'Postal Code', c.postal, { required: true, placeholder: '6 digits', attrs: 'inputmode="numeric" maxlength="6"' })}
-    </div>
-    <div class="org-form-actions">
-      <button type="button" class="btn btn-outline" onclick="orgSetEdit('billing', false)">Cancel</button>
-      <button type="button" class="btn btn-primary" onclick="orgSaveBillingContact()">Save Changes</button>
-    </div>
-  </section>`;
-}
-
-function orgSaveBillingContact() {
-  const d = { legal: orgVal('org-b-legal'), invoiceEmail: orgVal('org-b-invoiceEmail'), person: orgVal('org-b-person'), number: orgVal('org-b-number'), address: orgVal('org-b-address'), postal: orgVal('org-b-postal') };
-  const e = {};
-  if (!d.legal) e['org-b-legal'] = 'Legal entity name is required.';
-  if (!isEmail(d.invoiceEmail)) e['org-b-invoiceEmail'] = 'Enter a valid email address.';
-  if (!d.person) e['org-b-person'] = 'Contact person is required.';
-  if (d.number && !/^\+?[\d\s-]{8,}$/.test(d.number)) e['org-b-number'] = 'Enter a valid phone number, e.g. +65 0000 0000.';
-  if (!d.address) e['org-b-address'] = 'Billing address is required.';
-  if (!/^\d{6}$/.test(d.postal)) e['org-b-postal'] = 'Postal code must be 6 digits.';
-  if (Object.keys(e).length) { state.ui.orgDraft = d; state.ui.orgErrors = e; rerender(); return; }
-  orgBilling().contact = d;
-  state.ui.orgEdit.billing = false; state.ui.orgDraft = null; state.ui.orgErrors = {};
-  rerender();
-  showToast('Billing contact saved');
-}
-
-const ORG_PAY_STATUS = { paid: ['Paid', 'dot-green', 't-success'], pending: ['Pending', 'dot-orange-strong', 't-warning'], failed: ['Failed', 'dot-red-strong', 't-error'] };
-function orgPayDot(s) { const [l, d, c] = ORG_PAY_STATUS[s]; return `<span class="dot-label ${c}"><span class="dot ${d}"></span>${l}</span>`; }
-
-function orgInvoiceTableHTML() {
-  const b = orgBilling();
-  const order = { paid: 0, pending: 1, failed: 2 };
-  const list = applySort(b.invoices, 'org-invoices', { id: i => i.id, contract: i => i.contractNo || '', service: i => i.services.join(', '), date: i => i.date, amount: i => i.amount, status: i => order[i.status] }, { col: 'date', dir: 'desc' });
-  // Service: every service on the invoice's contract (never "+N").
-  const svc = i => `<span class="chips org-inv-svcs">${i.services.map(x => `<span class="chip">${esc(x)}</span>`).join('')}</span>`;
-  const rows = paginate(list, 'org-invoices', 10).map(i => `<tr>
-    <td>${esc(i.id)}</td><td>${esc(i.contractNo || '—')}</td><td>${svc(i)}</td><td>${esc(fmtDate(i.date))}</td><td>${fmtMoney(i.amount, 2)}</td><td>${orgPayDot(i.status)}</td>
-    <td><div class="row" style="gap:16px">
-      <button type="button" class="org-link org-dl" onclick="orgDownloadInvoice('${q(i.id)}')"><i data-lucide="download"></i>Download</button>
-      ${i.status === 'failed' ? `<button type="button" class="org-link" onclick="orgRetryInvoice('${q(i.id)}')"><i data-lucide="rotate-cw"></i>Retry payment</button>` : ''}
-    </div></td></tr>`).join('');
-  return `<div class="table-wrap"><table class="table">
-    <thead><tr><th>${sortHeader('org-invoices', 'id', 'Invoice', 'orgRefreshInvoices')}</th><th>${sortHeader('org-invoices', 'contract', 'Contract', 'orgRefreshInvoices')}</th><th>${sortHeader('org-invoices', 'service', 'Service', 'orgRefreshInvoices')}</th><th>${sortHeader('org-invoices', 'date', 'Date', 'orgRefreshInvoices')}</th><th>${sortHeader('org-invoices', 'amount', 'Amount', 'orgRefreshInvoices')}</th><th>${sortHeader('org-invoices', 'status', 'Status', 'orgRefreshInvoices')}</th><th>Action</th></tr></thead>
-    <tbody>${rows || `<tr><td colspan="7" class="table-empty">No invoices yet.</td></tr>`}</tbody></table></div>
-    ${paginationBar('org-invoices', list.length, 'orgRefreshInvoices')}`;
-}
-function orgRefreshInvoices() { renderRegion('org-invoice-region', orgInvoiceTableHTML()); }
-
-function orgDownloadInvoice(invId) {
-  const id = currentOrgId();
-  const b = orgBilling(id), inv = b.invoices.find(i => i.id === invId);
-  if (!inv) return;
-  const text = [
-    'PLACEHOLDER DOCUMENT — NOT A REAL INVOICE',
-    '==========================================',
-    '',
-    `Invoice:        ${inv.id}`,
-    `Contract:       ${inv.contractNo || '—'}`,
-    `Service:        ${inv.services.join(', ')}`,
-    `Date:           ${fmtDate(inv.date)}`,
-    `Billed to:      ${b.contact.legal}`,
-    `Attention:      ${b.contact.person}`,
-    `Address:        ${b.contact.address}, Singapore ${b.contact.postal}`,
-    `Invoice email:  ${b.contact.invoiceEmail}`,
-    '',
-    `Description:    ${inv.desc} [PLACEHOLDER]`,
-    `Amount (SGD):   ${fmtMoney(inv.amount, 2)}`,
-    `Status:         ${ORG_PAY_STATUS[inv.status][0]}`,
-    '',
-    'Generated by the Galaxis Hub demo prototype. All figures are placeholders.'
-  ].join('\n');
-  orgDownloadBlob(`${inv.id}-PLACEHOLDER.txt`, text);
-  showToast(`Downloaded ${inv.id} (placeholder)`, 'download');
-}
-function orgRetryInvoice(invId) {
-  const inv = orgBilling().invoices.find(i => i.id === invId);
-  const card = orgBilling().cards.find(c => c.isDefault);
-  if (!card) { showToast('Add a payment method first', 'triangle-alert'); return; }
-  inv.status = 'paid';
-  if (document.getElementById('org-bt')) rerender(); else orgRefreshInvoices();
-  showToast(`${inv.id} paid with ${card.brand} •••• ${card.last4}`);
+  // Client workspaces only (Figma 6628:35585): Subscription & Plan, Services & Contract, Billing Tracking.
+  // The agency's My Workspace has no Billing Information tab (removed 27/10/2026).
+  return subscription + orgServicesHTML() + orgBillingTrackingHTML();
 }
 
 function orgOpenPlanModal() {
@@ -7028,66 +6912,6 @@ function orgSavePlan() {
   if (id === 'agency') AGENCY_ORG.seats = plan.seats; else b.seats = plan.seats;
   rerender();
   showToast(changed ? `Plan changed to ${plan.name} (${cycle.toLowerCase()} billing)` : 'No changes to your plan', changed ? 'check-circle' : 'info');
-}
-
-function orgOpenCardModal(update) {
-  const b = orgBilling();
-  const card = b.cards.find(c => c.isDefault);
-  const body = `
-    <div class="banner banner-info"><i data-lucide="shield-alert"></i><div class="banner-text">Demo only — do not enter real card details. Nothing is sent or stored except the last four digits.</div></div>
-    <div class="field"><label class="field-label" for="org-c-holder">Cardholder Name<span class="req">*</span></label><input class="input" id="org-c-holder" value="${esc(update && card ? card.holder : '')}" autocomplete="off"></div>
-    <div class="field"><label class="field-label" for="org-c-number">Card Number<span class="req">*</span></label><input class="input" id="org-c-number" placeholder="${update && card ? `•••• •••• •••• ${esc(card.last4)}` : '4242 4242 4242 4242'}" inputmode="numeric" autocomplete="off"></div>
-    <div class="grid-2" style="gap:16px">
-      <div class="field"><label class="field-label" for="org-c-expiry">Expiry (MM/YY)<span class="req">*</span></label><input class="input" id="org-c-expiry" value="${esc(update && card ? card.expiry : '')}" placeholder="MM/YY" maxlength="5" autocomplete="off"></div>
-      <div class="field"><label class="field-label" for="org-c-cvc">CVC<span class="req">*</span></label><input class="input" id="org-c-cvc" placeholder="123" maxlength="4" inputmode="numeric" autocomplete="off"></div>
-    </div>
-    <div class="field"><label class="field-label" for="org-c-email">Billing Email<span class="req">*</span></label><input class="input" id="org-c-email" value="${esc(b.billingEmail)}"></div>
-    ${!update && b.cards.length ? '<label class="check"><input type="checkbox" id="org-c-default" checked>Set as default payment method</label>' : ''}
-    <div class="field-error" id="org-card-error"></div>`;
-  openModal({
-    title: update ? 'Update Card' : 'Add Payment Method', desc: update ? 'Replace the card used for automatic billing.' : 'Add a card for automatic billing.', body,
-    actions: [{ label: 'Cancel', kind: 'outline' }, { label: update ? 'Update Card' : 'Add Card', onClick: () => orgSaveCard(update) }]
-  });
-}
-function orgSaveCard(update) {
-  const b = orgBilling();
-  const holder = orgVal('org-c-holder'), num = orgVal('org-c-number').replace(/[\s-]/g, ''), exp = orgVal('org-c-expiry'), cvc = orgVal('org-c-cvc'), email = orgVal('org-c-email');
-  const errs = [];
-  if (!holder) errs.push('Enter the cardholder name.');
-  if (!/^\d{13,19}$/.test(num)) errs.push('Card number must be 13–19 digits.');
-  const m = exp.match(/^(\d{2})\/(\d{2})$/);
-  if (!m || +m[1] < 1 || +m[1] > 12) errs.push('Expiry must be in MM/YY format.');
-  else if (new Date(2000 + +m[2], +m[1], 0) < new Date(ORG_DEMO_TODAY)) errs.push('This card has expired.');
-  if (!/^\d{3,4}$/.test(cvc)) errs.push('CVC must be 3 or 4 digits.');
-  if (!isEmail(email)) errs.push('Enter a valid billing email.');
-  document.querySelectorAll('#modal-root .input').forEach(el => el.classList.remove('invalid'));
-  if (errs.length) { document.getElementById('org-card-error').innerHTML = errs.map(esc).join('<br>'); return false; }
-  const brand = num[0] === '4' ? 'Visa' : num[0] === '5' ? 'Mastercard' : num[0] === '3' ? 'Amex' : 'Card';
-  const info = { brand, last4: num.slice(-4), expiry: exp, holder };
-  b.billingEmail = email;
-  if (update) Object.assign(b.cards.find(c => c.isDefault), info);
-  else {
-    const makeDefault = !b.cards.length || document.getElementById('org-c-default')?.checked;
-    if (makeDefault) b.cards.forEach(c => { c.isDefault = false; });
-    b.cards.push({ id: uid('card'), ...info, isDefault: makeDefault });
-  }
-  rerender();
-  showToast(update ? `Card updated — ${brand} •••• ${info.last4}` : `${brand} •••• ${info.last4} added`, 'credit-card');
-}
-function orgMakeDefaultCard(cardId) {
-  const b = orgBilling();
-  b.cards.forEach(c => { c.isDefault = c.id === cardId; });
-  const c = b.cards.find(x => x.id === cardId);
-  rerender();
-  showToast(`${c.brand} •••• ${c.last4} is now the default card`, 'credit-card');
-}
-function orgRemoveCard(cardId) {
-  const b = orgBilling();
-  const c = b.cards.find(x => x.id === cardId);
-  confirmDialog({
-    title: 'Remove card?', text: `${c.brand} •••• ${c.last4} will no longer be available for billing.`, confirmLabel: 'Remove', danger: true,
-    onConfirm: () => { b.cards = b.cards.filter(x => x.id !== cardId); rerender(); showToast('Card removed'); }
-  });
 }
 
 // ---------- Brand Identity ----------
@@ -7186,9 +7010,9 @@ function orgDevGo(ctx, tab, edit) {
   state.ui.orgEdit = edit || {}; state.ui.orgDraft = null; state.ui.orgErrors = {};
   navigate('organisation', { tab });
 }
-const ORG_DEV_EDIT = { business: ['business'], billing: ['billing'], brand: [] };
+const ORG_DEV_EDIT = { business: ['business'], billing: [], brand: [] };
 ['agency', 'client'].forEach(ctx => {
-  ORG_TABS.forEach(t => {
+  orgTabs(ctx === 'agency').forEach(t => {
     const key = `${ctx}-organisation-${t.id}`;
     registerDevScreen(ctx === 'agency' ? 'Agency' : 'Client workspace', key, `Organisation · ${t.label}`, () => orgDevGo(ctx, t.id));
     registerDevToggles(key, () => {
@@ -7239,7 +7063,7 @@ ${ctx === 'client' ? `
 - Is UEN validated against ACRA format, or free text?
 - Can the description and general email be edited here? Figma has no fields for them.`;
   const billing = `## Purpose
-Subscription, payment method, billing contact and invoices. Figma frame \`6242:9882\`. **All figures are placeholders.**
+Client workspaces only: subscription, services & contracts and billing tracking. Figma frame \`6628:35585\`. **All figures are placeholders.**\n\n**The agency's My Workspace has no Billing Information tab (removed 27/10/2026)**; its Organisation page shows Business Information and Brand Identity only.
 
 ${common}
 
@@ -7247,27 +7071,17 @@ ${common}
 - Current Plan + billing cycle; Seats Used (active + pending members / plan seats, "Across all products"); Next Billing Date with "Auto-renews".
 - **Configure Plan** modal: Starter (5 seats) / Business (20) / Enterprise (50), each with [PLACEHOLDER] pricing, plus an Annual / Monthly cycle.
 - A plan with fewer seats than are in use is blocked with an inline error.
-- In the agency context the plan's seats drive the agency seat limit used in Team & Access.
-
-## Payment Method
-- Default card (brand •••• last 4), expiry and billing email.
-- **Update Card** and **Add Payment Method** open a card form with validation: name required, 13–19 digit number, MM/YY expiry that has not passed, 3–4 digit CVC, valid billing email.
-- Only the brand and last four digits are kept. The modal warns not to enter real card details.
-- Extra cards are listed with Make default / Remove.
-
-## Billing Contact & Address
-- Legal Entity Name, Invoice Email, Contact Person, Contact Number, Billing Address, Postal Code.
-- ✎ edit mode with validation (required fields, email format, 6-digit postal code).
+- The agency's seat limit in Team & Access still comes from its placeholder plan, which no longer has a screen.
 
 ## Client workspace layout (Figma 6628:35585, 27/10/2026)
-- The client Billing Information tab is: **Subscription & Plan**, **Services & Contract**, **Billing Tracking**. Payment Method, Billing Contact & Address and Billing History are not part of the client design (the agency workspace keeps them).
+- The client Billing Information tab is: **Subscription & Plan**, **Services & Contract**, **Billing Tracking**. Payment Method, Billing Contact & Address and Billing History are not part of the design.
 
 ## Services & Contract (client workspace)
 - Read-only, from the workspace's agency CRM record. "A contract can cover one or more services. Each service has one active contract at a time."
 - Table: **Services · Contract · Monthly Budget · Start Date · End Date · Days Left · Status**. Monthly Budget is the media budget for ad services and **NA** for the others. Days Left shows "-" for a cancelled service.
 - Status (dot + label): **Live** (green), **Paused** (amber, "On {date}": the contract has an overdue payment, see Billing Tracking), **Cancelled** (red, "On {date}"), plus Upcoming / Ended from the dates. Cancelled services stop counting as live everywhere (dashboards, renewals).
 
-## Billing Tracking (client workspace; replaces Billing History)
+## Billing Tracking (client workspace)
 - "Track payments for contract billing periods and milestones. Unpaid invoice or milestone delays may temporarily pause your contract."
 - Toolbar: **Search** (contract number or service) and a **month range** ("January - April 2026"; shows contracts whose dates overlap the range; default January to the current month).
 - Tabs with counts: **All · Paid · Pending · Paused · Cancelled**.
@@ -7279,14 +7093,6 @@ ${common}
   - Contract status and banner: **Cancelled** (red, "Contract has been cancelled by client on {date}."), **Paused** (yellow, "Contract paused on {date} due to overdue payment for T{n}."; paused the day after the due date), **Paid** (green, every instalment paid: "All payments have been made and completed."), otherwise **Pending** (amber, "Upcoming payment due on {date}.").
 - **Colours (27/10/2026)**: Paid green, **Pending orange**, **Paused golden yellow** (pill with dark text so it stays readable), Cancelled red, Upcoming grey. Orange and yellow are kept far enough apart in hue to tell apart; Pending and Paused also use different icons (clock vs warning).
 - Demo data: Visual Studio shows all four states (ads contract paused, SEO paid, Aurix cancelled, Galaxis CRM pending). [PLACEHOLDER] amounts.
-
-## Billing History (agency workspace)
-- Columns Invoice, **Contract**, **Service**, Date, Amount, Status (Paid green / Pending orange / Failed red dot), Action.
-- **Billing is per contract (23/10/2026).** A contract covers one or more services (e.g. Google Ads + Facebook Ads on one contract); a client can have several contracts running at once; each service has at most one active contract at a time, so contracts for the same service never overlap. Each invoice belongs to one contract, and **Service** lists every service on that contract (never "+N").
-- Client workspaces: one invoice per **instalment of the contract's billing schedule** (its payment term in the agency CRM: one-time, monthly, quarterly, 50-30-20% and so on), issued on or before today. The agency workspace, and clients without a CRM record, show the Galaxis Hub plan instalments (Service: Galaxis Hub plan, Contract: —).
-- Sortable, paginated (10 per page by default).
-- **Download** saves a plain-text placeholder invoice clearly labelled "PLACEHOLDER DOCUMENT".
-- Failed invoices also offer **Retry payment** against the default card.
 
 ## Open questions
 - Figma's button says "Configure Plan"; the brief said "Manage Plan". Figma copy is used.
@@ -7315,7 +7121,6 @@ ${common}
   Object.assign(screenSpecs, {
     'agency-organisation-business': { ...meta, title: 'Organisation — Business Information (Agency)', notes: business('agency') },
     'client-organisation-business': { ...meta, updatedAt: '22/10/2026', title: 'Organisation — Business Information (Client workspace)', notes: business('client') },
-    'agency-organisation-billing': { ...meta, title: 'Organisation — Billing Information (Agency)', notes: billing },
     'client-organisation-billing': { ...meta, title: 'Organisation — Billing Information (Client workspace)', notes: billing },
     'agency-organisation-brand': { ...meta, title: 'Organisation — Brand Identity (Agency)', notes: brand },
     'client-organisation-brand': { ...meta, title: 'Organisation — Brand Identity (Client workspace)', notes: brand }

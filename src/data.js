@@ -74,7 +74,7 @@ const masterTokens = {
 };
 
 // ---------- Products / integrations catalogue ----------
-// category: CRM | CCM | CDP | Marketing. provider: oom (internal OOm product) | third (external).
+// category: CRM | CCM | CDP | SEO. provider: oom (internal OOm product) | third (external).
 // flow: internal | oauth | api. CRM category obeys the "only one CRM active" rule.
 // url: the OOm product's web app, opened in a new tab from every "Open" (Galaxis CRM, Aurix, SEO Cloud).
 const products = [
@@ -93,7 +93,7 @@ const products = [
     dataShared: 'Customer profile, Events',
     syncs: ['Customer profiles', 'Events', 'Segments'],
     requirements: ['CDP subscription'] },
-  { id: 'seo-cloud',  name: 'SEO Cloud',   category: 'Marketing', provider: 'oom', flow: 'internal', color: '#2CB1B6', initials: 'S', url: 'https://oomdigital.com/dashboard',
+  { id: 'seo-cloud',  name: 'SEO Cloud',   category: 'SEO',       provider: 'oom', flow: 'internal', color: '#2CB1B6', initials: 'S', url: 'https://oomdigital.com/dashboard',
     description: 'Track keyword rankings, approvals and site health.',
     dataShared: 'Keywords, Rankings, Approvals',
     syncs: ['Keyword rankings', 'Content approvals'],
@@ -142,13 +142,9 @@ const products = [
     description: 'Attribute inbound phone calls to the ads that drove them.',
     dataShared: 'Calls, Call sources',
     syncs: ['Call logs', 'Call duration and qualification', 'Ad source / keyword'],
-    requirements: ['Delacon API token'] },
-  { id: 'mailchimp',  name: 'Mailchimp',   category: 'Marketing', provider: 'third', flow: 'oauth', color: '#FFE01B', initials: 'M',
-    description: 'Sync audiences and campaign engagement from Mailchimp.',
-    dataShared: 'Audiences, Campaign engagement',
-    syncs: ['Audiences', 'Campaign opens and clicks'],
-    requirements: ['Mailchimp account owner', 'Authorisation required'] }
+    requirements: ['Delacon API token'] }
 ];
+
 
 // Per-workspace product state. status: connected | pending | error | disabled. active: bool.
 // Only one CRM, one chat platform and one call tracker per workspace (PRODUCT_LANES in core.js).

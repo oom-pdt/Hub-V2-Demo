@@ -142,9 +142,9 @@ function orgBrand(orgId = currentOrgId()) {
   if (orgBrandStore[orgId]) return orgBrandStore[orgId];
   orgBrandStore[orgId] = {
     assets: [
-      { id: 'guidelines', name: 'Brand Guidelines', kind: 'ZIP', icon: 'folder', size: 'Placeholder file' },
-      { id: 'docs', name: 'Documentation', kind: 'Doc', icon: 'file-text', size: 'Placeholder file' },
-      { id: 'slides', name: 'Slides', kind: 'Slides', icon: 'presentation', size: 'Placeholder file' }
+      { id: 'guidelines', name: 'Brand Guidelines', kind: 'ZIP', icon: 'folder', size: '10.1 MB' },
+      { id: 'docs', name: 'Document', kind: 'Doc', icon: 'file-text', size: '3.6 MB' },
+      { id: 'slides', name: 'Slides', kind: 'Slides', icon: 'gallery-horizontal', size: '2.4 MB' }
     ]
   };
   return orgBrandStore[orgId];
@@ -772,23 +772,22 @@ function orgRemoveCard(cardId) {
 // Brand Identity: only Brand Assets (Logo, Colour Palette and Typography were removed on 23/10/2026).
 function orgBrandHTML() {
   const br = orgBrand(currentOrgId());
-  const ed = state.ui.orgEdit;
   const assets = br.assets.map(a => `<div class="org-asset">
       <span class="org-asset-icon"><i data-lucide="${a.icon}"></i></span>
-      <span class="grow"><div class="t-bold t-caption">${esc(a.name)}</div><div class="t-caption t-muted">${esc(a.kind)} • ${esc(a.size)}</div></span>
+      <span class="grow"><div class="org-asset-name">${esc(a.name)}</div><div class="org-asset-meta">${esc(a.kind)} • ${esc(a.size)}</div></span>
       <button type="button" class="org-link" onclick="orgDownloadAsset('${q(a.id)}')">Download</button>
-      ${ed.assets ? `<button type="button" class="kebab" aria-label="Remove ${esc(a.name)}" onclick="orgRemoveAsset('${q(a.id)}')"><i data-lucide="trash-2"></i></button>` : ''}
+      ${rowMenu(`org-asset-menu-${a.id}`, [
+        { label: 'Rename', icon: 'pencil', onClick: `orgRenameAsset('${q(a.id)}')` },
+        { label: 'Delete', icon: 'trash-2', danger: true, onClick: `orgRemoveAsset('${q(a.id)}')` }
+      ])}
     </div>`).join('');
+  const upload = `<input type="file" id="org-asset-input" hidden onchange="orgAssetPicked(this)">
+    <button type="button" class="btn btn-primary org-upload-btn" onclick="document.getElementById('org-asset-input').click()"><i data-lucide="upload"></i>Upload Assets</button>`;
   return `
-    <section class="card org-section">${orgCardHead('Brand Assets', 'Downloadable resources for teams and agency partners.', orgEditBtn('assets', 'brand assets'))}
+    <section class="card org-section">${orgCardHead('Brand Assets', 'Downloadable resources for teams and agency partners.', `<div>${upload}</div>`)}
       <div class="grid-3 org-asset-grid">${assets || '<div class="t-muted t-caption">No brand assets yet.</div>'}</div>
-      ${ed.assets ? `<div class="org-form-actions"><input type="file" id="org-asset-input" hidden onchange="orgAssetPicked(this)">
-        <button type="button" class="btn btn-outline" onclick="document.getElementById('org-asset-input').click()"><i data-lucide="upload"></i>Upload Asset</button>
-        <button type="button" class="btn btn-primary" onclick="orgSetEdit('assets', false)">Done</button></div>` : ''}
     </section>`;
 }
-
-
 
 function orgDownloadAsset(assetId) {
   const id = currentOrgId();
@@ -825,12 +824,27 @@ function orgAssetPicked(input) {
   };
   reader.readAsDataURL(file);
 }
+function orgRenameAsset(assetId) {
+  const a = orgBrand().assets.find(x => x.id === assetId);
+  if (!a) return;
+  openModal({
+    title: 'Rename brand asset',
+    body: `<label class="field-label" for="org-asset-name">Asset name</label>
+      <input class="input" id="org-asset-name" maxlength="80" value="${esc(a.name)}" onkeydown="if (event.key === 'Enter') runModalAction(1)">
+      <div class="field-error" id="org-asset-name-error"></div>`,
+    actions: [{ label: 'Cancel', kind: 'outline' }, { label: 'Save', onClick: () => {
+      const name = orgVal('org-asset-name');
+      if (!name) { document.getElementById('org-asset-name-error').textContent = 'Enter a name'; return false; }
+      a.name = name; rerender(); showToast('Brand asset renamed');
+    } }]
+  });
+}
 function orgRemoveAsset(assetId) {
   const br = orgBrand();
   const a = br.assets.find(x => x.id === assetId);
   confirmDialog({
-    title: 'Remove brand asset?', text: `“${a.name}” will no longer be available to your team and agency partners.`, confirmLabel: 'Remove', danger: true,
-    onConfirm: () => { br.assets = br.assets.filter(x => x.id !== assetId); rerender(); showToast('Brand asset removed'); }
+    title: 'Delete brand asset?', text: `“${a.name}” will no longer be available to your team and agency partners.`, confirmLabel: 'Delete', danger: true,
+    onConfirm: () => { br.assets = br.assets.filter(x => x.id !== assetId); rerender(); showToast('Brand asset deleted'); }
   });
 }
 
@@ -850,7 +864,7 @@ function orgDevGo(ctx, tab, edit) {
   state.ui.orgEdit = edit || {}; state.ui.orgDraft = null; state.ui.orgErrors = {};
   navigate('organisation', { tab });
 }
-const ORG_DEV_EDIT = { business: ['business'], billing: ['billing'], brand: ['logo', 'colours', 'type', 'assets'] };
+const ORG_DEV_EDIT = { business: ['business'], billing: ['billing'], brand: [] };
 ['agency', 'client'].forEach(ctx => {
   ORG_TABS.forEach(t => {
     const key = `${ctx}-organisation-${t.id}`;
@@ -863,7 +877,7 @@ const ORG_DEV_EDIT = { business: ['business'], billing: ['billing'], brand: ['lo
         sections.forEach(s => { state.ui.orgEdit[s] = on; });
         rerender();
       };
-      return [{ label: 'Edit mode', active: editing, run: set(!editing) }];
+      return sections.length ? [{ label: 'Edit mode', active: editing, run: set(!editing) }] : [];
     });
   });
 });
@@ -968,8 +982,9 @@ ${common}
 - Brand Identity shows **Brand Assets only**. The Logo, Colour Palette and Typography sections from the Figma frame were removed on 23/10/2026; the header card shows the organisation's initials tile.
 
 ## Brand Assets
-- Brand Guidelines (ZIP), Documentation (Doc), Slides — each **Download** saves a labelled placeholder text file.
-- ✎ edit mode allows uploading a new asset (kept in memory) and removing assets.
+- Brand Guidelines (ZIP), Document (Doc), Slides — each **Download** saves a labelled placeholder text file. File sizes are placeholders.
+- **Upload Assets** (top right, replaces the ✎ edit button) adds a file, kept in memory, max 5 MB in the demo.
+- Each asset's ⋮ menu: **Rename** (modal with the name field) and **Delete** (confirmation).
 
 ## Open questions
 - Where are brand files stored in production, and what are the size and type limits?

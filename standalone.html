@@ -542,6 +542,8 @@ svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
 .dev-toggle.dev-action { background: transparent; color: #94A3B8; }
 .dev-toggle:not(.dev-cycle):not(.dev-action)::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 6px; background: #475569; vertical-align: 1px; }
 .dev-toggle.active::before { background: #fff; }
+/* Picker in a right-aligned card header (e.g. Managed Accounts): open the popover leftwards. */
+.card-header .dp .dp-popover { left: auto; right: 0; }
 
 /* dashboard module styles — component-specific only; shared components live in design.css */
 
@@ -2383,7 +2385,8 @@ function setPerPage(table, n, fn) { const p = pager(table); p.perPage = Number(n
 
 // ---------- Date filter (ported from V1: Past / Current / Date Range) ----------
 state.dateFilters = {
-  agency: { mode: 'past', pastNumber: 30, pastUnit: 'days', currentUnit: 'month', start: '', end: '', label: 'Past 30 days' },
+  // Agency: the same Google Ads-style presets as the client tables (shown on the Managed Accounts table).
+  agency: { mode: 'preset', preset: 'last30', n: 30, pastNumber: 30, pastUnit: 'days', currentUnit: 'month', start: '', end: '', label: 'Last 30 days' },
   // Client: Google Ads-style presets (datePresetHTML), shown on the campaign tables and the SEO tab.
   client: { mode: 'preset', preset: 'last30', n: 30, pastNumber: 30, pastUnit: 'days', currentUnit: 'month', start: '', end: '', label: 'Last 30 days' }
 };
@@ -3666,11 +3669,13 @@ const DASH_ISSUE_PRODUCT = {
 function dashContractProduct(desc) { return /^SEO/.test(desc) ? 'SEO Cloud' : /^Aurix/.test(desc) ? 'Aurix' : /^(Google Ads|Facebook Ads|SEM)/.test(desc) ? 'Ads Performance' : 'Contracts'; }
 
 function dashRenderAgency() {
+  // Date range lives on the Managed Accounts table (Google Ads-style presets) and drives the whole page.
+  // "All time" starts at the earliest managed workspace.
+  state.dateFilters.agency.allFrom = dashAgencyWorkspaces().map(w => w.createdAt).filter(Boolean).sort()[0];
   const items = dashAttentionItems();
   return `
     <div class="dash-welcome">
       <div><h2 class="h-welcome">Welcome Back, ${esc(dashFirstName())}</h2><p class="dash-welcome-sub">Here’s what’s happening across your services today.</p></div>
-      ${dateFilterHTML('agency', 'dashRerender')}
     </div>
     ${dashAgencyBanner(items)}
     ${dashAgencyKpis(items)}
@@ -3971,6 +3976,7 @@ function dashManagedCard() {
   return `<div class="card-header">
       <div><h2 class="h-section">Managed Accounts</h2><div class="card-sub">A complete overview of all client accounts currently assigned to you.</div></div>
       <div class="row">
+        ${datePresetHTML('agency', 'dashRerender')}
         <div class="search dash-search"><input class="input" placeholder="Search client or contact" value="${esc(state.ui.dashMgrSearch)}" oninput="dashManagedSearch(this.value)" aria-label="Search managed accounts"><i data-lucide="search"></i></div>
         ${dashFilterButton('managed')}
         ${colPickerButton('managed')}
@@ -4150,8 +4156,8 @@ function dashRenderClient() {
   dashSyncClientState();
   const tab = dashTab();
   if (state.params.tab) state.ui.dashTab = state.params.tab;
-  // Date range (Google Ads-style presets): on the campaign tables for Ad Performance, in the header on the SEO tab.
-  // It drives the whole tab (KPIs, charts, tables). "All time" starts at the workspace's creation date.
+  // Date range (Google Ads-style presets): on the campaign tables for Ad Performance; the SEO tab has no picker and
+  // uses the same range. It drives the whole tab (KPIs, charts, tables). "All time" starts at the workspace's creation date.
   state.dateFilters.client.allFrom = ws.createdAt;
   const hasAds = tab === 'ads' && dashPlatforms(ws.id).length > 0;
   const view = hasAds ? dashAdView(ws) : 'all';
@@ -4160,7 +4166,6 @@ function dashRenderClient() {
     : view === 'all' ? 'Google and Meta advertising performance for this workspace.' : `${DASH_VIEW_LABEL[view]} performance for this workspace, with the full ${DASH_VIEW_LABEL[view]} report.`;
   const header = `<div class="dash-welcome">
       <div><h2 class="h-welcome">Welcome Back, ${esc(ws.name)}</h2><p class="dash-welcome-sub">${sub}</p></div>
-      ${tab === 'seo' ? datePresetHTML('client', 'dashRerender') : ''}
     </div>
     ${dashHubPanel(ws)}
     ${dashTabBar(tab, ws)}`;
@@ -6060,7 +6065,7 @@ Central command dashboard for agency administrators managing many client workspa
 
 ### Key Functional Specifications
 - **Workspace Switcher**: The workspace dropdown in the top bar switches between the agency view ("My Workspace") and individual client workspaces. There is no separate My/Agency toggle.
-- **Date Filter (Past / Current / Date Range)**: Applies to every spend and cost metric on this page. Total Accounts Managed is not date-dependent. **"Past N <unit>" is calendar-aligned (26/10/2026)**: it covers the last N complete periods before the current one. Past 1 week = Monday to Sunday of last week; past 1 month = the whole of last month (e.g. 1–30 Sep); past N years = whole calendar years; past N days = N days up to yesterday. "Current" still runs from the start of the current period to today.
+- **Date range (27/10/2026)**: on the **Managed Accounts table toolbar** (moved from the page header), using the same Google Ads-style picker as the client campaign tables (presets incl. Last week (Mon – Sun) and Last month, N days up to today / yesterday, start / end dates and a month calendar). It still applies to every spend and cost metric on the page (KPIs, issues, the table); Total Accounts Managed is not date-dependent. All time starts at the earliest managed workspace.
   - **Prototype note:** the date filter scales mock 30-day data to the selected range. It does **not** yet filter by event date. Real behaviour must use the event date (click / conversion date), as in the client dashboard spec.
 - **Layout (new agency dashboard design, 22/10/2026)**: banner → four KPI cards → Total Accounts Managed + Your Products → Managed Accounts. The dashboard is a performance indicator: each account shows its health and issue count, and users click through for the specifics.
 - **Attention Required banner**: "N account issues need your attention across …", naming the three areas with the most issues (Ads Performance, SEO Cloud, Aurix, Integrations, Contracts, Agency CRM) and summarising the rest ("and 2 other areas"). It counts the same issues as the Attention Required KPI and the Issues Count column, so the numbers always agree. **View Issues** opens the all-issues slide-over. Hidden when there are no issues.
@@ -6138,7 +6143,7 @@ Read-only SEO Cloud results inside the client workspace, next to ad performance,
   - Only the Keyword column is pinned; the day columns scroll. There is no Action column.
   - Column picker groups: Keyword details (Ranking URL, Volume, Search Intent, Difficulty) and Rankings (History, Baseline, Previous 6 days). Keyword and the latest day are always shown.
   - Empty state when nothing matches.
-- **Date filter** (shared with Ad Performance): sets the trend range, the sparkline range and the comparison point for every ▲/▼ change. History is kept for 120 days.
+- **Date range** (shared with Ad Performance; no picker on this tab since 27/10/2026, it follows the range set on the Ad Performance tables, default Last 30 days): sets the trend range, the sparkline range and the comparison point for every ▲/▼ change. History is kept for 120 days.
 
 ### Open questions
 - Is the keyword contract (X keywords, Y% target) owned by SEO Cloud or by the Agency CRM?

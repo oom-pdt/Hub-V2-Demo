@@ -460,7 +460,8 @@ function setPerPage(table, n, fn) { const p = pager(table); p.perPage = Number(n
 
 // ---------- Date filter (ported from V1: Past / Current / Date Range) ----------
 state.dateFilters = {
-  agency: { mode: 'past', pastNumber: 30, pastUnit: 'days', currentUnit: 'month', start: '', end: '', label: 'Past 30 days' },
+  // Agency: the same Google Ads-style presets as the client tables (shown on the Managed Accounts table).
+  agency: { mode: 'preset', preset: 'last30', n: 30, pastNumber: 30, pastUnit: 'days', currentUnit: 'month', start: '', end: '', label: 'Last 30 days' },
   // Client: Google Ads-style presets (datePresetHTML), shown on the campaign tables and the SEO tab.
   client: { mode: 'preset', preset: 'last30', n: 30, pastNumber: 30, pastUnit: 'days', currentUnit: 'month', start: '', end: '', label: 'Last 30 days' }
 };

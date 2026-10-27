@@ -75,9 +75,9 @@
 /* ---------- Services & Contract status + Billing Tracking (Figma 6628:35585) ---------- */
 .org-svc-st { font-weight: 700; }
 .org-svc-st .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
-.org-svc-st.is-live { color: var(--success-pill); }
-.org-svc-st.is-paused { color: #E8CB5A; }
-.org-svc-st.is-cancelled { color: #F78483; }
+.org-svc-st.is-live { color: #3FAE4A; }
+.org-svc-st.is-paused { color: #E8740C; }
+.org-svc-st.is-cancelled { color: #E0524F; }
 .org-svc-st.is-upcoming { color: var(--primary); }
 .org-svc-st.is-ended { color: var(--text-muted); }
 .org-bt-toolbar { display: flex; gap: 24px; align-items: center; margin-top: 8px; }
@@ -103,11 +103,13 @@
 .org-bt-dates { line-height: 20px; }
 .org-st { display: inline-flex; align-items: center; justify-content: center; height: 24px; padding: 0 12px; border-radius: var(--r-pill); font-size: 12px; font-weight: 700; color: #fff; white-space: nowrap; }
 .org-st-lg { min-width: 116px; height: 26px; font-size: 13px; }
-.org-st-paid { background: var(--success-pill); }
-.org-st-pending { background: #E8CB5A; }
-.org-st-paused { background: #EEEA7A; color: #fff; }
-.org-st-cancelled { background: #F07E7E; }
-.org-st-upcoming { background: #ABABAB; }
+/* Status palette: Paid green · Pending blue (calm, due soon) · Paused orange (action needed) · Cancelled red · Upcoming grey.
+   Fills are dark enough for white text. */
+.org-st-paid { background: #3FAE4A; }
+.org-st-pending { background: #3B7FE0; }
+.org-st-paused { background: #E8740C; }
+.org-st-cancelled { background: #E0524F; }
+.org-st-upcoming { background: #8A8A8A; }
 .org-bt-detail { padding: 0 18px 18px; background: var(--page); }
 .org-bt-breakdown { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: 18px; }
 .org-bt-bd-head { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; letter-spacing: .5px; }
@@ -115,17 +117,17 @@
 .org-bt-banner { display: flex; align-items: center; gap: 14px; margin: 18px 0; padding: 12px 24px; border: 1px solid; border-radius: var(--r-md); font-size: 13px; letter-spacing: .5px; }
 .org-bt-banner svg.lucide { width: 20px; height: 20px; flex-shrink: 0; }
 .org-bn-cancelled { background: #FBE3E3; border-color: #E44A4A; color: #C62828; }
-.org-bn-paused { background: #FAFBE3; border-color: #D9DD5F; color: #C7C93B; }
-.org-bn-pending { background: #FFF6E0; border-color: #E8C34A; color: #D4A517; }
-.org-bn-paid { background: #E9F8E9; border-color: #4CC255; color: #2E9E38; }
+.org-bn-paused { background: #FFF1E6; border-color: #F5A35C; color: #B45309; }
+.org-bn-pending { background: #EAF2FE; border-color: #8AB8F5; color: #1F5FBF; }
+.org-bn-paid { background: #E9F8E9; border-color: #4CC255; color: #2E7D32; }
 .org-bt-periods { display: grid; gap: 18px; }
 .org-bt-period { border: 1px solid var(--border); border-radius: var(--r-md); padding: 12px 18px 14px; background: #FDFDFD; min-width: 0; }
 .org-bt-period-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; letter-spacing: .5px; }
 .org-bt-period-amt { font-size: 13px; margin: 8px 0 8px; letter-spacing: .5px; }
 .org-bt-period-line { display: flex; align-items: center; gap: 8px; font-size: 13px; letter-spacing: .5px; }
 .org-bt-period-line svg.lucide { width: 16px; height: 16px; flex-shrink: 0; }
-.org-tx-pending { color: #D4A517; }
-.org-tx-paused { color: #C7C93B; }
+.org-tx-pending { color: #2A6FD6; }
+.org-tx-paused { color: #C25E0A; }
 .org-bt-all { margin-top: 18px; font-size: 13px; text-decoration: underline; }
 .org-bt-empty { padding: 24px; }
 .org-svc-pills .chip { color: var(--text); }
@@ -135,3 +137,7 @@
   .org-bt-periods { grid-template-columns: 1fr 1fr !important; }
   .org-bt-toolbar { flex-wrap: wrap; }
 }
+
+.org-bt-period-line.t-success { color: #2E9E38; }
+.org-bt-period-line.t-error { color: #D32F2F; }
+.org-bt-period-line.t-muted { color: #8A8A8A; }

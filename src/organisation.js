@@ -941,7 +941,7 @@ ${common}
   - An instalment is billed on its schedule date and due **14 days** later (CRM default credit term).
   - Instalment states: **Paid** ("Paid on {date}"), **Pending** (the next one due: "Payment due on {date}"), **Paused** (overdue: "Contract paused on {date}"), **Upcoming** ("Upcoming future payment"), **Cancelled** (after the cancellation date: "Contract cancelled on {date}").
   - Contract status and banner: **Cancelled** (red, "Contract has been cancelled by client on {date}."), **Paused** (yellow, "Contract paused on {date} due to overdue payment for T{n}."; paused the day after the due date), **Paid** (green, every instalment paid: "All payments have been made and completed."), otherwise **Pending** (amber, "Upcoming payment due on {date}.").
-- **Colours (27/10/2026)**: Paid green, **Pending blue** (calm: a payment is coming up or due), **Paused orange** (action needed), Cancelled red, Upcoming grey; different hues so Pending and Paused are easy to tell apart, and pill fills dark enough for white text. Pending and Paused also use different icons (clock vs warning).
+- **Colours (27/10/2026)**: Paid green, **Pending orange**, **Paused golden yellow** (pill with dark text so it stays readable), Cancelled red, Upcoming grey. Orange and yellow are kept far enough apart in hue to tell apart; Pending and Paused also use different icons (clock vs warning).
 - Demo data: Visual Studio shows all four states (ads contract paused, SEO paid, Aurix cancelled, Galaxis CRM pending). [PLACEHOLDER] amounts.
 
 ## Billing History (agency workspace)

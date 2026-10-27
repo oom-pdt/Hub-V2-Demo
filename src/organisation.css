@@ -76,7 +76,7 @@
 .org-svc-st { font-weight: 700; }
 .org-svc-st .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 .org-svc-st.is-live { color: #3FAE4A; }
-.org-svc-st.is-paused { color: #E8740C; }
+.org-svc-st.is-paused { color: #D9A700; }
 .org-svc-st.is-cancelled { color: #E0524F; }
 .org-svc-st.is-upcoming { color: var(--primary); }
 .org-svc-st.is-ended { color: var(--text-muted); }
@@ -103,11 +103,11 @@
 .org-bt-dates { line-height: 20px; }
 .org-st { display: inline-flex; align-items: center; justify-content: center; height: 24px; padding: 0 12px; border-radius: var(--r-pill); font-size: 12px; font-weight: 700; color: #fff; white-space: nowrap; }
 .org-st-lg { min-width: 116px; height: 26px; font-size: 13px; }
-/* Status palette: Paid green · Pending blue (calm, due soon) · Paused orange (action needed) · Cancelled red · Upcoming grey.
-   Fills are dark enough for white text. */
+/* Status palette: Paid green · Pending orange · Paused golden yellow (dark text, so it stays readable) · Cancelled red ·
+   Upcoming grey. Orange (~28°) and yellow (~48°) are far enough apart in hue to tell apart at a glance. */
 .org-st-paid { background: #3FAE4A; }
-.org-st-pending { background: #3B7FE0; }
-.org-st-paused { background: #E8740C; }
+.org-st-pending { background: #EE7A1A; }
+.org-st-paused { background: #F5C518; color: #4A3B00; }
 .org-st-cancelled { background: #E0524F; }
 .org-st-upcoming { background: #8A8A8A; }
 .org-bt-detail { padding: 0 18px 18px; background: var(--page); }
@@ -117,8 +117,8 @@
 .org-bt-banner { display: flex; align-items: center; gap: 14px; margin: 18px 0; padding: 12px 24px; border: 1px solid; border-radius: var(--r-md); font-size: 13px; letter-spacing: .5px; }
 .org-bt-banner svg.lucide { width: 20px; height: 20px; flex-shrink: 0; }
 .org-bn-cancelled { background: #FBE3E3; border-color: #E44A4A; color: #C62828; }
-.org-bn-paused { background: #FFF1E6; border-color: #F5A35C; color: #B45309; }
-.org-bn-pending { background: #EAF2FE; border-color: #8AB8F5; color: #1F5FBF; }
+.org-bn-paused { background: #FFF9DB; border-color: #E8C11A; color: #846700; }
+.org-bn-pending { background: #FFF1E6; border-color: #F5A35C; color: #B45309; }
 .org-bn-paid { background: #E9F8E9; border-color: #4CC255; color: #2E7D32; }
 .org-bt-periods { display: grid; gap: 18px; }
 .org-bt-period { border: 1px solid var(--border); border-radius: var(--r-md); padding: 12px 18px 14px; background: #FDFDFD; min-width: 0; }
@@ -126,8 +126,8 @@
 .org-bt-period-amt { font-size: 13px; margin: 8px 0 8px; letter-spacing: .5px; }
 .org-bt-period-line { display: flex; align-items: center; gap: 8px; font-size: 13px; letter-spacing: .5px; }
 .org-bt-period-line svg.lucide { width: 16px; height: 16px; flex-shrink: 0; }
-.org-tx-pending { color: #2A6FD6; }
-.org-tx-paused { color: #C25E0A; }
+.org-tx-pending { color: #C25E0A; }
+.org-tx-paused { color: #9A7A00; }
 .org-bt-all { margin-top: 18px; font-size: 13px; text-decoration: underline; }
 .org-bt-empty { padding: 24px; }
 .org-svc-pills .chip { color: var(--text); }

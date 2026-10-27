@@ -1006,8 +1006,7 @@ function dashSeoStrip(s) {
       <div class="dash-seo-facts"><span><b>${fmtNum(p.contractedKeywords)}</b> keywords contracted</span><span><b>${fmtNum(p.tracked)}</b> tracked</span><span>Target <b>${p.targetTop10Pct}%</b> in top 10</span><span>Last checked ${fmtDateTime(p.lastChecked)}</span></div>
     </div>
     <span class="pill ${s.status.pill}" title="${esc(DASH_SEO_RULE)}">${esc(s.status.label)}</span>
-    <button type="button" class="btn btn-outline btn-sm" onclick="dashSeoOpenCloud('open')">Open in SEO Cloud<i data-lucide="external-link"></i></button>
-    ${agency ? `<button type="button" class="btn btn-primary btn-sm" onclick="dashSeoOpenCloud('manage')">Manage in SEO Cloud<i data-lucide="external-link"></i></button>` : ''}
+    ${agency ? `<button type="button" class="btn btn-primary btn-sm" onclick="dashSeoOpenCloud('manage')">Manage in SEO Cloud<i data-lucide="external-link"></i></button>` : `<button type="button" class="btn btn-outline btn-sm" onclick="dashSeoOpenCloud('open')">Open in SEO Cloud<i data-lucide="external-link"></i></button>`}
   </div>`;
 }
 function dashSeoOpenCloud() { openProductApp('seo-cloud'); }
@@ -2890,7 +2889,7 @@ Read-only SEO Cloud results inside the client workspace, next to ad performance,
 
 ### Key Functional Specifications
 - **Availability**: the tab is enabled when SEO Cloud is connected and active for the workspace and an SEO project exists. Otherwise the tab is greyed out with "Connect SEO Cloud" (Integrations); opening it directly shows a "SEO Cloud is not connected" empty state.
-- **Contract strip**: "{contracted} keywords contracted · {tracked} tracked · Target {target}% in top 10 · Last checked {date, time}", the status pill, and "Open in SEO Cloud ↗". The agency persona also sees "Manage in SEO Cloud ↗".
+- **Contract strip**: "{contracted} keywords contracted · {tracked} tracked · Target {target}% in top 10 · Last checked {date, time}", the status pill, and a single contextual button: "Manage in SEO Cloud ↗" for agency users, "Open in SEO Cloud ↗" for client users.
 - **Status rule** (\`seoStatus\`): **On track** when the top-10 % is at or above target; **Off track** when it is below target by less than 5 points; **Critical** when it is 5 or more points below. Example with a 55% target: 55% on track, 52% off track, 50% critical. Pills: green / orange / red.
 - **Position Filter cards**: All, Top 1, Top 3, Top 5, Top 10, Top 30, Top >100. Each shows the count in brackets, the share of tracked keywords as the big value (All shows the count) and the ▲/▼ change in keywords since the start of the date range. Green = improvement; for Top >100 an increase is bad, so it is red. The Top 10 card shows a progress bar with a target marker ("Target 55%"), coloured by status. Cards filter the keyword table (selected card has a primary border; click again or ✕ to return to All).
 - **Average Position**: mean position today of the keywords ranking in the top 100 (keywords outside the top 100 are left out), with the change since the start of the range. Lower is better, so a lower number is shown as ▲ better (green).

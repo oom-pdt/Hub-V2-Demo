@@ -23,7 +23,8 @@ const INTEG_CATS = [
   { id: 'CRM', label: 'CRM', icon: 'users-round' },
   { id: 'CCM', label: 'CCM', icon: 'message-square-text' },
   { id: 'CDP', label: 'CDP', icon: 'database' },
-  { id: 'Marketing', label: 'Marketing', icon: 'megaphone' }
+  { id: 'Marketing', label: 'Marketing', icon: 'megaphone' },
+  { id: 'SEO', label: 'SEO', icon: 'trending-up' }
 ];
 const INTEG_BACKFILL = [['lifetime', 'Lifetime (default) — up to 2,000 records'], ['365', 'Past 1 year'], ['90', 'Past 90 days'], ['30', 'Past 30 days']];
 
@@ -147,7 +148,7 @@ function integStatusDots(pid, wsId = state.ctx) {
   if (e.status === 'pending') return integDot('orange', 'Pending Setup');
   if (e.status === 'error') return integDot('red', 'Error');
   if (e.status === 'disabled') return integDot('grey', 'Disabled');
-  return integDot('green', 'Connected') + (e.active ? integDot('green', 'Active') : integDot('grey', 'Inactive'));
+  return e.active ? integDot('green', 'Active') : integDot('grey', 'Inactive');
 }
 
 function integMatches(p) {
@@ -208,9 +209,8 @@ function integReadinessHTML() {
     ${items.map(([label, lv, t]) => `<span class="integ-ready integ-ready-${lv}" title="${esc(t || tip[lv])}"><i data-lucide="${icon[lv]}"></i>${label}</span>`).join('')}</div>`;
 }
 
-// Products offered in a client workspace's Integrations (26/10/2026). Plato (medical CRM) is shown as Coming Soon.
-// OOm products outside this list (Aurix, SEO Cloud…) are still reached from the dashboard's Products & Connections.
-const INTEG_CLIENT_PRODUCTS = ['crm-lite', 'salesforce', 'hubspot', 'sleekflow', 'wati', 'delacon'];
+// Products offered in a client workspace's Integrations. Plato (medical CRM) is shown as Coming Soon.
+const INTEG_CLIENT_PRODUCTS = ['crm-lite', 'aurix', 'seo-cloud', 'salesforce', 'hubspot', 'sleekflow', 'wati', 'delacon'];
 const INTEG_COMING_SOON = [{ name: 'Plato', category: 'Medical CRM', initials: 'P', color: '#0F9D8A', desc: 'Patient, appointment and clinic CRM for medical practices.' }];
 function integGridsHTML() {
   const entries = wsProducts(state.ctx);

@@ -21,8 +21,9 @@ const INTEG_ROUTABLE = ['sleekflow', 'wati', 'delacon'];
 const INTEG_CATS = [
   { id: 'all', label: 'All Products', icon: 'layout-grid' },
   { id: 'CRM', label: 'CRM', icon: 'users-round' },
-  { id: 'CCM', label: 'CCM', icon: 'message-square-text' },
+  { id: 'Chat Engagement', label: 'Chat Engagement', icon: 'message-square-text' },
   { id: 'CDP', label: 'CDP', icon: 'database' },
+  { id: 'Call Tracking & Analytics', label: 'Call Tracking & Analytics', icon: 'phone-call' },
   { id: 'SEO', label: 'SEO', icon: 'trending-up' }
 
 ];
@@ -1167,7 +1168,7 @@ The workspace's integrations hub, built from the Figma "Integrations" frames wit
   - ⋮ menu: View details, Configure, Disable (or Enable), Disconnect.
   - Error and pending cards show an inline box with the reason and **Fix Now** / **Resume Setup**, which open the configuration view.
   - Products routed through a CRM show "Routed via {CRM}".
-- **Available Products**: category tabs with counts (All / CRM / CCM / CDP / SEO). Each card has Learn More and **Connect**. The list ends with a Coming Soon card.
+- **Available Products**: category tabs with counts (All / CRM / Chat Engagement / CDP / Call Tracking & Analytics / SEO). Each card has Learn More and **Connect**. The list ends with a Coming Soon card.
 - **Details slide-over** (View details / Learn More): About this integration, What can be synced?, Requirements, Before you connect; footer **Connect** (or **Configure** when connected).
 - **Connection set-up screen (23/10/2026; replaces the config slide-over)**: Connect, Configure, Fix Now and Resume Setup open a dedicated page (\`client-integration-setup\`).
   - Breadcrumb **Integrations › {Product} › Connect / Configure**; product header (logo, category, status, connection type).

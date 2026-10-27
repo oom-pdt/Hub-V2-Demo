@@ -74,7 +74,7 @@ const masterTokens = {
 };
 
 // ---------- Products / integrations catalogue ----------
-// category: CRM | CCM | CDP | SEO. provider: oom (internal OOm product) | third (external).
+// category: CRM | Chat Engagement | CDP | Call Tracking & Analytics | SEO. provider: oom (internal OOm product) | third (external).
 // flow: internal | oauth | api. CRM category obeys the "only one CRM active" rule.
 // url: the OOm product's web app, opened in a new tab from every "Open" (Galaxis CRM, Aurix, SEO Cloud).
 const products = [
@@ -83,7 +83,7 @@ const products = [
     dataShared: 'Customer profile, Leads, Activities',
     syncs: ['Customer information', 'Leads', 'Activities', 'Deals and closed revenue'],
     requirements: ['Galaxis workspace admin access'] },
-  { id: 'aurix',      name: 'Aurix',       category: 'CCM', provider: 'oom',   flow: 'internal', color: '#5B4BE0', initials: 'A', url: 'https://app.aurix.com.sg/dashboard',
+  { id: 'aurix',      name: 'Aurix',       category: 'Chat Engagement', provider: 'oom',   flow: 'internal', color: '#5B4BE0', initials: 'A', url: 'https://app.aurix.com.sg/dashboard',
     description: 'Manage your chat enquiries that come in from your chatbot interactions.',
     dataShared: 'Customer profile, Leads, Activities',
     syncs: ['Chat conversations', 'Lead intent scores', 'Contact details'],
@@ -123,22 +123,22 @@ const products = [
     dataShared: 'Leads, Opportunities',
     syncs: ['Leads', 'Contacts', 'Opportunities'],
     requirements: ['Dynamics 365 Admin access', 'Authorisation required'] },
-  { id: 'sleekflow',  name: 'SleekFlow',   category: 'CCM', provider: 'third', flow: 'api', color: '#1C1C59', initials: 'SF',
+  { id: 'sleekflow',  name: 'SleekFlow',   category: 'Chat Engagement', provider: 'third', flow: 'api', color: '#1C1C59', initials: 'SF',
     description: 'Pull WhatsApp conversations and chat leads into your Hub.',
     dataShared: 'Conversations, Contacts',
     syncs: ['WhatsApp conversations', 'Contacts', 'UTM source'],
     requirements: ['SleekFlow API key', 'Premium or Enterprise plan for webhooks'] },
-  { id: 'wati',       name: 'Wati',        category: 'CCM', provider: 'third', flow: 'api', color: '#25D366', initials: 'W',
+  { id: 'wati',       name: 'Wati',        category: 'Chat Engagement', provider: 'third', flow: 'api', color: '#25D366', initials: 'W',
     description: 'Sync WhatsApp chats and contacts with historical backfill.',
     dataShared: 'Conversations, Contacts',
     syncs: ['WhatsApp conversations', 'Contacts', 'Custom fields'],
     requirements: ['Wati API access token'] },
-  { id: 'slack',      name: 'Slack',       category: 'CCM', provider: 'third', flow: 'oauth', color: '#4A154B', initials: 'S',
+  { id: 'slack',      name: 'Slack',       category: 'Chat Engagement', provider: 'third', flow: 'oauth', color: '#4A154B', initials: 'S',
     description: 'Send lead and alert notifications to your Slack channels.',
     dataShared: 'Notifications',
     syncs: ['Lead notifications', 'Integration alerts'],
     requirements: ['Slack workspace admin', 'Authorisation required'] },
-  { id: 'delacon',    name: 'Delacon',     category: 'CDP', provider: 'third', flow: 'api', color: '#E85D04', initials: 'D',
+  { id: 'delacon',    name: 'Delacon',     category: 'Call Tracking & Analytics', provider: 'third', flow: 'api', color: '#E85D04', initials: 'D',
     description: 'Attribute inbound phone calls to the ads that drove them.',
     dataShared: 'Calls, Call sources',
     syncs: ['Call logs', 'Call duration and qualification', 'Ad source / keyword'],

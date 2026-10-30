@@ -1161,7 +1161,7 @@ Agency-level integrations page ("My Workspace"). Bridges the external ad platfor
 The workspace's integrations hub, built from the Figma "Integrations" frames with V2's configuration depth and V1's ad-account linking. The product hub is **Draft**; the Ad Platforms section is ported from V1 \`client-profile\` and is **In Review**.
 
 ### Product hub (V2 + Figma, Draft)
-- **Products offered (26/10/2026)**: client Integrations lists only **Galaxis CRM, Salesforce, HubSpot, SleekFlow, Wati and Delacon**, plus **Plato** (medical CRM) as a Coming Soon card. Other products (Aurix, SEO Cloud, CDP, Institute CRM, Zoho, Dynamics, Slack, Mailchimp) are not shown here; OOm products are still reached from the dashboard's Products & Connections. Category tabs only show categories that have products.
+- **Products offered (26/10/2026)**: client Integrations lists only **Galaxis CRM, Aurix, SEO Cloud, Salesforce, HubSpot, SleekFlow, Wati and Delacon**, plus **Plato** (medical CRM) as a Coming Soon card. SEO Cloud has its own **SEO** category. Other products (CDP, Institute CRM, Zoho, Dynamics, Slack, Mailchimp) are not shown here. Category tabs only show categories that have products.
 - **Search** filters both grids. A **pipeline readiness** strip (Ads, CRM, Messaging, Calls) shows active / needs attention / not connected, computed from the data.
 - **Active Products** ("N Active"): logo, name, category, status (Connected · Active, Pending Setup, Error, Disabled), description, Data shared, Last synced and **Open**.
   - Open launches OOm products and shows the details slide-over for third-party products.

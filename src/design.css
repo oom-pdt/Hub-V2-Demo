@@ -522,7 +522,9 @@ svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
 .dp-day { height: 34px; border: 0; background: none; font: inherit; font-size: 12px; cursor: pointer; color: var(--text); }
 .dp-day:disabled { color: var(--border); cursor: default; }
 .dp-day.in-range { background: var(--tint); }
-.dp-day.is-edge { background: var(--primary); color: #fff; border-radius: 50%; font-weight: 700; }
+/* Cells stretch with the grid column, so the selected circle is a fixed-size pseudo-element (a radius on the cell would be oval). */
+.dp-day.is-edge { position: relative; z-index: 0; background: none; color: #fff; font-weight: 700; }
+.dp-day.is-edge::before { content: ''; position: absolute; z-index: -1; top: 50%; left: 50%; width: 34px; height: 34px; transform: translate(-50%, -50%); border-radius: 50%; background: var(--primary); }
 .dp-day:not(:disabled):not(.is-edge):hover { background: var(--grey-light); }
 .dp-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
 @media (max-width: 720px) { .dp-grid { grid-template-columns: 1fr; } .dp-presets { border-right: 0; border-bottom: 1px solid var(--border-light); max-height: 220px; } }

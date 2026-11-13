@@ -23,6 +23,10 @@ function wsById(id) { return workspaces.find(w => w.id === id); }
 function activeWorkspaces() { return workspaces.filter(w => !w.archived); }
 // The viewer can manage agency-only settings (ad linking, agency access) in this context.
 function viewerIsAgency() { return isAgency() || state.persona === 'agency'; }
+// Version 1 scope (dev toolbar "Version 1"): no integrations. Only Galaxis-native data and Google / Meta ads data are
+// shown; CRM, SEO Cloud, Aurix and other product data are hidden, and so are the client Integrations and Leads pages.
+function isV1() { return !!state.flags.v1; }
+const V1_HIDDEN_CLIENT_PAGES = ['integrations', 'integration-setup', 'leads', 'lead'];
 function productById(id) { return products.find(p => p.id === id); }
 function memberById(id) { return members.find(m => m.id === id); }
 function roleById(id) { return roles.find(r => r.id === id); }
@@ -30,6 +34,7 @@ function teamById(id) { return teams.find(t => t.id === id); }
 function wsProducts(wsId) { return workspaceProducts[wsId] || (workspaceProducts[wsId] = {}); }
 // The connected, active CRM for a workspace, or null. Drives CRM mode on the dashboard and the Leads nav item.
 function activeCrm(wsId) {
+  if (isV1()) return null;
   const entries = Object.entries(wsProducts(wsId));
   const hit = entries.find(([pid, s]) => productById(pid)?.category === 'CRM' && s.active && s.status === 'connected');
   return hit ? productById(hit[0]) : null;
@@ -148,6 +153,7 @@ function navigate(page, params = {}) {
   if (!def) return;
   const ctx = isAgency() ? 'agency' : 'client';
   if (def.contexts && !def.contexts.includes(ctx)) page = 'dashboard';
+  if (isV1() && ctx === 'client' && V1_HIDDEN_CLIENT_PAGES.includes(page)) page = 'dashboard';
   state.page = page;
   state.params = params;
   closeAllPopovers();
@@ -162,7 +168,7 @@ function switchWorkspace(wsId) {
   const def = screens[state.page];
   const ctx = wsId ? 'client' : 'agency';
   const params = state.page === 'team' || state.page === 'organisation' ? { tab: state.params.tab } : {};
-  if (!def || (def.contexts && !def.contexts.includes(ctx))) navigate('dashboard');
+  if (!def || (def.contexts && !def.contexts.includes(ctx)) || (isV1() && ctx === 'client' && V1_HIDDEN_CLIENT_PAGES.includes(state.page))) navigate('dashboard');
   else navigate(state.page, params);
   showToast(wsId ? `Switched to ${wsById(wsId).name}` : 'Switched to My Workspace (Agency)', 'repeat');
 }

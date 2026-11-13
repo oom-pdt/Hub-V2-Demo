@@ -20,9 +20,12 @@ function renderDevBar() {
     `<option value="${s.key}" ${s.key === key ? 'selected' : ''}>${esc(s.label)}</option>`).join('')}</optgroup>`).join('');
 
   const toggles = [];
+  // Version 1 scope applies to every screen, so it is always the first toggle.
+  toggles.push({ label: 'Version 1', active: isV1(), run: devToggleV1 });
   // Every option is one button: on/off toggles (highlighted when on), cycle buttons for 3+ states
   // ({ cycle: true }, label "Name: value"), and one-shot actions ({ action: true }).
   if (!isAgency()) {
+    toggles.push('sep');
     toggles.push({ label: 'Client user view', active: state.persona === 'client', run: () => { state.persona = state.persona === 'client' ? 'agency' : 'client'; render(); } });
   }
   const own = devToggleRegistry[key] ? devToggleRegistry[key]() : [];
@@ -38,4 +41,11 @@ function renderDevBar() {
       ${toggles.length ? toggles.map((t, i) => t === 'sep' ? '<span class="lbl">|</span>' :
         `<button type="button" class="dev-toggle ${t.cycle ? 'dev-cycle' : t.action ? 'dev-action' : t.active ? 'active' : ''}" ${t.cycle || t.action ? '' : `aria-pressed="${!!t.active}"`} title="${t.cycle ? 'Click to cycle' : t.action ? 'Run once' : 'Click to turn on / off'}" onclick="window.__devToggles[${i}].run()">${t.cycle ? '<span aria-hidden="true">↻ </span>' : t.action ? '<span aria-hidden="true">▶ </span>' : ''}${esc(t.label)}</button>`).join('') : '<span class="lbl">Default state only</span>'}
     </div>`;
+}
+
+// Turning Version 1 on leaves pages it hides (client Integrations, Leads) for the dashboard.
+function devToggleV1() {
+  state.flags.v1 = !state.flags.v1;
+  if (isV1() && !isAgency() && V1_HIDDEN_CLIENT_PAGES.includes(state.page)) navigate('dashboard');
+  else render();
 }

@@ -223,8 +223,9 @@ function dashQuality(v, ref, higherBetter) {
   if (higherBetter) return r >= 1.1 ? 'good' : r >= 0.85 ? 'mid' : 'bad';
   return r <= 0.9 ? 'good' : r <= 1.15 ? 'mid' : 'bad';
 }
+// Version 1: no colour coding anywhere (agency and client tables show plain figures).
 function dashDot(text, quality) {
-  return quality ? `<span class="metric-dot ${quality}" title="${DASH_QUALITY_LABEL[quality]}">${text}</span>` : text;
+  return quality && !isV1() ? `<span class="metric-dot ${quality}" title="${DASH_QUALITY_LABEL[quality]}">${text}</span>` : text;
 }
 // SEO number formatting: whole numbers stay whole, others get one decimal ("52.5%").
 function dashNum1(n) { const v = Math.round(Number(n || 0) * 10) / 10; return Number.isInteger(v) ? String(v) : v.toFixed(1); }
@@ -240,11 +241,12 @@ function dashAgencyWorkspaces() { return typeof visibleWorkspaces === 'function'
 const DASH_FILTERS = {
   managed: {
     store: () => state.ui.dashMgrFilter,
+    // Version 1: no Account Health, Performance band or SEO Status (their columns or colours are hidden).
     groups: () => [
-      { key: 'health', title: 'Account Health', options: [['attention', 'Attention Required'], ['off', 'Off Track'], ['on', 'On Track']] },
+      ...(isV1() ? [] : [{ key: 'health', title: 'Account Health', options: [['attention', 'Attention Required'], ['off', 'Off Track'], ['on', 'On Track']] }]),
       { key: 'platform', title: 'Ad Platforms', options: [['google', 'Google'], ['meta', 'Meta'], ['none', 'No platform linked']] },
-      { key: 'perf', title: 'Performance (Cost per Conversion)', options: [['good', 'Excellent'], ['mid', 'Average'], ['bad', 'Bad']] },
-      { key: 'seo', title: 'SEO Status', options: [['on', 'On track'], ['off', 'Off track'], ['critical', 'Critical'], ['none', 'Not on SEO Cloud']] }
+      ...(isV1() ? [] : [{ key: 'perf', title: 'Performance (Cost per Conversion)', options: [['good', 'Excellent'], ['mid', 'Average'], ['bad', 'Bad']] }]),
+      ...(isV1() ? [] : [{ key: 'seo', title: 'SEO Status', options: [['on', 'On track'], ['off', 'Off track'], ['critical', 'Critical'], ['none', 'Not on SEO Cloud']] }])
     ],
     refresh: () => { pager('dash-managed').page = 1; dashRefreshManaged(); }
   },
@@ -407,20 +409,28 @@ function dashAttentionItems() {
     desc: `${unlinked} unlinked ad account${unlinked === 1 ? '' : 's'} discovered from your master connections. Link them to a client workspace.`,
     cta: 'Review accounts', action: `navigate('integrations')`
   });
+  // Version 1 has no client Integrations page, so ad accounts are linked from the agency's Integrations.
   list.filter(w => !wsAdAccounts(w.id).length).forEach(w => items.push({
     client: w.name, type: 'No Account Linked', priority: 'Low',
-    desc: 'Missing Google or Meta platform integration.', cta: 'Link Ad Account', action: `openWorkspace('${w.id}','integrations')`
+    desc: 'Missing Google or Meta platform integration.', cta: 'Link Ad Account', action: isV1() ? `openWorkspace(null,'integrations')` : `openWorkspace('${w.id}','integrations')`
   }));
   // Aurix is a live CRM service but the workspace isn't connected to Aurix in Galaxis.
   list.filter(w => crmLiveServices(w.id).some(x => x.type === 'Aurix') && !(wsProducts(w.id).aurix?.status === 'connected')).forEach(w => items.push({
     client: w.name, type: 'Aurix Not Linked', priority: 'Low',
     desc: 'Aurix is a live service in the Agency CRM, but this workspace is not linked to Aurix yet.', cta: 'Link Aurix', action: `openWorkspace('${w.id}','integrations')`
   }));
+  if (isV1()) return dashV1Issues(items);
   items.forEach(i => {
     i.wsId = workspaces.find(w => w.name === i.client)?.id || null;   // null = agency-level ("My Workspace")
     i.product = DASH_ISSUE_PRODUCT[i.type] || (i.type === 'Integration Error' && /^Aurix/.test(i.desc) ? 'Aurix' : i.type === 'Contract Ending' ? dashContractProduct(i.desc) : 'Integrations');
   });
   return items.sort((a, b) => DASH_PRIORITY_RANK[a.priority] - DASH_PRIORITY_RANK[b.priority]);
+}
+// Version 1: only issues from Google / Meta ads and Galaxis itself (no SEO Cloud, Agency CRM, Aurix or product integrations).
+const DASH_V1_ISSUE_TYPES = ['Performance Review', 'Token Expired', 'Unlinked Ad Accounts', 'No Account Linked'];
+function dashV1Issues(items) {
+  return items.filter(i => DASH_V1_ISSUE_TYPES.includes(i.type)).map(i => ({ ...i, wsId: workspaces.find(w => w.name === i.client)?.id || null, product: 'Ads Performance' }))
+    .sort((a, b) => DASH_PRIORITY_RANK[a.priority] - DASH_PRIORITY_RANK[b.priority]);
 }
 // Which OOm product an issue belongs to (banner: "… across Ads Performance and Aurix").
 const DASH_ISSUE_PRODUCT = {
@@ -440,12 +450,12 @@ function dashRenderAgency() {
     <div class="dash-welcome">
       <div><h2 class="h-welcome">Welcome Back, ${esc(dashFirstName())}</h2><p class="dash-welcome-sub">Here’s what’s happening across your services today.</p></div>
     </div>
-    ${dashAgencyBanner(items)}
+    ${isV1() ? '' : dashAgencyBanner(items)}
     ${dashAgencyKpis(items)}
-    <div class="dash-top">
+    ${isV1() ? '' : `<div class="dash-top">
       ${dashDonutCard()}
       ${dashProductsCard()}
-    </div>
+    </div>`}
     <div class="card" id="dash-managed">${dashManagedCard()}</div>`;
 }
 
@@ -485,6 +495,14 @@ function dashAgencyKpis(items) {
   const followUps = list.reduce((t, w) => t + (crmAccounts[w.id]?.followUpsDue || 0), 0);
   const card = (title, tip, value, sub, onclick) => `<div class="kpi-card dash-agency-kpi ${onclick ? 'clickable' : ''}" ${onclick ? `role="button" tabindex="0" onclick="${onclick}"` : ''}>
       <div class="kpi-title t-bold">${esc(title)} ${infoTip(tip)}</div>${onclick ? '<span class="dash-kpi-panel" title="Show all pending issues"><i data-lucide="panel-right-open"></i></span>' : ''}<div class="kpi-value dash-agency-kpi-value">${value}</div><div class="kpi-sub">${sub}</div></div>`;
+  // Version 1: two cards, Total Accounts Managed (Galaxis workspaces, replaces the donut) and Combined Ad Spend.
+  if (isV1()) {
+    const t = dashPortfolio().total;
+    return `<div class="grid-2 dash-kpis dash-agency-kpis">
+    ${card('Total Accounts Managed', 'Client workspaces you manage. Not affected by the date filter.', fmtNum(list.length), 'Client workspaces')}
+    ${card('Combined Ad Spend', 'Google and Meta spend across your managed accounts for the selected dates.', fmtMoney(t.spend), 'Across Google and Meta Ads')}
+  </div>`;
+  }
   return `<div class="grid-4 dash-kpis dash-agency-kpis">
     ${card('Managed Contract Value', 'Total value of the live contracts across your managed accounts (monthly budget × contract months), from the Agency CRM.', fmtMoney(value, 2), 'Total value across managed contracts')}
     ${card('Attention Required', 'Open issues across ads, SEO, Aurix, contracts and integrations. The same issues drive the banner and Account Health. Select to see them all in a side panel.', fmtNum(items.length), `Issues across <b>${clients}</b> client${clients === 1 ? '' : 's'}`, 'dashOpenAllIssues()')}
@@ -691,7 +709,7 @@ function dashManagedRows() {
       w, t, linked, plats: wsPlatforms(w.id), issues, health: dashHealthOf(issues), services: svcKeys,
       contact: wsPrimaryContact(w.id), last: dashLastActivity(w),
       adSvcs: services.filter(x => CRM_AD_SERVICES.includes(x.type)), seoSvcs: services.filter(x => x.type === 'SEO'),
-      pacing: dashPacing(w.id, t.spend, days), industry: w.industry, am: memberById(crmAccounts[w.id]?.accountManager || '')?.name || null,
+      pacing: dashPacing(w.id, t.spend, days), industry: w.industry, am: isV1() ? null : memberById(crmAccounts[w.id]?.accountManager || '')?.name || null,
       seo: seoConnected(w.id) ? seoStats(w.id, days) : null,
       q: { cpm: linked ? dashQuality(t.cpm, port.cpm) : '', cpc: linked ? dashQuality(t.cpc, port.cpc) : '', cpa: linked ? dashQuality(t.cpa, port.cpa) : '', pRoas: linked ? dashQuality(t.pRoas, port.pRoas, true) : '' }
     };
@@ -721,8 +739,12 @@ const DASH_MG_COLS = [
   { key: 'contact', group: 'contact', label: 'Primary Contact' },
   { key: 'last', group: 'contact', label: 'Last Activity' }
 ];
+// Version 1 hides the columns built on the Agency CRM, SEO Cloud or product integrations: the Account group
+// (Services, Account Health, Issues Count), Budget Pacing, Contract Days Left and the SEO group.
+const DASH_MG_V1_HIDDEN = ['pacing', 'adsDays'];
+function dashMgCols() { return isV1() ? DASH_MG_COLS.filter(c => c.group !== 'overview' && c.group !== 'seo' && !DASH_MG_V1_HIDDEN.includes(c.key)) : DASH_MG_COLS; }
 registerColumnPicker('managed', {
-  columns: () => DASH_MG_COLS,
+  columns: () => dashMgCols(),
   groups: [['overview', 'Account', { summary: 'health', tone: 'neutral' }], ['ads', 'Ads', { summary: 'cpa', tone: 'ads' }],
     ['seo', 'SEO', { summary: 'top10', tone: 'seo' }], ['contact', 'Contact', { summary: 'contact', tone: 'neutral' }]],
   collapsible: true,
@@ -795,10 +817,10 @@ function dashManagedBody() {
   const f = state.ui.dashMgrFilter;
   let rows = dashManagedRows().filter(r => {
     if (term && !`${r.w.name} ${r.contact ? r.contact.email : ''}`.toLowerCase().includes(term)) return false;
-    if (f.health.length && !f.health.includes(r.health)) return false;
+    if (!isV1() && f.health.length && !f.health.includes(r.health)) return false;
     if (f.platform.length && !f.platform.some(p => p === 'none' ? !r.plats.length : r.plats.includes(p))) return false;
-    if (f.perf.length && !f.perf.includes(r.q.cpa)) return false;
-    if (f.seo.length && !f.seo.includes(r.seo ? r.seo.status.key : 'none')) return false;
+    if (!isV1() && f.perf.length && !f.perf.includes(r.q.cpa)) return false;
+    if (!isV1() && f.seo.length && !f.seo.includes(r.seo ? r.seo.status.key : 'none')) return false;
     return true;
   });
   const seoRank = { critical: 0, off: 1, on: 2 };
@@ -820,7 +842,7 @@ function dashManagedBody() {
   const page = paginate(rows, 'dash-managed', 10);
   const fn = 'dashRefreshManaged';
   // Grouped, collapsible columns (core.js colLayout): Account · Ads · SEO · CRM.
-  const layout = colLayout('managed', DASH_MG_COLS.filter(c => colVisible('managed', c.key)));
+  const layout = colLayout('managed', dashMgCols().filter(c => colVisible('managed', c.key)));
   const cols = layout.columns;
   const th = c => `<th class="${colCellClass(c)}"${colDragAttrs('managed', 'col', c.key, c.group)}${c.tip ? ` title="${esc(c.tip)}"` : ''}>${sortHeader('dash-managed', c.key, c.label, fn)}</th>`;
   const dash = '<span class="t-muted">—</span>';
@@ -855,7 +877,7 @@ function dashManagedBody() {
         { label: 'Go to workspace', icon: 'arrow-right', onClick: `openWorkspace('${r.w.id}','dashboard')` },
         ...(r.seo ? [{ label: 'View SEO performance', icon: 'search', onClick: `openWorkspace('${r.w.id}','dashboard',{tab:'seo'})` }] : []),
         { label: 'Organisation settings', icon: 'building-2', onClick: `openWorkspace('${r.w.id}','organisation')` },
-        { label: 'Integrations', icon: 'blocks', onClick: `openWorkspace('${r.w.id}','integrations')` }
+        ...(isV1() ? [] : [{ label: 'Integrations', icon: 'blocks', onClick: `openWorkspace('${r.w.id}','integrations')` }])
       ])}</td>
     </tr>`).join('');
   const emptyText = term ? `No workspaces found matching “${esc(state.ui.dashMgrSearch)}”.` : 'No workspaces found matching these filters.';
@@ -891,7 +913,7 @@ function dashSyncClientState() {
 // workspace (which drops params on the dashboard) keeps the tab. A remembered SEO tab falls back to Ads when the
 // new workspace has no SEO Cloud; an explicit ?tab=seo shows the "not connected" state instead.
 function dashTab() {
-  if (isAgency()) return 'ads';
+  if (isAgency() || isV1()) return 'ads';
   const explicit = state.params.tab;
   const t = explicit || state.ui.dashTab || 'ads';
   if (t !== 'seo') return 'ads';
@@ -930,8 +952,7 @@ function dashRenderClient() {
   const header = `<div class="dash-welcome">
       <div><h2 class="h-welcome">Welcome Back, ${esc(ws.name)}</h2><p class="dash-welcome-sub">${sub}</p></div>
     </div>
-    ${dashHubPanel(ws)}
-    ${dashTabBar(tab, ws)}`;
+    ${isV1() ? '' : dashHubPanel(ws) + dashTabBar(tab, ws)}`;
   if (tab === 'seo') return header + dashRenderSeo(ws);
   if (!hasAds) return header + dashNoAccountsCard();
   const switcher = dashViewSwitcher(ws, view);
@@ -1358,7 +1379,7 @@ function dashNoAccountsCard() {
     <h2 class="h-section">No ad accounts linked yet</h2>
     <p class="t-secondary">This workspace has no Google Ads or Meta ad account linked, so there is no advertising performance to show yet. Once an account is linked, spend, conversions and campaign data appear here.</p>
     ${agency
-      ? `<button type="button" class="btn btn-primary" onclick="navigate('integrations')"><i data-lucide="link"></i>Link ad accounts</button>`
+      ? `<button type="button" class="btn btn-primary" onclick="${isV1() ? `openWorkspace(null,'integrations')` : `navigate('integrations')`}"><i data-lucide="link"></i>Link ad accounts</button>`
       : `<p class="t-bold">Contact your Agency Admin to link your Google or Meta ad accounts.</p>`}
   </div>`;
 }
@@ -1388,6 +1409,7 @@ function dashKpiPanel({ eyebrow, source, label, tip, value, caption, rows, body 
 }
 // Leads & Revenue panel (CRM), from the same totals as the Leads & Revenue section.
 function dashKpiCrmPanel(t, crm) {
+  if (isV1()) return '';
   if (!crm) return dashKpiPanel({ eyebrow: 'Leads & Revenue', source: 'Needs a CRM', rows: [['Attributed Revenue', '—'], ['ROAS', '—'], ['Attributed Leads', '—'], ['Cost per CRM Lead', '—'], ['Converted Leads', '—']],
     body: `<div class="dash-kp-locked"><i data-lucide="lock"></i><div><div class="t-bold">Connect a CRM to unlock leads, revenue and ROAS</div>
       <div class="dash-kp-caption">Lead and revenue attribution needs one connected CRM.</div>
@@ -1413,7 +1435,8 @@ function dashKpiPanels(ws, p, m) {
     const gShare = g && t.conversions ? g.conversions / t.conversions * 100 : 0;
     head = dashSectionHead('Ad Performance', `Platform-reported results from ${dashPlatforms(ws.id).map(x => PLATFORM_NAME[x]).join(' and ')} Ads for the selected dates.`, modelSel);
     p1 = dashKpiPanel({ eyebrow: 'Spend & Traffic', label: 'Total Ads Spend', tip: 'Total advertising spend reported by connected ad platforms.', value: fmtMoney(t.spend, 2),
-      caption: `<b class="${used >= 100 ? 't-error' : used >= 85 ? 't-warning' : ''}">${Math.round(used)}%</b> of the ${fmtMoney(budget)} budget used`,
+      caption: isV1() ? (g && mt ? `Google <b>${fmtMoney(g.spend)}</b> · Meta <b>${fmtMoney(mt.spend)}</b>` : `Across ${g ? 'Google' : 'Meta'} Ads`)
+        : `<b class="${used >= 100 ? 't-error' : used >= 85 ? 't-warning' : ''}">${Math.round(used)}%</b> of the ${fmtMoney(budget)} budget used`,
       rows: [['Impressions', fmtNum(t.impressions)], ['Unique Users', fmtNum(unique)], ['Clicks', fmtNum(t.clicks)], ['Click-Through Rate (CTR)', fmtPct(t.ctr)], ['Avg. Cost per Click (CPC)', fmtMoney(t.cpc, 2)]] });
     // Platform split as text (no bars in this look): Google Ads X% · Meta Ads Y%.
     const legend = g && mt ? `Google Ads <b>${Math.round(gShare)}%</b> · Meta Ads <b>${100 - Math.round(gShare)}%</b>` : `<b>100%</b> from ${g ? 'Google' : 'Meta'} Ads`;
@@ -1422,7 +1445,7 @@ function dashKpiPanels(ws, p, m) {
       rows: [['Cost per Conversion', t.conversions ? fmtMoney(t.cpa, 2) : '—'], ['Conversion Rate', t.clicks ? fmtPct(t.conversions / t.clicks * 100) : '—'],
         ...(g ? [['Google Ads', `${fmtNum(g.conversions)} • ${fmtMoney(g.cpa, 2)}`]] : []),
         ...(mt ? [['Meta Ads', `${fmtNum(mt.conversions)} • ${fmtMoney(mt.cpa, 2)}`]] : [])] });
-    return `${head}<div class="dash-kp">${p1}${p2}${dashKpiCrmPanel(t, crm)}</div>`;
+    return `${head}<div class="dash-kp ${isV1() ? 'dash-kp-2' : ''}">${p1}${p2}${dashKpiCrmPanel(t, crm)}</div>`;
   }
   const d = dashPfData(ws.id, p), t = d.total;
   // This platform's share of workspace spend, as text (no bars in this look).
@@ -1443,7 +1466,7 @@ function dashKpiPanels(ws, p, m) {
       rows: [['Cost per lead', t.pLeads ? fmtMoney(t.cpLead, 2) : '—'], ['Leads ÷ link clicks', t.clicks ? fmtPct(t.pLeads / t.clicks * 100) : '—'], ['Purchases', fmtNum(t.purchases || 0)], ['Purchases conversion value', fmtMoney(t.convValue)],
         ['Purchase ROAS (return on ad spend)', t.spend ? t.pRoas.toFixed(2) : '—']] });
   }
-  return `${head}<div class="dash-kp">${p1}${p2}${dashKpiCrmPanel(t, crm)}</div>`;
+  return `${head}<div class="dash-kp ${isV1() ? 'dash-kp-2' : ''}">${p1}${p2}${dashKpiCrmPanel(t, crm)}</div>`;
 }
 
 function dashClientKpis(ws, m) {
@@ -1457,9 +1480,12 @@ function dashClientKpis(ws, m) {
   const cpaSub = g && mt ? `Google <b>${fmtMoney(g.cpa, 2)}</b> • Meta <b>${fmtMoney(mt.cpa, 2)}</b>` : `Across ${g ? 'Google' : 'Meta'} Ads`;
   const warn = used >= 100 ? 'dash-bad' : used >= 85 ? 'dash-warn' : '';
   const plats = dashPlatforms(ws.id).map(pl => PLATFORM_NAME[pl]).join(' and ');
+  // Version 1: the client's budget isn't known (it comes from the Agency CRM), so spend shows its platform split instead.
+  const spendSub = g && mt ? `Google <b>${fmtMoney(g.spend)}</b> • Meta <b>${fmtMoney(mt.spend)}</b>` : `Across ${g ? 'Google' : 'Meta'} Ads`;
   return `${dashSectionHead('Ad Performance', `Platform-reported results from ${plats} Ads for the selected dates.`)}
   <div class="grid-5 dash-kpis">
-    ${dashKpi('Total Ad Spend', 'Total advertising spend reported by connected ad platforms.', fmtMoney(t.spend),
+    ${isV1() ? dashKpi('Total Ad Spend', 'Total advertising spend reported by connected ad platforms.', fmtMoney(t.spend), spendSub)
+      : dashKpi('Total Ad Spend', 'Total advertising spend reported by connected ad platforms.', fmtMoney(t.spend),
       `of <b>${fmtMoney(budget)}</b> budget, <b class="${warn}">${used}%</b> used`,
       `<div class="progress dash-budget"><span class="${warn}" style="width:${Math.min(100, used)}%"></span></div>`)}
     ${dashKpi('Impressions', 'Times ads were served, using the platform-reported impressions metric.', fmtNum(t.impressions), `<b>${fmtNum(unique)}</b> unique users`)}
@@ -1476,6 +1502,7 @@ function dashSectionHead(title, sub, right = '') {
 
 // CRM mode (V2): extra lead / revenue KPIs with attribution model. Ad-only: locked cards + upsell.
 function dashCrmSection(m, crm) {
+  if (isV1()) return '';
   const t = m.total;
   const tips = {
     leads: 'Leads in your CRM attributed to Google or Meta ads under the selected attribution model.',
@@ -2525,7 +2552,7 @@ function dashPfCell(e, c, ref) {
   if (c.t === 'text') return v ? esc(v) : dash;
   if (c.t === 'budget') return v ? (v.note ? `<span class="t-muted">${esc(v.note)}</span>` : esc(dashPfBudgetText(v))) : dash;
   if (c.t === 'url') return v ? `<span class="dash-pf-url" title="${esc(v)}">${esc(v.replace(/^https:\/\//, ''))}</span>` : dash;
-  if (c.t === 'qs') return v ? `<span class="metric-dot ${v >= 7 ? 'good' : v >= 5 ? 'mid' : 'bad'}">${v}/10</span>` : dash;
+  if (c.t === 'qs') return v ? dashDot(`${v}/10`, v >= 7 ? 'good' : v >= 5 ? 'mid' : 'bad') : dash;
   if (c.needs && !e[c.needs]) return dash;
   const text = DASH_PF_FMT[c.t](v || 0);
   return c.quality && ref ? dashDot(text, dashQuality(v, ref[c.key], c.quality === 'high')) : text;
@@ -2753,8 +2780,7 @@ function dashSimulateCrm() {
 
 registerDevToggles('agency-dashboard', () => [
   { label: 'Alerts', active: !state.flags.dashAlertsOff, run: () => { state.flags.dashAlertsOff = !state.flags.dashAlertsOff; rerender(); } },
-  'sep',
-  { label: 'Simulate CRM conversion', action: true, run: dashSimulateCrm }
+  ...(isV1() ? [] : ['sep', { label: 'Simulate CRM conversion', action: true, run: dashSimulateCrm }])
 ]);
 // Shared by All Platforms, Google Ads and Meta Ads. "Single platform (Google only)" hides Meta for a workspace
 // that has both, so the single-platform behaviour (no All Platforms, Google view only) can be demoed.
@@ -2762,7 +2788,7 @@ function dashAdsDevToggles() {
   const crm = !!activeCrm(state.ctx);
   const plats = wsPlatforms(state.ctx);
   return [
-    { label: 'CRM connected', active: crm, run: () => crm ? dashSetAdOnly() : dashSetCrmConnected() },
+    ...(isV1() ? [] : [{ label: 'CRM connected', active: crm, run: () => crm ? dashSetAdOnly() : dashSetCrmConnected() }]),
     { label: 'No ad accounts linked', active: !!state.flags.dashNoAccounts, run: () => { state.flags.dashNoAccounts = !state.flags.dashNoAccounts; rerender(); } },
     ...(plats.includes('google') && plats.length > 1 ? [{ label: 'Single platform (Google only)', active: !!state.flags.dashGoogleOnly, run: () => { state.flags.dashGoogleOnly = !state.flags.dashGoogleOnly; rerender(); } }] : []),
     'sep',
@@ -2861,6 +2887,11 @@ Central command dashboard for agency administrators managing many client workspa
   - Search by client or contact. Filter: Account Health, Ad Platforms, Performance band, SEO Status. Every column is sortable; rows without data sort last. The ⋮ menu: Go to workspace, View SEO performance (SEO Cloud clients), Organisation settings, Integrations.
 - **Filter dropdowns**: Changes apply immediately. Each group has an "All" option. **Clear Filter** removes every filter. **Revert To Original** restores the selection from when the panel was opened. **Apply** closes the panel.
 - **Cross-Client Campaigns**: Removed on purpose. Per V1 notes, pulling campaign KPIs across every client is too heavy for v1, and the Managed Accounts table is enough for cross-client comparison.
+- **Version 1** *(Draft, 13/11/2026; dev toolbar "Version 1")*: no integrations, so only Galaxis data and Google / Meta ads data are shown.
+  - **Hidden**: the Attention Required banner and KPI card; Your Products and the donut; the Managed Contract Value, Upcoming Renewals and Client Follow-ups Due KPIs (Agency CRM); in Managed Accounts, the Account group (Services, Account Health, Issues Count), Budget Pacing, Contract Days Left, the SEO group, the account manager under the client name, the Account Health, Performance and SEO Status filters and the Integrations row action.
+  - **No colour coding** in Managed Accounts: Cost Per Conversion, CPM, CPC and ROAS show plain figures (no portfolio-average dots). Same on the client dashboard.
+  - **KPIs**: two cards, Total Accounts Managed (count of client workspaces; replaces the donut) and Combined Ad Spend (Google and Meta). No Total Accounts Managed donut.
+  - **Issues**: only Performance Review, Token Expired, Unlinked Ad Accounts and No Account Linked. Link Ad Account opens the agency's Integrations, since clients have no Integrations page.
 
 ### Open questions
 - **KPIs TBC**: the final portfolio KPI set still needs performance-marketing and account-management sign-off.
@@ -2989,6 +3020,11 @@ Client-facing workspace dashboard giving a simplified, unified view of Meta and 
 - **No ad accounts linked**: Charts, KPIs and the table are replaced by an empty state.
   - Agency Admins see "Link ad accounts" (Integrations).
   - Client users are told to contact their Agency Admin.
+- **Version 1** *(Draft, 13/11/2026; dev toolbar "Version 1")*: no integrations, so only Galaxis data and Google / Meta ads data are shown.
+  - **Hidden**: Products & Connections, the SEO Performance tab, the Leads & Revenue section (and its KPI panel), the CRM column group, the attribution model, and the client's Integrations and Leads pages (sidebar and routes).
+  - **No budget**: the client's budget isn't known without the Agency CRM, so Total Ad Spend has no "% of budget used" or progress bar. It shows the Google / Meta spend split instead (or "Across Google Ads" for one platform).
+  - "Link ad accounts" opens the agency's Integrations.
+  - **No colour coding** in Campaigns and Ads or the Google / Meta reports (including Quality Score): plain figures, no green / orange / red dots.
 
 ### Open questions
 - **KPIs TBC**: the "unique users" figure is a mock reach estimate. Confirm whether reach should come from the platforms (Meta reach is not additive across campaigns).

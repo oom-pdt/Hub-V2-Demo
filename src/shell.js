@@ -6,7 +6,8 @@ const NAV_ITEMS = [
   { page: 'dashboard', label: 'Dashboard', icon: 'layout-dashboard' },
   { page: 'organisation', label: 'Organisation', icon: 'building-2' },
   { page: 'team', label: 'Team & Access', icon: 'users' },
-  { page: 'integrations', label: 'Integrations', icon: 'blocks' },
+  // Version 1 has no integrations: clients don't get the Integrations page (the agency keeps it for ad-account linking).
+  { page: 'integrations', label: 'Integrations', icon: 'blocks', show: () => isAgency() || !isV1() },
   // Not in Figma: Leads appears only inside a client workspace with an active CRM (V2 feature).
   { page: 'leads', label: 'Leads', icon: 'contact', show: () => !isAgency() && !!activeCrm(state.ctx) }
 ];

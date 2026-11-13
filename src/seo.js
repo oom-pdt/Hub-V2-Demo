@@ -38,6 +38,7 @@ function seoDayIso(offset) { const d = seoToday(); d.setDate(d.getDate() - offse
 
 // SEO Cloud counts as connected when the product is connected and active and a project exists.
 function seoConnected(wsId) {
+  if (isV1()) return false;   // SEO Cloud is an integration: not in Version 1
   const e = wsProducts(wsId)['seo-cloud'];
   return !!(e && e.status === 'connected' && e.active && seoProjects[wsId]);
 }

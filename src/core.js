@@ -39,7 +39,7 @@ function activeCrm(wsId) {
   const hit = entries.find(([pid, s]) => productById(pid)?.category === 'CRM' && s.active && s.status === 'connected');
   return hit ? productById(hit[0]) : null;
 }
-// The client workspace's single Primary Contact (V1 rule: exactly one per workspace), or null.
+// The client workspace's single Owner (V1 rule: exactly one per workspace), or null.
 function wsPrimaryContact(wsId) { return members.find(m => m.org === wsId && m.isPrimary && m.status !== 'deactivated') || null; }
 // One connected product per lane: a workspace can have only one CRM, one chat platform and one call tracker.
 const PRODUCT_LANES = {

@@ -1877,7 +1877,7 @@ const CRM_DAYS_LEFT = { 'ws-visual': { ads: 72, seo: 41 }, 'ws-bright': { ads: 1
     if (seoProjects[ws.id]) assignees.push({ role: 'SEO Specialist', memberId: 'm-a2' });
     const pl = assigned.find(m => m.roleId === 'r-a-pl');
     if (pl) assignees.push({ role: 'Project Lead', memberId: pl.id });
-    const contacts = members.filter(m => m.org === ws.id).slice(0, 3).map(m => ({ name: m.name, email: m.email, role: m.isPrimary ? 'Primary contact' : 'Marketing' }));
+    const contacts = members.filter(m => m.org === ws.id).slice(0, 3).map(m => ({ name: m.name, email: m.email, role: m.isPrimary ? 'Owner' : 'Marketing' }));
     crmAccounts[ws.id] = {
       crmId: `CRM-${1000 + ws.seed}`, stage: 'converted', convertedAt: ws.createdAt, services, accountManager: am.id, assignees, clientContacts: contacts, source: 'crm',
       adAccountIds: { google: linked('google')?.id || null, meta: linked('meta')?.id || null },
@@ -1970,7 +1970,7 @@ function activeCrm(wsId) {
   const hit = entries.find(([pid, s]) => productById(pid)?.category === 'CRM' && s.active && s.status === 'connected');
   return hit ? productById(hit[0]) : null;
 }
-// The client workspace's single Primary Contact (V1 rule: exactly one per workspace), or null.
+// The client workspace's single Owner (V1 rule: exactly one per workspace), or null.
 function wsPrimaryContact(wsId) { return members.find(m => m.org === wsId && m.isPrimary && m.status !== 'deactivated') || null; }
 // One connected product per lane: a workspace can have only one CRM, one chat platform and one call tracker.
 const PRODUCT_LANES = {
@@ -3997,7 +3997,7 @@ const DASH_MG_COLS = [
   { key: 'top10', group: 'seo', label: 'Keywords in Top 10', tip: 'Key SEO KPI: share of tracked keywords ranking in the top 10 today, against the contracted target.' },
   { key: 'avgPos', group: 'seo', label: 'Avg Position', tip: 'Mean position of keywords ranking in the top 100 (lower is better).' },
   { key: 'seoDays', group: 'seo', label: 'Contract Days Left', tip: 'Days left on the Agency CRM contract for the SEO service. Amber at 60 days or fewer, red at 30 or fewer.' },
-  { key: 'contact', group: 'contact', label: 'Primary Contact' },
+  { key: 'contact', group: 'contact', label: 'Owner' },
   { key: 'last', group: 'contact', label: 'Last Activity' }
 ];
 // Version 1 hides the columns built on the Agency CRM, SEO Cloud or product integrations: the Account group
@@ -6136,14 +6136,14 @@ Central command dashboard for agency administrators managing many client workspa
   - **Contract Ending** (Medium): any service contract ending within 30 days.
   - **Aurix Not Linked** (Aurix, Low). **Integration Error** (High, or Medium when pending). **CRM Set-up** (Medium: client invites awaiting approval).
 - **Managed Accounts table**:
-  - **Default columns** (the new design, plus each service's key KPI): Client (industry · account manager underneath), **Services** (overlapping product marks: Ads Performance, SEO Cloud, Aurix, Galaxis CRM, +N other CRM services), **Account Health**, **Issues Count**, **Ads: Cost Per Conversion** (the key ads KPI), **SEO: Top 10 %** (current / target, the key SEO KPI), **Primary Contact**, **Last Activity**, Action.
+  - **Default columns** (the new design, plus each service's key KPI): Client (industry · account manager underneath), **Services** (overlapping product marks: Ads Performance, SEO Cloud, Aurix, Galaxis CRM, +N other CRM services), **Account Health**, **Issues Count**, **Ads: Cost Per Conversion** (the key ads KPI), **SEO: Top 10 %** (current / target, the key SEO KPI), **Owner**, **Last Activity**, Action.
   - **Account Health**: Attention Required (red) when any open issue is High priority, Off Track (orange) when there are other open issues, On Track (green) with none.
   - **Issues Count**: "N Items"; selecting it opens a drawer listing that client's issues with their CTAs.
   - **More columns, hidden by default** (column picker, or Ads Performance › Open): Ads: Ad Platforms, Combined Spend, Budget Pacing, Conversions, ROAS, CPM, CPC, Contract Days Left. SEO: SEO Status, Avg Position, Contract Days Left. Definitions:
     - **Budget Pacing**: ad spend for the selected dates against the CRM media budget for the same days (monthly media budget × days ÷ 30). Ahead of pace above 115% (red), Under spend below 80% (orange), otherwise On track (green).
     - **Contract Days Left**: each service runs on its own CRM contract; Ads shows one figure when the ad services share a contract, otherwise one per platform. Amber at 60 days or fewer, red at 30 or fewer.
     - **ROAS**: platform-reported purchase value ÷ spend, mainly meaningful for e-commerce clients.
-  - **Column groups**: Account · Ads · SEO · Contact bands, collapsible; collapsed groups keep their key column (Account Health, Cost Per Conversion, Top 10 %, Primary Contact). All start expanded; each viewer's choice is remembered (prototype: localStorage). **Reset to default** restores the default columns. **Reordering (23/10/2026)**: viewers can reorder columns within a group and reorder the groups themselves, by dragging the grip handles in the column picker (arrow keys also work) or dragging the column headers / group bands in the table; columns only move within their own group. **A collapsed group always shows its first column** (the picker tags it "Shown when collapsed"); by default each group's key column is placed first, so the default collapsed view is unchanged. Dragging a whole group in the picker folds every group's column list, leaving just the group names to reorder. The order is remembered per viewer and also drives the CSV export; **Reset to default** restores it.
+  - **Column groups**: Account · Ads · SEO · Contact bands, collapsible; collapsed groups keep their key column (Account Health, Cost Per Conversion, Top 10 %, Owner). All start expanded; each viewer's choice is remembered (prototype: localStorage). **Reset to default** restores the default columns. **Reordering (23/10/2026)**: viewers can reorder columns within a group and reorder the groups themselves, by dragging the grip handles in the column picker (arrow keys also work) or dragging the column headers / group bands in the table; columns only move within their own group. **A collapsed group always shows its first column** (the picker tags it "Shown when collapsed"); by default each group's key column is placed first, so the default collapsed view is unchanged. Dragging a whole group in the picker folds every group's column list, leaving just the group names to reorder. The order is remembered per viewer and also drives the CSV export; **Reset to default** restores it.
   - Coloured dots on Cost per Conversion (and CPM / CPC) compare each workspace with the portfolio average: green at least 10% better, orange within -10% to +15%, red more than 15% worse.
   - Search by client or contact. Filter: Account Health, Ad Platforms, Performance band, SEO Status. Every column is sortable; rows without data sort last. The ⋮ menu: Go to workspace, View SEO performance (SEO Cloud clients), Organisation settings, Integrations.
 - **Filter dropdowns**: Changes apply immediately. Each group has an "All" option. **Clear Filter** removes every filter. **Revert To Original** restores the selection from when the panel was opened. **Apply** closes the panel.
@@ -6396,8 +6396,12 @@ state.ui.orgDraft = null;                     // form values kept across a faile
 state.ui.orgErrors = {};
 
 // ---------- Data accessors ----------
-// The agency's own organisation has no Billing Information tab.
-function orgTabs(agency = isAgency()) { return agency ? ORG_TABS.filter(t => t.id !== 'billing') : ORG_TABS; }
+// The agency's own organisation has no Billing Information tab. Version 1 shows Business Information only
+// (no Brand Identity, and no Billing Information, which comes from the Agency CRM).
+function orgTabs(agency = isAgency()) {
+  if (isV1()) return ORG_TABS.filter(t => t.id === 'business');
+  return agency ? ORG_TABS.filter(t => t.id !== 'billing') : ORG_TABS;
+}
 function orgTab() { return orgTabs().some(t => t.id === state.params.tab) ? state.params.tab : 'business'; }
 function orgEntity(orgId = currentOrgId()) { return orgId === 'agency' ? AGENCY_ORG : wsById(orgId); }
 function orgPad2(n) { return String(n).padStart(2, '0'); }
@@ -6420,7 +6424,7 @@ function orgProfile(orgId = currentOrgId()) {
   return p;
 }
 
-// Primary Business Contact. In a client workspace it follows the workspace Primary Contact (Team & Access).
+// Primary Business Contact. In a client workspace it follows the workspace Owner (Team & Access).
 function orgContact(orgId = currentOrgId()) {
   const p = orgProfile(orgId);
   const pc = orgId === 'agency' ? null : wsPrimaryContact(orgId);
@@ -6623,7 +6627,7 @@ function orgBusinessHTML() {
   const editing = !!state.ui.orgEdit.business;
   const v = editing && state.ui.orgDraft ? state.ui.orgDraft : orgBusinessValues(id);
   const head = orgCardHead('Business Information', 'Manage your organisation’s legal and business information.', orgEditBtn('business', 'business information'));
-  const syncNote = id !== 'agency' ? 'Synced with the workspace Primary Contact in Team & Access' : '';
+  const syncNote = id !== 'agency' ? 'Synced with the workspace Owner in Team & Access' : '';
   if (!editing) {
     return `<section class="card org-section">${head}
       <div class="form-section-title">Company Information</div>
@@ -6640,7 +6644,7 @@ function orgBusinessHTML() {
         required: true,
         options: [['', 'Select a member…'], ...cands.map(m => [m.id, `${m.name}${m.status === 'pending' ? ' (pending invite)' : ''}`, `data-email="${esc(m.email)}"`])],
         attrs: `onchange="document.getElementById('org-f-contactEmail').value = this.selectedOptions[0].dataset.email || ''"`,
-        hint: 'Becomes the workspace Primary Contact (one per workspace).'
+        hint: 'Becomes the workspace Owner (one per workspace).'
       }) + orgField('org-f-contactNumber', 'Contact Number', v.contactNumber, { placeholder: '+65 0000 0000' })
         + orgField('org-f-contactEmail', 'Email', v.contactEmail, { attrs: 'disabled', hint: 'Taken from the member’s account.' })
     : orgField('org-f-contactName', 'Contact Person', v.contactName, { required: true })
@@ -6695,7 +6699,7 @@ function orgSaveBusiness() {
   if (d.site && !/^[^\s]+\.[^\s]{2,}$/.test(d.site)) e['org-f-site'] = 'Enter a valid domain, e.g. example.com.';
   if (!/^\d{6}$/.test(d.postal)) e['org-f-postal'] = 'Postal code must be 6 digits.';
   if (d.contactNumber && !/^\+?[\d\s-]{8,}$/.test(d.contactNumber)) e['org-f-contactNumber'] = 'Enter a valid phone number, e.g. +65 0000 0000.';
-  if (cands.length) { if (!d.contactMember) e['org-f-contactMember'] = 'Choose the primary contact.'; }
+  if (cands.length) { if (!d.contactMember) e['org-f-contactMember'] = 'Choose the owner.'; }
   else {
     if (!d.contactName) e['org-f-contactName'] = 'Contact person is required.';
     if (!isEmail(d.contactEmail)) e['org-f-contactEmail'] = 'Enter a valid email address.';
@@ -6711,7 +6715,7 @@ function orgSaveBusiness() {
   Object.assign(ent, { name: d.name, industry: d.industry, site: d.site });
   Object.assign(p, { uen: d.uen, size: d.size, founded: d.founded, address: d.address, postal: d.postal, unit: d.unit, building: d.building, contactNumber: d.contactNumber });
   if (cands.length) {
-    // Single-primary rule (V1): exactly one Primary Contact per workspace.
+    // Single-primary rule (V1): exactly one Owner per workspace.
     members.filter(m => m.org === id).forEach(m => { m.isPrimary = m.id === d.contactMember; });
     const m = memberById(d.contactMember);
     p.contactName = m.name; p.contactEmail = m.email;
@@ -7050,7 +7054,7 @@ function orgRemoveAsset(assetId) {
 registerScreen('organisation', {
   contexts: ['agency', 'client'],
   title: () => 'Organisation',
-  desc: () => 'Manage your organisation’s information and brand identity.',
+  desc: () => isV1() ? 'Manage your organisation’s information.' : 'Manage your organisation’s information and brand identity.',
   key: () => `${isAgency() ? 'agency' : 'client'}-organisation-${orgTab()}`,
   render: orgRender
 });
@@ -7102,12 +7106,15 @@ ${common}
 - Saving updates the organisation everywhere (workspace switcher, header card, Client Organisation list) and shows a toast.
 ${ctx === 'client' ? `
 ## Primary Business Contact (client workspace)
-- Synced with the workspace **Primary Contact** in Team & Access.
+- Synced with the workspace **Owner** in Team & Access.
 - In edit mode, Contact Person is a member picker; Email follows the chosen member.
-- Saving enforces the V1 single-primary rule: the chosen member becomes Primary Contact and every other member in the workspace loses the flag.
+- Saving enforces the V1 single-primary rule: the chosen member becomes Owner and every other member in the workspace loses the flag.
 - Workspaces with no members fall back to free-text name and email.` : `
 ## Primary Business Contact (agency)
 - Free-text name, number and email stored on the agency profile.`}
+
+## Version 1 *(Draft, 13/11/2026; dev toolbar "Version 1")*
+Business Information only. Brand Identity and Billing Information (from the Agency CRM) are hidden for agency and client workspaces.
 
 ## Open questions
 - Website is not in the Figma grid; it was added because the header card shows it and nothing else edits it. Confirm with design.
@@ -7182,7 +7189,7 @@ ${common}
 
 // ---- src/team-access.js ----
 // Galaxis Hub demo — Team & Access: Members / Teams / Roles & Permissions / Client Organisation (agency) / Agency (client workspace).
-// Ports V1 agency team + roles, client users + primary contact, workspace creation and agency access; adds the Figma-only
+// Ports V1 agency team + roles, client users + owner, workspace creation and agency access; adds the Figma-only
 // Teams, Deactivate/Remove, Duplicate role, Archive organisation and seat usage. Every global here is prefixed `team`,
 // except `permissionCatalogue`, which data.js refers to by name.
 
@@ -7256,7 +7263,11 @@ const permissionCatalogue = [
   ] }
 ];
 
-function teamPermGroups(scope) { return permissionCatalogue.filter(g => !g.scope || g.scope === scope); }
+function teamPermGroups(scope) {
+  const list = permissionCatalogue.filter(g => !g.scope || g.scope === scope);
+  // Version 1 has no product access to manage.
+  return isV1() ? list.map(g => ({ ...g, subgroups: g.subgroups.map(sg => ({ ...sg, perms: sg.perms.filter(p => p.id !== 'teams.products') })) })) : list;
+}
 function teamGroupPermIds(g) { return g.subgroups.flatMap(sg => sg.perms.map(p => p.id)); }
 function teamAllPermIds(scope) { return teamPermGroups(scope).flatMap(teamGroupPermIds); }
 function teamPermById(id) { for (const g of permissionCatalogue) for (const sg of g.subgroups) { const p = sg.perms.find(x => x.id === id); if (p) return p; } return null; }
@@ -7363,17 +7374,20 @@ function teamFilterGroups(tab) {
   const org = currentOrgId();
   const opt = (list, id, label) => list.map(x => [x[id], x[label]]);
   const productOpts = opt(teamOrgProducts(org), 'id', 'name');
+  // Version 1: no Product Access (columns, filters, team field and the Management Product Access permission) and
+  // no Activity column in Members.
+  const prodFilter = isV1() ? [] : [{ key: 'product', label: 'Product Access', options: productOpts }];
   if (tab === 'members') return [
     { key: 'team', label: 'Team', options: [...opt(teamOrgTeams(org), 'id', 'name'), ['none', 'No team']] },
     { key: 'role', label: 'Assigned Role', options: opt(teamScopeRoles(), 'id', 'name') },
     { key: 'status', label: 'Status', options: [['active', 'Active'], ...(isAgency() ? [] : [['awaiting', 'Awaiting approval']]), ['pending', 'Pending Invite'], ['inactive', 'Inactive'], ['deactivated', 'Deactivated']] },
-    { key: 'product', label: 'Product Access', options: productOpts }
+    ...prodFilter
   ];
   if (tab === 'teams') return [
     { key: 'status', label: 'Status', options: [['active', 'Active'], ['inactive', 'Inactive']] },
-    { key: 'product', label: 'Product Access', options: productOpts }
+    ...prodFilter
   ];
-  if (tab === 'roles') return [{ key: 'product', label: 'Product Access', options: productOpts }];
+  if (tab === 'roles') return prodFilter;
   if (tab === 'clients') {
     const inds = [...new Set(workspaces.map(w => w.industry).filter(Boolean))].sort();
     return [
@@ -7558,7 +7572,7 @@ function teamMembersTable() {
   const head = `<th>${sortHeader(T, 'name', 'Name & Email', 'teamRefresh')}</th><th>${sortHeader(T, 'team', 'Team', 'teamRefresh')}</th>
     <th>${sortHeader(T, 'role', 'Assigned Role', 'teamRefresh')}</th><th>${sortHeader(T, 'status', 'Status', 'teamRefresh')}</th>
     ${agency ? `<th>${sortHeader(T, 'ws', 'Assigned Workspaces', 'teamRefresh')}</th>` : ''}
-    <th>${sortHeader(T, 'products', 'Product Access', 'teamRefresh')}</th><th>Activity</th><th class="team-th-action">Action</th>`;
+    ${isV1() ? '' : `<th>${sortHeader(T, 'products', 'Product Access', 'teamRefresh')}</th><th>Activity</th>`}<th class="team-th-action">Action</th>`;
   const rows = page.map(m => {
     const self = m.id === CURRENT_USER_ID;
     const items = [{ label: 'Edit', icon: 'pencil', onClick: `teamOpenMemberModal('${m.id}')` }];
@@ -7571,13 +7585,13 @@ function teamMembersTable() {
     items.push('sep', { label: self ? 'Remove (you)' : 'Remove', icon: 'trash-2', danger: true, disabled: self, onClick: `teamConfirmRemove('${m.id}')` });
     const role = roleById(m.roleId);
     return `<tr class="${m.status === 'deactivated' ? 'team-row-muted' : ''}">
-      <td><div class="team-name">${esc(m.name)}${m.isPrimary && !agency ? '<span class="team-primary-badge" title="Primary Contact for this workspace"><i data-lucide="star"></i>Primary Contact</span>' : ''}${self ? '<span class="chip team-you">You</span>' : ''}</div><div class="cell-sub">${esc(m.email)}</div></td>
+      <td><div class="team-name">${esc(m.name)}${m.isPrimary && !agency ? '<span class="team-primary-badge" title="Owner for this workspace"><i data-lucide="star"></i>Owner</span>' : ''}${self ? '<span class="chip team-you">You</span>' : ''}</div><div class="cell-sub">${esc(m.email)}</div></td>
       <td>${esc(teamById(m.teamId)?.name || '—')}</td>
       <td>${esc(role?.name || '—')}${!agency && m.canManage ? '<div class="cell-sub">Can manage members</div>' : ''}</td>
       <td>${statusDot(m.status)}${m.status === 'awaiting' ? '<div class="cell-sub">From agency CRM · not invited yet</div>' : ''}</td>
       ${agency ? `<td class="team-ws-cell">${teamWsSummary(m)}</td>` : ''}
-      <td>${productChips(m.products)}</td>
-      <td>${esc(m.lastActive || '-')}<div class="cell-sub">${esc(m.lastProduct || '-')}</div></td>
+      ${isV1() ? '' : `<td>${productChips(m.products)}</td>
+      <td>${esc(m.lastActive || '-')}<div class="cell-sub">${esc(m.lastProduct || '-')}</div></td>`}
       <td class="team-td-action">${rowMenu(`team-m-${m.id}`, items)}</td></tr>`;
   }).join('');
   const filtered = (state.ui.teamSearch.members || '').trim() || teamFilterCount('members');
@@ -7601,7 +7615,7 @@ function teamConfirmDeactivate(id) {
   if (id === CURRENT_USER_ID) { showToast('You can’t deactivate your own account', 'triangle-alert'); return; }
   confirmDialog({
     title: 'Deactivate Team Member?',
-    text: `This member will no longer have access to your organisation. You can reactivate them at any time.${m.isPrimary ? ' They are the Primary Contact, so this workspace will have no Primary Contact until you set another.' : ''}`,
+    text: `This member will no longer have access to your organisation. You can reactivate them at any time.${m.isPrimary ? ' They are the Owner, so this workspace will have no Owner until you set another.' : ''}`,
     confirmLabel: 'Deactivate', icon: 'user-x',
     onConfirm: () => { m.status = 'deactivated'; teamRefresh(); showToast(`${m.name} has been deactivated`, 'user-x'); }
   });
@@ -7637,8 +7651,8 @@ function teamOpenMemberModal(id) {
   const locked = !!roleById(roleId)?.locked;
   const other = !agency ? wsPrimaryContact(org) : null;
   const primaryHint = other && other.id !== m?.id
-    ? `Only 1 Primary Contact per workspace. Currently: ${esc(other.email)}. Turning this on switches it.`
-    : 'Only 1 Primary Contact per workspace.';
+    ? `Only 1 Owner per workspace. Currently: ${esc(other.email)}. Turning this on switches it.`
+    : 'Only 1 Owner per workspace.';
   const body = `
     ${teamField('Member Email', `<input class="input" id="team-f-email" type="email" placeholder="name@example.com" value="${esc(m?.email || '')}" ${m ? 'disabled' : ''} autocomplete="off">`, { req: true, id: 'team-f-email' })}
     <div class="grid-2 team-form-2">
@@ -7653,7 +7667,7 @@ function teamOpenMemberModal(id) {
       </div>` : `
       <div class="team-toggle-row"><div><div class="t-bold">Manage members</div><div class="field-hint">View workspace analytics is always on. Turn this on to let them invite and edit members.</div></div>
         <label class="toggle"><input type="checkbox" id="team-f-manage" ${m?.canManage ? 'checked' : ''}><span></span></label></div>
-      <div class="team-toggle-row"><div><div class="t-bold">Set as Primary Contact</div><div class="field-hint">${primaryHint}</div></div>
+      <div class="team-toggle-row"><div><div class="t-bold">Set as Owner</div><div class="field-hint">${primaryHint}</div></div>
         <label class="toggle"><input type="checkbox" id="team-f-primary" ${m?.isPrimary ? 'checked' : ''}><span></span></label></div>`}`;
   openModal({
     title: m ? 'Edit Team Member' : 'Invite Team Member',
@@ -7690,7 +7704,7 @@ function teamSaveMember(id) {
   else {
     m.canManage = document.getElementById('team-f-manage').checked;
     const primary = document.getElementById('team-f-primary').checked;
-    // V1 strict single Primary Contact: setting one clears every other primary in this workspace.
+    // V1 strict single Owner: setting one clears every other primary in this workspace.
     if (primary) members.forEach(x => { if (x.org === org) x.isPrimary = false; });
     m.isPrimary = primary;
   }
@@ -7713,10 +7727,10 @@ function teamTeamsTable() {
   const T = 'team-teams';
   const all = teamTeamsList();
   const head = `<th>${sortHeader(T, 'name', 'Team', 'teamRefresh')}</th><th>${sortHeader(T, 'members', 'Members', 'teamRefresh')}</th><th>${sortHeader(T, 'status', 'Status', 'teamRefresh')}</th>
-    <th>${sortHeader(T, 'products', 'Product Access', 'teamRefresh')}</th><th>${sortHeader(T, 'created', 'Created', 'teamRefresh')}</th><th class="team-th-action">Action</th>`;
+    ${isV1() ? '' : `<th>${sortHeader(T, 'products', 'Product Access', 'teamRefresh')}</th>`}<th>${sortHeader(T, 'created', 'Created', 'teamRefresh')}</th><th class="team-th-action">Action</th>`;
   const rows = paginate(all, T).map(t => `<tr>
       <td><button type="button" class="team-link-cell" onclick="teamOpenTeamMembers('${t.id}')">${esc(t.name)}</button></td>
-      <td>${teamTeamMembers(t.id).length}</td><td>${statusDot(t.status)}</td><td>${productChips(t.products)}</td><td>${fmtDate(t.createdAt)}</td>
+      <td>${teamTeamMembers(t.id).length}</td><td>${statusDot(t.status)}</td>${isV1() ? '' : `<td>${productChips(t.products)}</td>`}<td>${fmtDate(t.createdAt)}</td>
       <td class="team-td-action">${rowMenu(`team-t-${t.id}`, [
         { label: 'View Members', icon: 'users', onClick: `teamOpenTeamMembers('${t.id}')` },
         { label: 'Edit', icon: 'pencil', onClick: `teamOpenTeamModal('${t.id}')` },
@@ -7751,8 +7765,8 @@ function teamOpenTeamModal(id) {
   state.ui.teamFormMembers = [];
   const body = `
     ${teamField('Team Name', `<input class="input" id="team-f-tname" placeholder="e.g. Marketing" value="${esc(t?.name || '')}" autocomplete="off">`, { req: true, id: 'team-f-tname' })}
-    <div class="field"><span class="field-label">Product Access</span><div class="team-chip-select" id="team-f-products">${teamProductPicker()}</div>
-      <div class="field-hint">Members of this team get access to the selected products.</div></div>
+    ${isV1() ? '' : `<div class="field"><span class="field-label">Product Access</span><div class="team-chip-select" id="team-f-products">${teamProductPicker()}</div>
+      <div class="field-hint">Members of this team get access to the selected products.</div></div>`}
     ${t ? '' : `<div class="field"><span class="field-label">Add Members</span>${teamChecklist('teamFormMembers', () => teamMemberItems(), 'Search members')}
       <div class="field-hint">A member can belong to one team. Adding them here moves them from their current team.</div></div>`}`;
   openModal({
@@ -7877,10 +7891,10 @@ function teamRolesTable() {
   const T = 'team-roles';
   const all = teamRolesList();
   const head = `<th>${sortHeader(T, 'name', 'Role', 'teamRefresh')}</th><th>Description</th><th>${sortHeader(T, 'members', 'Members', 'teamRefresh')}</th>
-    <th>${sortHeader(T, 'products', 'Product Access', 'teamRefresh')}</th><th>${sortHeader(T, 'created', 'Created', 'teamRefresh')}</th><th class="team-th-action">Action</th>`;
+    ${isV1() ? '' : `<th>${sortHeader(T, 'products', 'Product Access', 'teamRefresh')}</th>`}<th>${sortHeader(T, 'created', 'Created', 'teamRefresh')}</th><th class="team-th-action">Action</th>`;
   const rows = paginate(all, T).map(r => `<tr>
       <td><button type="button" class="team-link-cell" onclick="teamOpenRoleEditor('${r.id}')">${esc(r.name)}</button>${r.locked ? '<span class="team-lock" title="System role — view only"><i data-lucide="lock"></i></span>' : ''}</td>
-      <td class="t-secondary team-wrap">${esc(r.description || '—')}</td><td>${teamRoleMembers(r.id).length}</td><td>${productChips(teamRoleProducts(r.id))}</td><td>${fmtDate(r.createdAt)}</td>
+      <td class="t-secondary team-wrap">${esc(r.description || '—')}</td><td>${teamRoleMembers(r.id).length}</td>${isV1() ? '' : `<td>${productChips(teamRoleProducts(r.id))}</td>`}<td>${fmtDate(r.createdAt)}</td>
       <td class="team-td-action">${rowMenu(`team-r-${r.id}`, [
         { label: r.locked ? 'View' : 'Edit', icon: r.locked ? 'eye' : 'pencil', onClick: `teamOpenRoleEditor('${r.id}')` },
         { label: 'Duplicate', icon: 'copy', onClick: `teamConfirmDuplicateRole('${r.id}')` },
@@ -8102,7 +8116,7 @@ function teamOrgCard(ws) {
     <div class="team-org-line"><i data-lucide="briefcase"></i>${esc(ws.industry || '—')}${ws.source === 'crm' ? '<span class="crm-badge team-org-crm" title="Created automatically when the account converted in the agency CRM"><i data-lucide="sparkles"></i>From CRM</span>' : ''}</div>
     ${setupHtml}
     <div class="team-org-contact"><span class="team-org-avatar"><i data-lucide="user"></i></span>
-      <span>${pc ? `<span class="team-org-contact-name">${esc(pc.name)}</span><span class="cell-sub">${esc(pc.email)}</span>` : '<span class="team-org-contact-name t-muted">Unassigned</span><span class="cell-sub">No Primary Contact</span>'}</span></div>
+      <span>${pc ? `<span class="team-org-contact-name">${esc(pc.name)}</span><span class="cell-sub">${esc(pc.email)}</span>` : '<span class="team-org-contact-name t-muted">Unassigned</span><span class="cell-sub">No Owner</span>'}</span></div>
     <div class="team-org-stats">
       <div><div class="team-org-stat"><i data-lucide="users"></i>${clientCount}</div><div class="cell-sub">Client Members</div></div>
       <div><div class="team-org-stat"><i data-lucide="users"></i>${agencyCount}</div><div class="cell-sub">Agency Members</div></div>
@@ -8423,6 +8437,7 @@ Central administration of agency (OOm) staff: invite members, set their team and
 - **Row actions**: Edit, Resend Invite (pending only), Deactivate / Reactivate, Remove.
   - *(Draft — Figma only)* Deactivate suspends access and can be reversed; Remove deletes the member. You can't deactivate or remove yourself.
 - Product access follows the member's team.
+- **Version 1** *(Draft, 13/11/2026; dev toolbar "Version 1")*: no Product Access anywhere in Team & Access (Members, Teams and Roles columns and filters, the Create / Edit Team field, and the Management Product Access permission), and no Activity column in Members. Applies to agency and client workspaces.
 
 ### Open questions
 - Permissions are not enforced in this prototype (V1 didn't either).`
@@ -8436,8 +8451,8 @@ Manage the client's own members in this workspace. Ported from the V1 "Workspace
 - **Seat usage** *(Draft — Figma only)*: "{Workspace} · N / 20 Seats Used" bar with Active / Pending / Inactive counts. 20 seats is a [PLACEHOLDER] allowance.
 - **Client Member Management**: Invite and edit members with Team, Role and a **Manage members** toggle ("View workspace analytics" is always on).
   - *Visibility/Editability:* Visible and editable by authorised client users and authorised agency users.
-- **Strict Single Primary Contact**: exactly one Primary Contact per workspace. Turning it on for one member clears the previous one. The Primary Contact shows a badge, and Organisation, Dashboard and the Client Organisation cards read it.
-- **Row actions**: Edit, Resend Invite, Deactivate / Reactivate, Remove *(Deactivate/Remove: Draft — Figma only)*. Deactivating the Primary Contact leaves the workspace without one until another is set.
+- **Strict Single Owner**: exactly one Owner per workspace. Turning it on for one member clears the previous one. The Owner shows a badge, and Organisation, Dashboard and the Client Organisation cards read it.
+- **Row actions**: Edit, Resend Invite, Deactivate / Reactivate, Remove *(Deactivate/Remove: Draft — Figma only)*. Deactivating the Owner leaves the workspace without one until another is set.
 - Search, filters (Team / Role / Status / Product Access), sorting and pagination as on the agency list.
 - **Awaiting approval** *(Draft, 22/10/2026)*: client contacts added by the agency CRM auto set-up show "Awaiting approval" until the account manager approves them. Their row menu offers **Approve & send invite** (status becomes Pending Invite). They don't use a seat; the seat card lists them separately. The Status filter includes Awaiting approval.`
   },
@@ -8511,7 +8526,7 @@ Full-page role builder (Figma "Create Role" / "Edit Role"), replacing V1's role 
 Directory for creating and locating client organisations (workspaces). Ported from V1 "Client Workspaces Directory & Creation", shown as Figma cards.
 
 ### Key Functional Specifications
-- **Card grid**: logo initials, name, status dot (Active / Inactive / Archived), Action menu (Open Workspace, Assign Members, Archive), industry, Primary Contact (or "Unassigned"), client member count and agency member count (members assigned to it, including Owner / Agency Admin).
+- **Card grid**: logo initials, name, status dot (Active / Inactive / Archived), Action menu (Open Workspace, Assign Members, Archive), industry, Owner (or "Unassigned"), client member count and agency member count (members assigned to it, including Owner / Agency Admin).
 - Search by name, industry or contact; filter by Status and Industry. Picking "Archived" shows archived organisations, which can be restored.
 - **Add Organisation** modal with New / Existing tabs:
   - New: Organisation Name (required), Site URL, Industry. A duplicate name (case-insensitive, archived included) shows "This organisation already exists. Please use the “Existing Organisation” tab."
@@ -8527,7 +8542,7 @@ When an account converts in the agency CRM, Galaxis creates the client workspace
 2. **Services & budgets synced** from the CRM (shown read-only in Organisation › Business Information › Services & Contract).
 3. **Agency assignees added** through the default CRM role mapping (no editing UI since 22/10/2026). The CRM's named user is used when they hold the mapped Galaxis role and team; otherwise the agency member with that role and team and the fewest workspaces is picked. Assignment writes to each member's assigned workspaces, so the workspace appears in their switcher.
 4. **SEO Cloud project linked** (only when SEO is a live service). The project starts as *Pending setup* until keywords are set up in SEO Cloud.
-5. **Client contacts awaiting approval.** CRM contacts are added as members with status *Awaiting approval*. They are not invited and don't use a seat. The account manager approves them (all at once or one by one) or removes them; approved contacts become *Pending Invite*. The first primary contact becomes the workspace Primary Contact.
+5. **Client contacts awaiting approval.** CRM contacts are added as members with status *Awaiting approval*. They are not invited and don't use a seat. The account manager approves them (all at once or one by one) or removes them; approved contacts become *Pending Invite*. The first owner becomes the workspace Owner.
 6. **Ad accounts linked** — a manual step: "Link in Integrations" opens agency Integrations.
 - **Card**: while set-up is incomplete, the card shows "Set-up: N of M steps" with a progress bar. The action menu has **View set-up**.
 - **Set-up checklist** (slide-over): progress, each step with ✓ Done / Needs approval / Manual step, the contact list with Approve and Remove, Link in Integrations, Assign members (when a CRM role has no matching Galaxis user), **Open workspace** and **Approve & send invites**.
@@ -10379,21 +10394,21 @@ const crmQueue = [
     adAccountIds: { google: '#998-234-1102' },
     accountManager: 'melson.ng@example.com',
     assignees: [{ crmRole: 'SEO Specialist', email: 'mary.lim@example.com' }, { crmRole: 'Project Lead', email: 'serah.chua@example.com' }],
-    contacts: [{ name: 'Alex Northstar', email: 'alex@northstar-dental.example.com', role: 'Primary contact' },
+    contacts: [{ name: 'Alex Northstar', email: 'alex@northstar-dental.example.com', role: 'Owner' },
       { name: 'Bea Practice', email: 'bea@northstar-dental.example.com', role: 'Marketing' }] },
   { name: 'Harbourview Bakery', industry: 'F&B', site: 'harbourview-bakery.example.com',
     services: [{ type: 'Facebook Ads', monthlyBudget: 3000 }, { type: 'Social Media', monthlyBudget: 1500 }],
     adAccountIds: { meta: 'act_4920194820' },
     accountManager: 'joseph.tan@example.com',
     assignees: [{ crmRole: 'Ads Specialist', email: '' }],
-    contacts: [{ name: 'Casey Harbour', email: 'casey@harbourview.example.com', role: 'Primary contact' }] },
+    contacts: [{ name: 'Casey Harbour', email: 'casey@harbourview.example.com', role: 'Owner' }] },
   { name: 'Lumen Fitness Studio', industry: 'Other', site: 'lumen-fitness.example.com',
     services: [{ type: 'SEO', monthlyBudget: 2500 }, { type: 'Google Ads', monthlyBudget: 5000 }, { type: 'Facebook Ads', monthlyBudget: 4000 }],
     seo: { contractedKeywords: 40, targetTop10Pct: 45 },
     adAccountIds: { google: '#552-901-7744', meta: 'act_9999999999' },   // the Meta ID isn't discovered yet: stays a manual step
     accountManager: 'joseph.tan@example.com',
     assignees: [{ crmRole: 'SEO Specialist', email: '' }, { crmRole: 'Ads Specialist', email: '' }, { crmRole: 'Project Lead', email: '' }],
-    contacts: [{ name: 'Dana Lumen', email: 'dana@lumen-fitness.example.com', role: 'Primary contact' },
+    contacts: [{ name: 'Dana Lumen', email: 'dana@lumen-fitness.example.com', role: 'Owner' },
       { name: 'Eli Coach', email: 'eli@lumen-fitness.example.com', role: 'Marketing' },
       { name: 'Fern Ledger', email: 'fern@lumen-fitness.example.com', role: 'Finance' }] }
 ];
@@ -10416,16 +10431,16 @@ function crmResolve(crmRole, email) {
   if (named) return named;
   return [...list].sort((a, b) => (a.workspaces || []).length - (b.workspaces || []).length || a.name.localeCompare(b.name))[0] || null;
 }
-// Client role for a CRM contact. The primary contact becomes Super Admin and the workspace Primary Contact.
+// Client role for a CRM contact. The owner becomes Super Admin and the workspace Owner.
 function crmContactRole(role) {
-  if (/primary/i.test(role)) return 'r-c-super';
+  if (/owner|primary/i.test(role)) return 'r-c-super';
   if (/marketing/i.test(role)) return 'r-c-hom';
   return 'r-c-employee';
 }
 function crmAddContactMember(wsId, c, status) {
   const m = { id: uid('m'), org: wsId, name: c.name, email: c.email, teamId: null, roleId: crmContactRole(c.role), status,
     products: [], lastActive: null, lastProduct: null, crmContact: true, crmRole: c.role };
-  if (/primary/i.test(c.role) && !wsPrimaryContact(wsId)) m.isPrimary = true;
+  if (/owner|primary/i.test(c.role) && !wsPrimaryContact(wsId)) m.isPrimary = true;
   members.push(m);
   return m;
 }
@@ -10651,7 +10666,7 @@ function crmContactList(wsId) {
   const list = crmSetupContacts(wsId);
   if (!list.length) return '<div class="t-caption t-muted crm-step-detail">No client contacts left to invite.</div>';
   return `<div class="crm-contacts">${list.map(m => `<div class="crm-contact">
-      <div class="grow crm-contact-text"><div class="crm-contact-name"><span class="t-bold">${esc(m.name)}</span><span class="chip">${esc(m.isPrimary ? 'Primary contact' : (m.crmRole || roleById(m.roleId)?.name || 'Contact'))}</span></div><div class="cell-sub">${esc(m.email)}</div></div>
+      <div class="grow crm-contact-text"><div class="crm-contact-name"><span class="t-bold">${esc(m.name)}</span><span class="chip">${esc(m.isPrimary ? 'Owner' : (m.crmRole || roleById(m.roleId)?.name || 'Contact'))}</span></div><div class="cell-sub">${esc(m.email)}</div></div>
       ${m.status === 'awaiting'
         ? `<button type="button" class="btn btn-outline btn-sm" onclick="crmRemoveContact('${m.id}')">Remove</button><button type="button" class="btn btn-primary btn-sm" onclick="crmApproveContact('${m.id}')">Approve</button>`
         : statusDot(m.status)}</div>`).join('')}</div>`;
@@ -10666,8 +10681,8 @@ function crmLinkAds(wsId) {
 // ---------- Seed: two new workspaces still waiting for approval (Attention row demo) ----------
 (function crmSeedPending() {
   const seed = {
-    'ws-grizzly': [{ name: 'Gus Grizzly', email: 'gus@grizzly.example.com', role: 'Primary contact' }, { name: 'Hana Bear', email: 'hana@grizzly.example.com', role: 'Marketing' }],
-    'ws-beantech': [{ name: 'Ivan Bean', email: 'ivan@beantech.example.com', role: 'Primary contact' }]
+    'ws-grizzly': [{ name: 'Gus Grizzly', email: 'gus@grizzly.example.com', role: 'Owner' }, { name: 'Hana Bear', email: 'hana@grizzly.example.com', role: 'Marketing' }],
+    'ws-beantech': [{ name: 'Ivan Bean', email: 'ivan@beantech.example.com', role: 'Owner' }]
   };
   Object.entries(seed).forEach(([wsId, contacts]) => {
     const ws = wsById(wsId), acc = crmAccounts[wsId];

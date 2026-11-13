@@ -22,8 +22,12 @@ state.ui.orgDraft = null;                     // form values kept across a faile
 state.ui.orgErrors = {};
 
 // ---------- Data accessors ----------
-// The agency's own organisation has no Billing Information tab.
-function orgTabs(agency = isAgency()) { return agency ? ORG_TABS.filter(t => t.id !== 'billing') : ORG_TABS; }
+// The agency's own organisation has no Billing Information tab. Version 1 shows Business Information only
+// (no Brand Identity, and no Billing Information, which comes from the Agency CRM).
+function orgTabs(agency = isAgency()) {
+  if (isV1()) return ORG_TABS.filter(t => t.id === 'business');
+  return agency ? ORG_TABS.filter(t => t.id !== 'billing') : ORG_TABS;
+}
 function orgTab() { return orgTabs().some(t => t.id === state.params.tab) ? state.params.tab : 'business'; }
 function orgEntity(orgId = currentOrgId()) { return orgId === 'agency' ? AGENCY_ORG : wsById(orgId); }
 function orgPad2(n) { return String(n).padStart(2, '0'); }
@@ -46,7 +50,7 @@ function orgProfile(orgId = currentOrgId()) {
   return p;
 }
 
-// Primary Business Contact. In a client workspace it follows the workspace Primary Contact (Team & Access).
+// Primary Business Contact. In a client workspace it follows the workspace Owner (Team & Access).
 function orgContact(orgId = currentOrgId()) {
   const p = orgProfile(orgId);
   const pc = orgId === 'agency' ? null : wsPrimaryContact(orgId);
@@ -249,7 +253,7 @@ function orgBusinessHTML() {
   const editing = !!state.ui.orgEdit.business;
   const v = editing && state.ui.orgDraft ? state.ui.orgDraft : orgBusinessValues(id);
   const head = orgCardHead('Business Information', 'Manage your organisation’s legal and business information.', orgEditBtn('business', 'business information'));
-  const syncNote = id !== 'agency' ? 'Synced with the workspace Primary Contact in Team & Access' : '';
+  const syncNote = id !== 'agency' ? 'Synced with the workspace Owner in Team & Access' : '';
   if (!editing) {
     return `<section class="card org-section">${head}
       <div class="form-section-title">Company Information</div>
@@ -266,7 +270,7 @@ function orgBusinessHTML() {
         required: true,
         options: [['', 'Select a member…'], ...cands.map(m => [m.id, `${m.name}${m.status === 'pending' ? ' (pending invite)' : ''}`, `data-email="${esc(m.email)}"`])],
         attrs: `onchange="document.getElementById('org-f-contactEmail').value = this.selectedOptions[0].dataset.email || ''"`,
-        hint: 'Becomes the workspace Primary Contact (one per workspace).'
+        hint: 'Becomes the workspace Owner (one per workspace).'
       }) + orgField('org-f-contactNumber', 'Contact Number', v.contactNumber, { placeholder: '+65 0000 0000' })
         + orgField('org-f-contactEmail', 'Email', v.contactEmail, { attrs: 'disabled', hint: 'Taken from the member’s account.' })
     : orgField('org-f-contactName', 'Contact Person', v.contactName, { required: true })
@@ -321,7 +325,7 @@ function orgSaveBusiness() {
   if (d.site && !/^[^\s]+\.[^\s]{2,}$/.test(d.site)) e['org-f-site'] = 'Enter a valid domain, e.g. example.com.';
   if (!/^\d{6}$/.test(d.postal)) e['org-f-postal'] = 'Postal code must be 6 digits.';
   if (d.contactNumber && !/^\+?[\d\s-]{8,}$/.test(d.contactNumber)) e['org-f-contactNumber'] = 'Enter a valid phone number, e.g. +65 0000 0000.';
-  if (cands.length) { if (!d.contactMember) e['org-f-contactMember'] = 'Choose the primary contact.'; }
+  if (cands.length) { if (!d.contactMember) e['org-f-contactMember'] = 'Choose the owner.'; }
   else {
     if (!d.contactName) e['org-f-contactName'] = 'Contact person is required.';
     if (!isEmail(d.contactEmail)) e['org-f-contactEmail'] = 'Enter a valid email address.';
@@ -337,7 +341,7 @@ function orgSaveBusiness() {
   Object.assign(ent, { name: d.name, industry: d.industry, site: d.site });
   Object.assign(p, { uen: d.uen, size: d.size, founded: d.founded, address: d.address, postal: d.postal, unit: d.unit, building: d.building, contactNumber: d.contactNumber });
   if (cands.length) {
-    // Single-primary rule (V1): exactly one Primary Contact per workspace.
+    // Single-primary rule (V1): exactly one Owner per workspace.
     members.filter(m => m.org === id).forEach(m => { m.isPrimary = m.id === d.contactMember; });
     const m = memberById(d.contactMember);
     p.contactName = m.name; p.contactEmail = m.email;
@@ -676,7 +680,7 @@ function orgRemoveAsset(assetId) {
 registerScreen('organisation', {
   contexts: ['agency', 'client'],
   title: () => 'Organisation',
-  desc: () => 'Manage your organisation’s information and brand identity.',
+  desc: () => isV1() ? 'Manage your organisation’s information.' : 'Manage your organisation’s information and brand identity.',
   key: () => `${isAgency() ? 'agency' : 'client'}-organisation-${orgTab()}`,
   render: orgRender
 });
@@ -728,12 +732,15 @@ ${common}
 - Saving updates the organisation everywhere (workspace switcher, header card, Client Organisation list) and shows a toast.
 ${ctx === 'client' ? `
 ## Primary Business Contact (client workspace)
-- Synced with the workspace **Primary Contact** in Team & Access.
+- Synced with the workspace **Owner** in Team & Access.
 - In edit mode, Contact Person is a member picker; Email follows the chosen member.
-- Saving enforces the V1 single-primary rule: the chosen member becomes Primary Contact and every other member in the workspace loses the flag.
+- Saving enforces the V1 single-primary rule: the chosen member becomes Owner and every other member in the workspace loses the flag.
 - Workspaces with no members fall back to free-text name and email.` : `
 ## Primary Business Contact (agency)
 - Free-text name, number and email stored on the agency profile.`}
+
+## Version 1 *(Draft, 13/11/2026; dev toolbar "Version 1")*
+Business Information only. Brand Identity and Billing Information (from the Agency CRM) are hidden for agency and client workspaces.
 
 ## Open questions
 - Website is not in the Figma grid; it was added because the header card shows it and nothing else edits it. Confirm with design.

@@ -301,7 +301,7 @@ const CRM_DAYS_LEFT = { 'ws-visual': { ads: 72, seo: 41 }, 'ws-bright': { ads: 1
     if (seoProjects[ws.id]) assignees.push({ role: 'SEO Specialist', memberId: 'm-a2' });
     const pl = assigned.find(m => m.roleId === 'r-a-pl');
     if (pl) assignees.push({ role: 'Project Lead', memberId: pl.id });
-    const contacts = members.filter(m => m.org === ws.id).slice(0, 3).map(m => ({ name: m.name, email: m.email, role: m.isPrimary ? 'Primary contact' : 'Marketing' }));
+    const contacts = members.filter(m => m.org === ws.id).slice(0, 3).map(m => ({ name: m.name, email: m.email, role: m.isPrimary ? 'Owner' : 'Marketing' }));
     crmAccounts[ws.id] = {
       crmId: `CRM-${1000 + ws.seed}`, stage: 'converted', convertedAt: ws.createdAt, services, accountManager: am.id, assignees, clientContacts: contacts, source: 'crm',
       adAccountIds: { google: linked('google')?.id || null, meta: linked('meta')?.id || null },

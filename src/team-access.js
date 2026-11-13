@@ -1,5 +1,5 @@
 // Galaxis Hub demo — Team & Access: Members / Teams / Roles & Permissions / Client Organisation (agency) / Agency (client workspace).
-// Ports V1 agency team + roles, client users + primary contact, workspace creation and agency access; adds the Figma-only
+// Ports V1 agency team + roles, client users + owner, workspace creation and agency access; adds the Figma-only
 // Teams, Deactivate/Remove, Duplicate role, Archive organisation and seat usage. Every global here is prefixed `team`,
 // except `permissionCatalogue`, which data.js refers to by name.
 
@@ -73,7 +73,11 @@ const permissionCatalogue = [
   ] }
 ];
 
-function teamPermGroups(scope) { return permissionCatalogue.filter(g => !g.scope || g.scope === scope); }
+function teamPermGroups(scope) {
+  const list = permissionCatalogue.filter(g => !g.scope || g.scope === scope);
+  // Version 1 has no product access to manage.
+  return isV1() ? list.map(g => ({ ...g, subgroups: g.subgroups.map(sg => ({ ...sg, perms: sg.perms.filter(p => p.id !== 'teams.products') })) })) : list;
+}
 function teamGroupPermIds(g) { return g.subgroups.flatMap(sg => sg.perms.map(p => p.id)); }
 function teamAllPermIds(scope) { return teamPermGroups(scope).flatMap(teamGroupPermIds); }
 function teamPermById(id) { for (const g of permissionCatalogue) for (const sg of g.subgroups) { const p = sg.perms.find(x => x.id === id); if (p) return p; } return null; }
@@ -180,17 +184,20 @@ function teamFilterGroups(tab) {
   const org = currentOrgId();
   const opt = (list, id, label) => list.map(x => [x[id], x[label]]);
   const productOpts = opt(teamOrgProducts(org), 'id', 'name');
+  // Version 1: no Product Access (columns, filters, team field and the Management Product Access permission) and
+  // no Activity column in Members.
+  const prodFilter = isV1() ? [] : [{ key: 'product', label: 'Product Access', options: productOpts }];
   if (tab === 'members') return [
     { key: 'team', label: 'Team', options: [...opt(teamOrgTeams(org), 'id', 'name'), ['none', 'No team']] },
     { key: 'role', label: 'Assigned Role', options: opt(teamScopeRoles(), 'id', 'name') },
     { key: 'status', label: 'Status', options: [['active', 'Active'], ...(isAgency() ? [] : [['awaiting', 'Awaiting approval']]), ['pending', 'Pending Invite'], ['inactive', 'Inactive'], ['deactivated', 'Deactivated']] },
-    { key: 'product', label: 'Product Access', options: productOpts }
+    ...prodFilter
   ];
   if (tab === 'teams') return [
     { key: 'status', label: 'Status', options: [['active', 'Active'], ['inactive', 'Inactive']] },
-    { key: 'product', label: 'Product Access', options: productOpts }
+    ...prodFilter
   ];
-  if (tab === 'roles') return [{ key: 'product', label: 'Product Access', options: productOpts }];
+  if (tab === 'roles') return prodFilter;
   if (tab === 'clients') {
     const inds = [...new Set(workspaces.map(w => w.industry).filter(Boolean))].sort();
     return [
@@ -375,7 +382,7 @@ function teamMembersTable() {
   const head = `<th>${sortHeader(T, 'name', 'Name & Email', 'teamRefresh')}</th><th>${sortHeader(T, 'team', 'Team', 'teamRefresh')}</th>
     <th>${sortHeader(T, 'role', 'Assigned Role', 'teamRefresh')}</th><th>${sortHeader(T, 'status', 'Status', 'teamRefresh')}</th>
     ${agency ? `<th>${sortHeader(T, 'ws', 'Assigned Workspaces', 'teamRefresh')}</th>` : ''}
-    <th>${sortHeader(T, 'products', 'Product Access', 'teamRefresh')}</th><th>Activity</th><th class="team-th-action">Action</th>`;
+    ${isV1() ? '' : `<th>${sortHeader(T, 'products', 'Product Access', 'teamRefresh')}</th><th>Activity</th>`}<th class="team-th-action">Action</th>`;
   const rows = page.map(m => {
     const self = m.id === CURRENT_USER_ID;
     const items = [{ label: 'Edit', icon: 'pencil', onClick: `teamOpenMemberModal('${m.id}')` }];
@@ -388,13 +395,13 @@ function teamMembersTable() {
     items.push('sep', { label: self ? 'Remove (you)' : 'Remove', icon: 'trash-2', danger: true, disabled: self, onClick: `teamConfirmRemove('${m.id}')` });
     const role = roleById(m.roleId);
     return `<tr class="${m.status === 'deactivated' ? 'team-row-muted' : ''}">
-      <td><div class="team-name">${esc(m.name)}${m.isPrimary && !agency ? '<span class="team-primary-badge" title="Primary Contact for this workspace"><i data-lucide="star"></i>Primary Contact</span>' : ''}${self ? '<span class="chip team-you">You</span>' : ''}</div><div class="cell-sub">${esc(m.email)}</div></td>
+      <td><div class="team-name">${esc(m.name)}${m.isPrimary && !agency ? '<span class="team-primary-badge" title="Owner for this workspace"><i data-lucide="star"></i>Owner</span>' : ''}${self ? '<span class="chip team-you">You</span>' : ''}</div><div class="cell-sub">${esc(m.email)}</div></td>
       <td>${esc(teamById(m.teamId)?.name || '—')}</td>
       <td>${esc(role?.name || '—')}${!agency && m.canManage ? '<div class="cell-sub">Can manage members</div>' : ''}</td>
       <td>${statusDot(m.status)}${m.status === 'awaiting' ? '<div class="cell-sub">From agency CRM · not invited yet</div>' : ''}</td>
       ${agency ? `<td class="team-ws-cell">${teamWsSummary(m)}</td>` : ''}
-      <td>${productChips(m.products)}</td>
-      <td>${esc(m.lastActive || '-')}<div class="cell-sub">${esc(m.lastProduct || '-')}</div></td>
+      ${isV1() ? '' : `<td>${productChips(m.products)}</td>
+      <td>${esc(m.lastActive || '-')}<div class="cell-sub">${esc(m.lastProduct || '-')}</div></td>`}
       <td class="team-td-action">${rowMenu(`team-m-${m.id}`, items)}</td></tr>`;
   }).join('');
   const filtered = (state.ui.teamSearch.members || '').trim() || teamFilterCount('members');
@@ -418,7 +425,7 @@ function teamConfirmDeactivate(id) {
   if (id === CURRENT_USER_ID) { showToast('You can’t deactivate your own account', 'triangle-alert'); return; }
   confirmDialog({
     title: 'Deactivate Team Member?',
-    text: `This member will no longer have access to your organisation. You can reactivate them at any time.${m.isPrimary ? ' They are the Primary Contact, so this workspace will have no Primary Contact until you set another.' : ''}`,
+    text: `This member will no longer have access to your organisation. You can reactivate them at any time.${m.isPrimary ? ' They are the Owner, so this workspace will have no Owner until you set another.' : ''}`,
     confirmLabel: 'Deactivate', icon: 'user-x',
     onConfirm: () => { m.status = 'deactivated'; teamRefresh(); showToast(`${m.name} has been deactivated`, 'user-x'); }
   });
@@ -454,8 +461,8 @@ function teamOpenMemberModal(id) {
   const locked = !!roleById(roleId)?.locked;
   const other = !agency ? wsPrimaryContact(org) : null;
   const primaryHint = other && other.id !== m?.id
-    ? `Only 1 Primary Contact per workspace. Currently: ${esc(other.email)}. Turning this on switches it.`
-    : 'Only 1 Primary Contact per workspace.';
+    ? `Only 1 Owner per workspace. Currently: ${esc(other.email)}. Turning this on switches it.`
+    : 'Only 1 Owner per workspace.';
   const body = `
     ${teamField('Member Email', `<input class="input" id="team-f-email" type="email" placeholder="name@example.com" value="${esc(m?.email || '')}" ${m ? 'disabled' : ''} autocomplete="off">`, { req: true, id: 'team-f-email' })}
     <div class="grid-2 team-form-2">
@@ -470,7 +477,7 @@ function teamOpenMemberModal(id) {
       </div>` : `
       <div class="team-toggle-row"><div><div class="t-bold">Manage members</div><div class="field-hint">View workspace analytics is always on. Turn this on to let them invite and edit members.</div></div>
         <label class="toggle"><input type="checkbox" id="team-f-manage" ${m?.canManage ? 'checked' : ''}><span></span></label></div>
-      <div class="team-toggle-row"><div><div class="t-bold">Set as Primary Contact</div><div class="field-hint">${primaryHint}</div></div>
+      <div class="team-toggle-row"><div><div class="t-bold">Set as Owner</div><div class="field-hint">${primaryHint}</div></div>
         <label class="toggle"><input type="checkbox" id="team-f-primary" ${m?.isPrimary ? 'checked' : ''}><span></span></label></div>`}`;
   openModal({
     title: m ? 'Edit Team Member' : 'Invite Team Member',
@@ -507,7 +514,7 @@ function teamSaveMember(id) {
   else {
     m.canManage = document.getElementById('team-f-manage').checked;
     const primary = document.getElementById('team-f-primary').checked;
-    // V1 strict single Primary Contact: setting one clears every other primary in this workspace.
+    // V1 strict single Owner: setting one clears every other primary in this workspace.
     if (primary) members.forEach(x => { if (x.org === org) x.isPrimary = false; });
     m.isPrimary = primary;
   }
@@ -530,10 +537,10 @@ function teamTeamsTable() {
   const T = 'team-teams';
   const all = teamTeamsList();
   const head = `<th>${sortHeader(T, 'name', 'Team', 'teamRefresh')}</th><th>${sortHeader(T, 'members', 'Members', 'teamRefresh')}</th><th>${sortHeader(T, 'status', 'Status', 'teamRefresh')}</th>
-    <th>${sortHeader(T, 'products', 'Product Access', 'teamRefresh')}</th><th>${sortHeader(T, 'created', 'Created', 'teamRefresh')}</th><th class="team-th-action">Action</th>`;
+    ${isV1() ? '' : `<th>${sortHeader(T, 'products', 'Product Access', 'teamRefresh')}</th>`}<th>${sortHeader(T, 'created', 'Created', 'teamRefresh')}</th><th class="team-th-action">Action</th>`;
   const rows = paginate(all, T).map(t => `<tr>
       <td><button type="button" class="team-link-cell" onclick="teamOpenTeamMembers('${t.id}')">${esc(t.name)}</button></td>
-      <td>${teamTeamMembers(t.id).length}</td><td>${statusDot(t.status)}</td><td>${productChips(t.products)}</td><td>${fmtDate(t.createdAt)}</td>
+      <td>${teamTeamMembers(t.id).length}</td><td>${statusDot(t.status)}</td>${isV1() ? '' : `<td>${productChips(t.products)}</td>`}<td>${fmtDate(t.createdAt)}</td>
       <td class="team-td-action">${rowMenu(`team-t-${t.id}`, [
         { label: 'View Members', icon: 'users', onClick: `teamOpenTeamMembers('${t.id}')` },
         { label: 'Edit', icon: 'pencil', onClick: `teamOpenTeamModal('${t.id}')` },
@@ -568,8 +575,8 @@ function teamOpenTeamModal(id) {
   state.ui.teamFormMembers = [];
   const body = `
     ${teamField('Team Name', `<input class="input" id="team-f-tname" placeholder="e.g. Marketing" value="${esc(t?.name || '')}" autocomplete="off">`, { req: true, id: 'team-f-tname' })}
-    <div class="field"><span class="field-label">Product Access</span><div class="team-chip-select" id="team-f-products">${teamProductPicker()}</div>
-      <div class="field-hint">Members of this team get access to the selected products.</div></div>
+    ${isV1() ? '' : `<div class="field"><span class="field-label">Product Access</span><div class="team-chip-select" id="team-f-products">${teamProductPicker()}</div>
+      <div class="field-hint">Members of this team get access to the selected products.</div></div>`}
     ${t ? '' : `<div class="field"><span class="field-label">Add Members</span>${teamChecklist('teamFormMembers', () => teamMemberItems(), 'Search members')}
       <div class="field-hint">A member can belong to one team. Adding them here moves them from their current team.</div></div>`}`;
   openModal({
@@ -694,10 +701,10 @@ function teamRolesTable() {
   const T = 'team-roles';
   const all = teamRolesList();
   const head = `<th>${sortHeader(T, 'name', 'Role', 'teamRefresh')}</th><th>Description</th><th>${sortHeader(T, 'members', 'Members', 'teamRefresh')}</th>
-    <th>${sortHeader(T, 'products', 'Product Access', 'teamRefresh')}</th><th>${sortHeader(T, 'created', 'Created', 'teamRefresh')}</th><th class="team-th-action">Action</th>`;
+    ${isV1() ? '' : `<th>${sortHeader(T, 'products', 'Product Access', 'teamRefresh')}</th>`}<th>${sortHeader(T, 'created', 'Created', 'teamRefresh')}</th><th class="team-th-action">Action</th>`;
   const rows = paginate(all, T).map(r => `<tr>
       <td><button type="button" class="team-link-cell" onclick="teamOpenRoleEditor('${r.id}')">${esc(r.name)}</button>${r.locked ? '<span class="team-lock" title="System role — view only"><i data-lucide="lock"></i></span>' : ''}</td>
-      <td class="t-secondary team-wrap">${esc(r.description || '—')}</td><td>${teamRoleMembers(r.id).length}</td><td>${productChips(teamRoleProducts(r.id))}</td><td>${fmtDate(r.createdAt)}</td>
+      <td class="t-secondary team-wrap">${esc(r.description || '—')}</td><td>${teamRoleMembers(r.id).length}</td>${isV1() ? '' : `<td>${productChips(teamRoleProducts(r.id))}</td>`}<td>${fmtDate(r.createdAt)}</td>
       <td class="team-td-action">${rowMenu(`team-r-${r.id}`, [
         { label: r.locked ? 'View' : 'Edit', icon: r.locked ? 'eye' : 'pencil', onClick: `teamOpenRoleEditor('${r.id}')` },
         { label: 'Duplicate', icon: 'copy', onClick: `teamConfirmDuplicateRole('${r.id}')` },
@@ -919,7 +926,7 @@ function teamOrgCard(ws) {
     <div class="team-org-line"><i data-lucide="briefcase"></i>${esc(ws.industry || '—')}${ws.source === 'crm' ? '<span class="crm-badge team-org-crm" title="Created automatically when the account converted in the agency CRM"><i data-lucide="sparkles"></i>From CRM</span>' : ''}</div>
     ${setupHtml}
     <div class="team-org-contact"><span class="team-org-avatar"><i data-lucide="user"></i></span>
-      <span>${pc ? `<span class="team-org-contact-name">${esc(pc.name)}</span><span class="cell-sub">${esc(pc.email)}</span>` : '<span class="team-org-contact-name t-muted">Unassigned</span><span class="cell-sub">No Primary Contact</span>'}</span></div>
+      <span>${pc ? `<span class="team-org-contact-name">${esc(pc.name)}</span><span class="cell-sub">${esc(pc.email)}</span>` : '<span class="team-org-contact-name t-muted">Unassigned</span><span class="cell-sub">No Owner</span>'}</span></div>
     <div class="team-org-stats">
       <div><div class="team-org-stat"><i data-lucide="users"></i>${clientCount}</div><div class="cell-sub">Client Members</div></div>
       <div><div class="team-org-stat"><i data-lucide="users"></i>${agencyCount}</div><div class="cell-sub">Agency Members</div></div>
@@ -1240,6 +1247,7 @@ Central administration of agency (OOm) staff: invite members, set their team and
 - **Row actions**: Edit, Resend Invite (pending only), Deactivate / Reactivate, Remove.
   - *(Draft — Figma only)* Deactivate suspends access and can be reversed; Remove deletes the member. You can't deactivate or remove yourself.
 - Product access follows the member's team.
+- **Version 1** *(Draft, 13/11/2026; dev toolbar "Version 1")*: no Product Access anywhere in Team & Access (Members, Teams and Roles columns and filters, the Create / Edit Team field, and the Management Product Access permission), and no Activity column in Members. Applies to agency and client workspaces.
 
 ### Open questions
 - Permissions are not enforced in this prototype (V1 didn't either).`
@@ -1253,8 +1261,8 @@ Manage the client's own members in this workspace. Ported from the V1 "Workspace
 - **Seat usage** *(Draft — Figma only)*: "{Workspace} · N / 20 Seats Used" bar with Active / Pending / Inactive counts. 20 seats is a [PLACEHOLDER] allowance.
 - **Client Member Management**: Invite and edit members with Team, Role and a **Manage members** toggle ("View workspace analytics" is always on).
   - *Visibility/Editability:* Visible and editable by authorised client users and authorised agency users.
-- **Strict Single Primary Contact**: exactly one Primary Contact per workspace. Turning it on for one member clears the previous one. The Primary Contact shows a badge, and Organisation, Dashboard and the Client Organisation cards read it.
-- **Row actions**: Edit, Resend Invite, Deactivate / Reactivate, Remove *(Deactivate/Remove: Draft — Figma only)*. Deactivating the Primary Contact leaves the workspace without one until another is set.
+- **Strict Single Owner**: exactly one Owner per workspace. Turning it on for one member clears the previous one. The Owner shows a badge, and Organisation, Dashboard and the Client Organisation cards read it.
+- **Row actions**: Edit, Resend Invite, Deactivate / Reactivate, Remove *(Deactivate/Remove: Draft — Figma only)*. Deactivating the Owner leaves the workspace without one until another is set.
 - Search, filters (Team / Role / Status / Product Access), sorting and pagination as on the agency list.
 - **Awaiting approval** *(Draft, 22/10/2026)*: client contacts added by the agency CRM auto set-up show "Awaiting approval" until the account manager approves them. Their row menu offers **Approve & send invite** (status becomes Pending Invite). They don't use a seat; the seat card lists them separately. The Status filter includes Awaiting approval.`
   },
@@ -1328,7 +1336,7 @@ Full-page role builder (Figma "Create Role" / "Edit Role"), replacing V1's role 
 Directory for creating and locating client organisations (workspaces). Ported from V1 "Client Workspaces Directory & Creation", shown as Figma cards.
 
 ### Key Functional Specifications
-- **Card grid**: logo initials, name, status dot (Active / Inactive / Archived), Action menu (Open Workspace, Assign Members, Archive), industry, Primary Contact (or "Unassigned"), client member count and agency member count (members assigned to it, including Owner / Agency Admin).
+- **Card grid**: logo initials, name, status dot (Active / Inactive / Archived), Action menu (Open Workspace, Assign Members, Archive), industry, Owner (or "Unassigned"), client member count and agency member count (members assigned to it, including Owner / Agency Admin).
 - Search by name, industry or contact; filter by Status and Industry. Picking "Archived" shows archived organisations, which can be restored.
 - **Add Organisation** modal with New / Existing tabs:
   - New: Organisation Name (required), Site URL, Industry. A duplicate name (case-insensitive, archived included) shows "This organisation already exists. Please use the “Existing Organisation” tab."
@@ -1344,7 +1352,7 @@ When an account converts in the agency CRM, Galaxis creates the client workspace
 2. **Services & budgets synced** from the CRM (shown read-only in Organisation › Business Information › Services & Contract).
 3. **Agency assignees added** through the default CRM role mapping (no editing UI since 22/10/2026). The CRM's named user is used when they hold the mapped Galaxis role and team; otherwise the agency member with that role and team and the fewest workspaces is picked. Assignment writes to each member's assigned workspaces, so the workspace appears in their switcher.
 4. **SEO Cloud project linked** (only when SEO is a live service). The project starts as *Pending setup* until keywords are set up in SEO Cloud.
-5. **Client contacts awaiting approval.** CRM contacts are added as members with status *Awaiting approval*. They are not invited and don't use a seat. The account manager approves them (all at once or one by one) or removes them; approved contacts become *Pending Invite*. The first primary contact becomes the workspace Primary Contact.
+5. **Client contacts awaiting approval.** CRM contacts are added as members with status *Awaiting approval*. They are not invited and don't use a seat. The account manager approves them (all at once or one by one) or removes them; approved contacts become *Pending Invite*. The first owner becomes the workspace Owner.
 6. **Ad accounts linked** — a manual step: "Link in Integrations" opens agency Integrations.
 - **Card**: while set-up is incomplete, the card shows "Set-up: N of M steps" with a progress bar. The action menu has **View set-up**.
 - **Set-up checklist** (slide-over): progress, each step with ✓ Done / Needs approval / Manual step, the contact list with Approve and Remove, Link in Integrations, Assign members (when a CRM role has no matching Galaxis user), **Open workspace** and **Approve & send invites**.

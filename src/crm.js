@@ -27,21 +27,21 @@ const crmQueue = [
     adAccountIds: { google: '#998-234-1102' },
     accountManager: 'melson.ng@example.com',
     assignees: [{ crmRole: 'SEO Specialist', email: 'mary.lim@example.com' }, { crmRole: 'Project Lead', email: 'serah.chua@example.com' }],
-    contacts: [{ name: 'Alex Northstar', email: 'alex@northstar-dental.example.com', role: 'Primary contact' },
+    contacts: [{ name: 'Alex Northstar', email: 'alex@northstar-dental.example.com', role: 'Owner' },
       { name: 'Bea Practice', email: 'bea@northstar-dental.example.com', role: 'Marketing' }] },
   { name: 'Harbourview Bakery', industry: 'F&B', site: 'harbourview-bakery.example.com',
     services: [{ type: 'Facebook Ads', monthlyBudget: 3000 }, { type: 'Social Media', monthlyBudget: 1500 }],
     adAccountIds: { meta: 'act_4920194820' },
     accountManager: 'joseph.tan@example.com',
     assignees: [{ crmRole: 'Ads Specialist', email: '' }],
-    contacts: [{ name: 'Casey Harbour', email: 'casey@harbourview.example.com', role: 'Primary contact' }] },
+    contacts: [{ name: 'Casey Harbour', email: 'casey@harbourview.example.com', role: 'Owner' }] },
   { name: 'Lumen Fitness Studio', industry: 'Other', site: 'lumen-fitness.example.com',
     services: [{ type: 'SEO', monthlyBudget: 2500 }, { type: 'Google Ads', monthlyBudget: 5000 }, { type: 'Facebook Ads', monthlyBudget: 4000 }],
     seo: { contractedKeywords: 40, targetTop10Pct: 45 },
     adAccountIds: { google: '#552-901-7744', meta: 'act_9999999999' },   // the Meta ID isn't discovered yet: stays a manual step
     accountManager: 'joseph.tan@example.com',
     assignees: [{ crmRole: 'SEO Specialist', email: '' }, { crmRole: 'Ads Specialist', email: '' }, { crmRole: 'Project Lead', email: '' }],
-    contacts: [{ name: 'Dana Lumen', email: 'dana@lumen-fitness.example.com', role: 'Primary contact' },
+    contacts: [{ name: 'Dana Lumen', email: 'dana@lumen-fitness.example.com', role: 'Owner' },
       { name: 'Eli Coach', email: 'eli@lumen-fitness.example.com', role: 'Marketing' },
       { name: 'Fern Ledger', email: 'fern@lumen-fitness.example.com', role: 'Finance' }] }
 ];
@@ -64,16 +64,16 @@ function crmResolve(crmRole, email) {
   if (named) return named;
   return [...list].sort((a, b) => (a.workspaces || []).length - (b.workspaces || []).length || a.name.localeCompare(b.name))[0] || null;
 }
-// Client role for a CRM contact. The primary contact becomes Super Admin and the workspace Primary Contact.
+// Client role for a CRM contact. The owner becomes Super Admin and the workspace Owner.
 function crmContactRole(role) {
-  if (/primary/i.test(role)) return 'r-c-super';
+  if (/owner|primary/i.test(role)) return 'r-c-super';
   if (/marketing/i.test(role)) return 'r-c-hom';
   return 'r-c-employee';
 }
 function crmAddContactMember(wsId, c, status) {
   const m = { id: uid('m'), org: wsId, name: c.name, email: c.email, teamId: null, roleId: crmContactRole(c.role), status,
     products: [], lastActive: null, lastProduct: null, crmContact: true, crmRole: c.role };
-  if (/primary/i.test(c.role) && !wsPrimaryContact(wsId)) m.isPrimary = true;
+  if (/owner|primary/i.test(c.role) && !wsPrimaryContact(wsId)) m.isPrimary = true;
   members.push(m);
   return m;
 }
@@ -299,7 +299,7 @@ function crmContactList(wsId) {
   const list = crmSetupContacts(wsId);
   if (!list.length) return '<div class="t-caption t-muted crm-step-detail">No client contacts left to invite.</div>';
   return `<div class="crm-contacts">${list.map(m => `<div class="crm-contact">
-      <div class="grow crm-contact-text"><div class="crm-contact-name"><span class="t-bold">${esc(m.name)}</span><span class="chip">${esc(m.isPrimary ? 'Primary contact' : (m.crmRole || roleById(m.roleId)?.name || 'Contact'))}</span></div><div class="cell-sub">${esc(m.email)}</div></div>
+      <div class="grow crm-contact-text"><div class="crm-contact-name"><span class="t-bold">${esc(m.name)}</span><span class="chip">${esc(m.isPrimary ? 'Owner' : (m.crmRole || roleById(m.roleId)?.name || 'Contact'))}</span></div><div class="cell-sub">${esc(m.email)}</div></div>
       ${m.status === 'awaiting'
         ? `<button type="button" class="btn btn-outline btn-sm" onclick="crmRemoveContact('${m.id}')">Remove</button><button type="button" class="btn btn-primary btn-sm" onclick="crmApproveContact('${m.id}')">Approve</button>`
         : statusDot(m.status)}</div>`).join('')}</div>`;
@@ -314,8 +314,8 @@ function crmLinkAds(wsId) {
 // ---------- Seed: two new workspaces still waiting for approval (Attention row demo) ----------
 (function crmSeedPending() {
   const seed = {
-    'ws-grizzly': [{ name: 'Gus Grizzly', email: 'gus@grizzly.example.com', role: 'Primary contact' }, { name: 'Hana Bear', email: 'hana@grizzly.example.com', role: 'Marketing' }],
-    'ws-beantech': [{ name: 'Ivan Bean', email: 'ivan@beantech.example.com', role: 'Primary contact' }]
+    'ws-grizzly': [{ name: 'Gus Grizzly', email: 'gus@grizzly.example.com', role: 'Owner' }, { name: 'Hana Bear', email: 'hana@grizzly.example.com', role: 'Marketing' }],
+    'ws-beantech': [{ name: 'Ivan Bean', email: 'ivan@beantech.example.com', role: 'Owner' }]
   };
   Object.entries(seed).forEach(([wsId, contacts]) => {
     const ws = wsById(wsId), acc = crmAccounts[wsId];

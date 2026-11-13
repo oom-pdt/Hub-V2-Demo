@@ -75,8 +75,8 @@ const permissionCatalogue = [
 
 function teamPermGroups(scope) {
   const list = permissionCatalogue.filter(g => !g.scope || g.scope === scope);
-  // Version 1 has no product access to manage.
-  return isV1() ? list.map(g => ({ ...g, subgroups: g.subgroups.map(sg => ({ ...sg, perms: sg.perms.filter(p => p.id !== 'teams.products') })) })) : list;
+  // Version 1 has no product access to manage and no Integrations page.
+  return isV1() ? list.filter(g => g.id !== 'integrations').map(g => ({ ...g, subgroups: g.subgroups.map(sg => ({ ...sg, perms: sg.perms.filter(p => p.id !== 'teams.products') })) })) : list;
 }
 function teamGroupPermIds(g) { return g.subgroups.flatMap(sg => sg.perms.map(p => p.id)); }
 function teamAllPermIds(scope) { return teamPermGroups(scope).flatMap(teamGroupPermIds); }
@@ -903,8 +903,8 @@ function teamOrgCard(ws) {
   const pc = wsPrimaryContact(ws.id);
   const clientCount = teamOrgMembers(ws.id).filter(m => m.status !== 'deactivated').length;
   const agencyCount = teamWsAgencyMembers(ws.id).length;
-  // Agency CRM auto set-up (crm.js): badge, progress while incomplete, and the checklist.
-  const hasSetup = typeof crmSetups !== 'undefined' && !!crmSetups[ws.id];
+  // Agency CRM auto set-up (crm.js): badge, progress while incomplete, and the checklist. Not in Version 1.
+  const hasSetup = !isV1() && typeof crmSetups !== 'undefined' && !!crmSetups[ws.id];
   const prog = hasSetup ? crmSetupProgress(ws.id) : null;
   const items = ws.archived
     ? [{ label: 'Restore', icon: 'archive-restore', onClick: `teamRestoreOrg('${ws.id}')` }]
@@ -923,7 +923,7 @@ function teamOrgCard(ws) {
       ${statusDot(teamOrgStatus(ws))}
       ${rowMenu(`team-o-${ws.id}`, items)}
     </div>
-    <div class="team-org-line"><i data-lucide="briefcase"></i>${esc(ws.industry || '—')}${ws.source === 'crm' ? '<span class="crm-badge team-org-crm" title="Created automatically when the account converted in the agency CRM"><i data-lucide="sparkles"></i>From CRM</span>' : ''}</div>
+    <div class="team-org-line"><i data-lucide="briefcase"></i>${esc(ws.industry || '—')}${ws.source === 'crm' && !isV1() ? '<span class="crm-badge team-org-crm" title="Created automatically when the account converted in the agency CRM"><i data-lucide="sparkles"></i>From CRM</span>' : ''}</div>
     ${setupHtml}
     <div class="team-org-contact"><span class="team-org-avatar"><i data-lucide="user"></i></span>
       <span>${pc ? `<span class="team-org-contact-name">${esc(pc.name)}</span><span class="cell-sub">${esc(pc.email)}</span>` : '<span class="team-org-contact-name t-muted">Unassigned</span><span class="cell-sub">No Owner</span>'}</span></div>
@@ -1226,7 +1226,7 @@ registerScreen('team', {
     });
   });
   registerDevToggles('agency-team-clients', () => [emptyToggle('clients', 'Empty state (no client organisations)'),
-    { label: 'Simulate CRM conversion', action: true, run: () => crmSimulateConversion() }]);
+    ...(isV1() ? [] : [{ label: 'Simulate CRM conversion', action: true, run: () => crmSimulateConversion() }])]);
   registerDevToggles('client-team-agency', () => [emptyToggle('agency', 'Empty state (no agency access)')]);
 })();
 
@@ -1247,7 +1247,7 @@ Central administration of agency (OOm) staff: invite members, set their team and
 - **Row actions**: Edit, Resend Invite (pending only), Deactivate / Reactivate, Remove.
   - *(Draft — Figma only)* Deactivate suspends access and can be reversed; Remove deletes the member. You can't deactivate or remove yourself.
 - Product access follows the member's team.
-- **Version 1** *(Draft, 13/11/2026; dev toolbar "Version 1")*: no Product Access anywhere in Team & Access (Members, Teams and Roles columns and filters, the Create / Edit Team field, and the Management Product Access permission), and no Activity column in Members. Applies to agency and client workspaces.
+- **Version 1** *(Draft, 13/11/2026; dev toolbar "Version 1")*: client organisation cards have no "From CRM" badge, set-up tracker or View set-up action. No Product Access anywhere in Team & Access (Members, Teams and Roles columns and filters, the Create / Edit Team field, and the Management Product Access permission), and no Activity column in Members. Applies to agency and client workspaces.
 
 ### Open questions
 - Permissions are not enforced in this prototype (V1 didn't either).`
@@ -1353,7 +1353,7 @@ When an account converts in the agency CRM, Galaxis creates the client workspace
 3. **Agency assignees added** through the default CRM role mapping (no editing UI since 22/10/2026). The CRM's named user is used when they hold the mapped Galaxis role and team; otherwise the agency member with that role and team and the fewest workspaces is picked. Assignment writes to each member's assigned workspaces, so the workspace appears in their switcher.
 4. **SEO Cloud project linked** (only when SEO is a live service). The project starts as *Pending setup* until keywords are set up in SEO Cloud.
 5. **Client contacts awaiting approval.** CRM contacts are added as members with status *Awaiting approval*. They are not invited and don't use a seat. The account manager approves them (all at once or one by one) or removes them; approved contacts become *Pending Invite*. The first owner becomes the workspace Owner.
-6. **Ad accounts linked** — a manual step: "Link in Integrations" opens agency Integrations.
+6. **Ad accounts linked** — a manual step: "Link in Ad Accounts" opens the agency's Ad Accounts page.
 - **Card**: while set-up is incomplete, the card shows "Set-up: N of M steps" with a progress bar. The action menu has **View set-up**.
 - **Set-up checklist** (slide-over): progress, each step with ✓ Done / Needs approval / Manual step, the contact list with Approve and Remove, Link in Integrations, Assign members (when a CRM role has no matching Galaxis user), **Open workspace** and **Approve & send invites**.
 - Steps are computed from live data, so linking ad accounts or approving contacts elsewhere ticks them off.

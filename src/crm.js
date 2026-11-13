@@ -118,7 +118,7 @@ function crmSetupSteps(wsId) {
     const why = p => ids[p] ? `the CRM's ${PLATFORM_NAME[p]} ID ${ids[p]} isn't among the discovered accounts yet` : `the CRM has no ${PLATFORM_NAME[p]} ad account ID`;
     steps.push({ id: 'ads', label: 'Ad accounts linked', state: left.length ? 'manual' : 'done',
       detail: (auto.length ? `Linked automatically from the CRM's ad account IDs: ${auto.map(a => `${PLATFORM_NAME[a.platform]} ${a.id}`).join(', ')}. ` : '')
-        + (left.length ? `Link ${left.map(p => PLATFORM_NAME[p]).join(' and ')} in Integrations: ${left.map(why).join('; ')}.` : (auto.length ? '' : `${need.map(p => PLATFORM_NAME[p]).join(' and ')} linked.`)) });
+        + (left.length ? `Link ${left.map(p => PLATFORM_NAME[p]).join(' and ')} in Ad Accounts: ${left.map(why).join('; ')}.` : (auto.length ? '' : `${need.map(p => PLATFORM_NAME[p]).join(' and ')} linked.`)) });
   }
   return steps;
 }
@@ -139,7 +139,7 @@ function crmPendingSetups() {
 // Contract: runs the whole auto set-up for the next account in the queue.
 function crmSimulateConversion() {
   if (!crmConnected()) {
-    showToast('Agency CRM is disconnected. Reconnect it in Integrations to sync new accounts.', 'triangle-alert');
+    showToast('Agency CRM is disconnected. Reconnect it in Ad Accounts to sync new accounts.', 'triangle-alert');
     return null;
   }
   const next = crmQueue.shift();
@@ -278,7 +278,7 @@ function crmSetupHTML(wsId) {
     const [icon, cls, label] = CRM_STEP_ICON[st.state];
     let extra = '';
     if (st.id === 'invites') extra = crmContactList(wsId);
-    if (st.id === 'ads' && st.state !== 'done') extra = `<button type="button" class="btn btn-outline btn-sm crm-step-btn" onclick="crmLinkAds('${wsId}')"><i data-lucide="link"></i>Link in Integrations</button>`;
+    if (st.id === 'ads' && st.state !== 'done' && !isV1()) extra = `<button type="button" class="btn btn-outline btn-sm crm-step-btn" onclick="crmLinkAds('${wsId}')"><i data-lucide="link"></i>Link in Ad Accounts</button>`;
     if (st.id === 'assignees' && st.state !== 'done') extra = `<button type="button" class="btn btn-outline btn-sm crm-step-btn" onclick="closeDrawer(); teamOpenAssignMembers('${wsId}')"><i data-lucide="user-plus"></i>Assign members</button>`;
     return `<li class="crm-step ${cls}">
       <span class="crm-step-icon" title="${label}"><i data-lucide="${icon}"></i></span>

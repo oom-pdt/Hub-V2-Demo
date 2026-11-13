@@ -6,8 +6,9 @@ const NAV_ITEMS = [
   { page: 'dashboard', label: 'Dashboard', icon: 'layout-dashboard' },
   { page: 'organisation', label: 'Organisation', icon: 'building-2' },
   { page: 'team', label: 'Team & Access', icon: 'users' },
-  // Version 1 has no integrations: clients don't get the Integrations page (the agency keeps it for ad-account linking).
-  { page: 'integrations', label: 'Integrations', icon: 'blocks', show: () => isAgency() || !isV1() },
+  // Version 1 has no Integrations page (agency or client). In the agency workspace the page is called Ad Accounts,
+  // with its own icon (blocks means Integrations).
+  { page: 'integrations', label: 'Integrations', agencyLabel: 'Ad Accounts', agencyIcon: 'cable', icon: 'blocks', show: () => !isV1() },
   // Not in Figma: Leads appears only inside a client workspace with an active CRM (V2 feature).
   { page: 'leads', label: 'Leads', icon: 'contact', show: () => !isAgency() && !!activeCrm(state.ctx) }
 ];
@@ -18,7 +19,7 @@ function renderShell() {
 }
 
 function renderSidebar() {
-  const nav = NAV_ITEMS.filter(n => !n.show || n.show()).map(n => `
+  const nav = NAV_ITEMS.filter(n => !n.show || n.show()).map(n => ({ ...n, label: isAgency() && n.agencyLabel ? n.agencyLabel : n.label, icon: isAgency() && n.agencyIcon ? n.agencyIcon : n.icon })).map(n => `
     <button type="button" class="nav-item ${state.page === n.page || (n.page === 'leads' && state.page === 'lead') || (n.page === 'integrations' && state.page === 'integration-setup') ? 'active' : ''}" onclick="navigate('${n.page}')" title="${esc(n.label)}">
       <i data-lucide="${n.icon}"></i><span>${esc(n.label)}</span>
     </button>`).join('');

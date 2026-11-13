@@ -409,10 +409,9 @@ function dashAttentionItems() {
     desc: `${unlinked} unlinked ad account${unlinked === 1 ? '' : 's'} discovered from your master connections. Link them to a client workspace.`,
     cta: 'Review accounts', action: `navigate('integrations')`
   });
-  // Version 1 has no client Integrations page, so ad accounts are linked from the agency's Integrations.
   list.filter(w => !wsAdAccounts(w.id).length).forEach(w => items.push({
     client: w.name, type: 'No Account Linked', priority: 'Low',
-    desc: 'Missing Google or Meta platform integration.', cta: 'Link Ad Account', action: isV1() ? `openWorkspace(null,'integrations')` : `openWorkspace('${w.id}','integrations')`
+    desc: 'Missing Google or Meta platform integration.', cta: 'Link Ad Account', action: `openWorkspace('${w.id}','integrations')`
   }));
   // Aurix is a live CRM service but the workspace isn't connected to Aurix in Galaxis.
   list.filter(w => crmLiveServices(w.id).some(x => x.type === 'Aurix') && !(wsProducts(w.id).aurix?.status === 'connected')).forEach(w => items.push({
@@ -1378,9 +1377,9 @@ function dashNoAccountsCard() {
     <div class="dash-empty-icon"><i data-lucide="link-2-off"></i></div>
     <h2 class="h-section">No ad accounts linked yet</h2>
     <p class="t-secondary">This workspace has no Google Ads or Meta ad account linked, so there is no advertising performance to show yet. Once an account is linked, spend, conversions and campaign data appear here.</p>
-    ${agency
-      ? `<button type="button" class="btn btn-primary" onclick="${isV1() ? `openWorkspace(null,'integrations')` : `navigate('integrations')`}"><i data-lucide="link"></i>Link ad accounts</button>`
-      : `<p class="t-bold">Contact your Agency Admin to link your Google or Meta ad accounts.</p>`}
+    ${!agency ? `<p class="t-bold">Contact your Agency Admin to link your Google or Meta ad accounts.</p>`
+      : isV1() ? ''   // Version 1 has no Integrations page to link from.
+      : `<button type="button" class="btn btn-primary" onclick="navigate('integrations')"><i data-lucide="link"></i>Link ad accounts</button>`}
   </div>`;
 }
 
@@ -2891,7 +2890,7 @@ Central command dashboard for agency administrators managing many client workspa
   - **Hidden**: the Attention Required banner and KPI card; Your Products and the donut; the Managed Contract Value, Upcoming Renewals and Client Follow-ups Due KPIs (Agency CRM); in Managed Accounts, the Account group (Services, Account Health, Issues Count), Budget Pacing, Contract Days Left, the SEO group, the account manager under the client name, the Account Health, Performance and SEO Status filters and the Integrations row action.
   - **No colour coding** in Managed Accounts: Cost Per Conversion, CPM, CPC and ROAS show plain figures (no portfolio-average dots). Same on the client dashboard.
   - **KPIs**: two cards, Total Accounts Managed (count of client workspaces; replaces the donut) and Combined Ad Spend (Google and Meta). No Total Accounts Managed donut.
-  - **Issues**: only Performance Review, Token Expired, Unlinked Ad Accounts and No Account Linked. Link Ad Account opens the agency's Integrations, since clients have no Integrations page.
+  - **No Integrations page** (agency or client): it is hidden from the sidebar and its routes go to the dashboard.
 
 ### Open questions
 - **KPIs TBC**: the final portfolio KPI set still needs performance-marketing and account-management sign-off.
@@ -3023,7 +3022,7 @@ Client-facing workspace dashboard giving a simplified, unified view of Meta and 
 - **Version 1** *(Draft, 13/11/2026; dev toolbar "Version 1")*: no integrations, so only Galaxis data and Google / Meta ads data are shown.
   - **Hidden**: Products & Connections, the SEO Performance tab, the Leads & Revenue section (and its KPI panel), the CRM column group, the attribution model, and the client's Integrations and Leads pages (sidebar and routes).
   - **No budget**: the client's budget isn't known without the Agency CRM, so Total Ad Spend has no "% of budget used" or progress bar. It shows the Google / Meta spend split instead (or "Across Google Ads" for one platform).
-  - "Link ad accounts" opens the agency's Integrations.
+  - **No ad accounts linked**: the empty state has no "Link ad accounts" button for agency users (there is no Integrations page). Client users still see "Contact your Agency Admin…".
   - **No colour coding** in Campaigns and Ads or the Google / Meta reports (including Quality Score): plain figures, no green / orange / red dots.
 
 ### Open questions

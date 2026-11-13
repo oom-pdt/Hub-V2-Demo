@@ -160,8 +160,9 @@ function integMatches(p) {
 // ---------- Screen ----------
 registerScreen('integrations', {
   contexts: ['agency', 'client'],
-  title: () => 'Integrations',
-  desc: () => 'Connect the products that integrate with your workspace to send and receive data.',
+  // The agency's page is "Ad Accounts" (master Google / Meta connections and ad-account linking).
+  title: () => isAgency() ? 'Ad Accounts' : 'Integrations',
+  desc: () => isAgency() ? 'Connect Google and Meta, and link the ad accounts they discover to your client workspaces.' : 'Connect the products that integrate with your workspace to send and receive data.',
   render: () => isAgency() ? integRenderAgency() : integRenderClient(),
   afterRender: () => {}
 });
@@ -1099,7 +1100,7 @@ registerDevToggles('agency-integrations', () => [
 // ---------- Specs ----------
 Object.assign(screenSpecs, {
   'agency-integrations': {
-    title: 'Integrations — Ad Account Discovery, Workspace Linking & Agency CRM (Agency)',
+    title: 'Ad Accounts — Ad Account Discovery, Workspace Linking & Agency CRM (Agency; was "Integrations", renamed 13/11/2026)',
     status: 'In Review',
     author: 'Hannah',
     updatedAt: '22/10/2026',

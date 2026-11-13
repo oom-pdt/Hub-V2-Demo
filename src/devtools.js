@@ -43,9 +43,9 @@ function renderDevBar() {
     </div>`;
 }
 
-// Turning Version 1 on leaves pages it hides (client Integrations, Leads) for the dashboard.
+// Turning Version 1 on leaves pages it hides (Integrations, Leads) for the dashboard.
 function devToggleV1() {
   state.flags.v1 = !state.flags.v1;
-  if (isV1() && !isAgency() && V1_HIDDEN_CLIENT_PAGES.includes(state.page)) navigate('dashboard');
+  if (isV1() && V1_HIDDEN_PAGES.includes(state.page)) navigate('dashboard');
   else render();
 }
